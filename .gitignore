@@ -10,3 +10,6 @@ preview/screenshots/
 private/
 *.pem
 *.key
+
+# Fork: das Release-ZIP wird gebaut, nicht eingecheckt (tools/fork_release.py)
+neonplan3d.zip

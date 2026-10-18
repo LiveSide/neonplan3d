@@ -43,6 +43,7 @@ Alles in einer Datei, mit `FORK` markiert:
 | `own-furniture/` | Neu. Anleitung und Beispiel für eigene Möbel. |
 | `custom_components/neonplan3d/manifest.json` | `version` mit Fork-Kennung, `issue_tracker` auf dieses Repo. |
 | `hacs.json` | `name` mit Fork-Kennung. |
+| `tools/fork_release.py` | Neu. Baut das Release-ZIP, weil die Workflows im Fork nicht laufen. |
 | `FORK.md` | Diese Datei. |
 
 Der Rest ist unverändert. Der Import-Dialog im Editor
@@ -91,15 +92,24 @@ unterschreiben lassen.
 
 ## Version und Release
 
-HACS installiert hier aus dem Release-Asset (`hacs.json`, `zip_release`). Der
-Workflow `.github/workflows/release.yml` baut das ZIP selbst, prüft aber, dass
-der Tag zur `version` in `manifest.json` passt. Daher:
+HACS installiert hier aus dem Release-Asset (`hacs.json`, `zip_release`).
+Upstream baut das ZIP im Workflow `.github/workflows/release.yml` -
+**in einem Fork laufen GitHub Actions aber erst, wenn man sie einmal von Hand
+freigibt** (Reiter *Actions* im Repo). Solange das nicht passiert ist, baut
+`tools/fork_release.py` das ZIP genauso und hängt es an:
 
 ```bash
 # manifest.json: "version": "1.20.2.1"   (Original + vierte Stelle für den Fork)
 git commit -am "1.20.2.1: ..." && git push
-gh release create v1.20.2.1 --title "1.20.2.1" --notes "..."
+gh release create v1.20.2.1 --repo d14tk/neonplan3d --title "1.20.2.1" --notes "..."
+python tools/fork_release.py --tag v1.20.2.1
 ```
+
+`gh` nimmt im Klon eines Forks sonst das **Original** als Ziel. Darum überall
+`--repo d14tk/neonplan3d` angeben oder einmal
+`gh repo set-default d14tk/neonplan3d` setzen.
+
+Ohne das ZIP am Release findet HACS nichts zu installieren.
 
 Das Schema ist **Originalversion plus vierte Stelle**. So ist auf den ersten
 Blick zu sehen, auf welchem Release des Originals der Fork sitzt.
