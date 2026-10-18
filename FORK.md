@@ -43,13 +43,41 @@ Alles in einer Datei, mit `FORK` markiert:
 | `own-furniture/` | Neu. Anleitung und Beispiel für eigene Möbel. |
 | `custom_components/neonplan3d/manifest.json` | `version` mit Fork-Kennung, `issue_tracker` auf dieses Repo. |
 | `hacs.json` | `name` mit Fork-Kennung. |
-| `custom_components/neonplan3d/frontend/neonplan3d.js` | Nur die Versionskonstante, von `tools/fork_release.py --stamp` gesetzt. Siehe unten. |
+| `frontend/src/viewer/earth.ts` | `coverAbove()`: nur Flächen auf dem Gelände decken einen Lichtschacht zu. Ein Balkon im Obergeschoss zog den Schachtrand sonst meterhoch zu sich hinauf. Upstream gemeldet als [#602](https://github.com/Mastershort/neonplan3d/issues/602). |
+| `frontend/src/viewer/earth.test.ts` | Neuer Test dazu: Balkon oben hebt nicht, Balkon im Erdgeschoss hebt weiter. |
+| `custom_components/neonplan3d/frontend/*.js` | Die gebauten Bundles. Vier der sieben sind bitgleich mit denen des Originals, nur `neonplan3d.js`, `-3d.js` und `-editor.js` tragen die Änderung und die Fork-Versionsnummer. |
 | `tools/fork_release.py` | Neu. Stempelt die Version in die Bundles und baut das Release-ZIP, weil die Workflows im Fork nicht laufen. |
 | `FORK.md` | Diese Datei. |
 
 Der Rest ist unverändert. Der Import-Dialog im Editor
 (**Möbel → Möbel-Pack importieren …**) und `tools/fp3dpack.py` zum Unterschreiben
 gehören zum Original und werden nur benutzt.
+
+## Das Frontend bauen
+
+Seit dem Fix in `earth.ts` gehört ein Frontend-Build dazu. Er ist
+reproduzierbar: ohne eigene Änderungen kommen dieselben Bundles heraus, die
+das Original ausliefert.
+
+**Nicht im QNAP-Share bauen** (dort liegt das Repo, aber `npm` über SMB ist
+langsam und die `node_modules` vertragen sich nicht zwischen Windows und
+Linux). Stattdessen eine lokale Kopie:
+
+```bash
+# 1. frontend/, custom_components/neonplan3d/ und site/ lokal kopieren
+# 2. dort:
+cd frontend
+npm ci
+npm test            # 410 Tests
+npm run typecheck
+npm run build       # schreibt nach ../custom_components/neonplan3d/frontend/
+# 3. die erzeugten *.js zurück ins Repo kopieren
+```
+
+`build.mjs` nimmt die Version aus `custom_components/neonplan3d/manifest.json`
+und schreibt sie ins Bundle. Wer baut, braucht `--stamp` aus
+`tools/fork_release.py` also nicht; das Skript bleibt für den Fall, dass nur
+die Versionsnummer geändert wird.
 
 ## Updates des Originals einpflegen
 
@@ -83,10 +111,13 @@ zu bauen. Der Aufruf ist wiederholbar: ist schon gestempelt, passiert nichts.
 
 **Konflikte sind in zwei Dateien zu erwarten:**
 
-* `custom_components/neonplan3d/frontend/neonplan3d.js` - das gebaute Bundle,
-  das wir gestempelt haben. Immer die Fassung des Originals nehmen
-  (`git checkout --theirs custom_components/neonplan3d/frontend/neonplan3d.js`)
-  und danach neu stempeln. Nie von Hand in dieser Datei editieren.
+* `custom_components/neonplan3d/frontend/*.js` - die gebauten Bundles. Immer
+  die Fassung des Originals nehmen
+  (`git checkout --theirs custom_components/neonplan3d/frontend/`) und danach
+  **neu bauen**, siehe oben. Nie von Hand in diesen Dateien editieren.
+* `frontend/src/viewer/earth.ts`, wenn das Original an `coverAbove()` arbeitet.
+  Sollte der Fehler dort behoben sein (Issue #602), kann unsere Fassung
+  entfallen - dann prüft `earth.test.ts`, ob das Verhalten stimmt.
 * `packs.py`, aber nur wenn das Original dort anfasst, was der Fork anfasst:
   die Importliste am Dateikopf, den Bereich um `STUDIO_KEYS` oder
   `verify_pack()`. Die eigenen Zeilen sind mit `FORK` markiert, also gilt beim
@@ -97,7 +128,8 @@ zu bauen. Der Aufruf ist wiederholbar: ist schon gestempelt, passiert nichts.
    `verify_pack()` umbaut, bleiben zwei Dinge zu tun: die lokalen Schlüssel zu
    den Herausgeber-Schlüsseln dazunehmen und die Beschränkung auf eigene Möbel
    nach `validate_payload()` prüfen.
-3. Danach **`pytest tests/test_packs_fork.py`** laufen lassen. Diese Tests sind
+3. Danach **`pytest tests/test_packs_fork.py`** und, im Frontend,
+   **`npm test`** laufen lassen. Diese Tests sind
    der Beweis, dass der Fork noch tut, was er soll: wenn sie durchlaufen, sind
    eigene Möbel importierbar und Pro-Erweiterungen weiter gesperrt. Dazu
    `pytest tests/test_packs.py`, damit der Signaturweg des Originals heil ist.
