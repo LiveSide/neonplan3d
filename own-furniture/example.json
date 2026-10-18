@@ -1,0 +1,56 @@
+{
+  "format": "fp3dpack",
+  "version": 1,
+  "id": "local.example",
+  "name": "Eigene Möbel (Beispiel)",
+  "publisher": "Eigenbau",
+  "description": "Vorlage: ein Quader, ein Zylinder-Möbel, eine Wandlampe und eine Schräge.",
+  "items": [
+    {
+      "id": "crate",
+      "name": { "de": "Kiste", "en": "Crate" },
+      "size": [0.5, 0.4, 0.4],
+      "surface": true,
+      "parts": [
+        { "shape": "box", "x": 0, "z": 0, "w": 1, "d": 1, "y": 0, "h": 1, "color": "wood", "top": "wood", "edges": true }
+      ]
+    },
+    {
+      "id": "stool",
+      "name": { "de": "Hocker", "en": "Stool" },
+      "size": [0.35, 0.35, 0.45],
+      "parts": [
+        { "shape": "cyl", "x": 0, "z": 0, "w": 1, "d": 1, "y": 0.85, "h": 0.15, "color": "wood", "edges": true },
+        { "shape": "cyl", "x": 0, "z": 0.35, "w": 0.12, "d": 0.12, "y": 0, "h": 0.85, "color": "metal" },
+        { "shape": "cyl", "x": -0.3, "z": -0.18, "w": 0.12, "d": 0.12, "y": 0, "h": 0.85, "color": "metal" },
+        { "shape": "cyl", "x": 0.3, "z": -0.18, "w": 0.12, "d": 0.12, "y": 0, "h": 0.85, "color": "metal" }
+      ],
+      "symbol": [{ "shape": "circle", "x": 0, "z": 0, "r": 0.5 }]
+    },
+    {
+      "id": "wall_lamp",
+      "name": { "de": "Wandlampe", "en": "Wall lamp" },
+      "size": [0.2, 0.14, 0.25],
+      "mount": "wall",
+      "wall_y": 1.8,
+      "electric": true,
+      "light": "wall",
+      "parts": [
+        { "shape": "box", "x": 0, "z": -0.4, "w": 0.5, "d": 0.2, "y": 0.4, "h": 0.2, "color": "metal" },
+        { "shape": "loft", "x": 0, "z": 0.1, "w": 0.9, "d": 0.9, "y": 0.25, "h": 0.7, "tw": 0.5, "td": 0.5, "color": "white", "glow": true }
+      ]
+    },
+    {
+      "id": "ramp",
+      "name": { "de": "Schräge", "en": "Ramp" },
+      "size": [1.0, 0.6, 0.3],
+      "parts": [
+        { "shape": "loft", "x": 0, "z": 0, "w": 1, "d": 1, "y": 0, "h": 1, "tx": 0, "tz": 0.45, "tw": 1, "td": 0.1, "color": "dark", "edges": "faint" }
+      ],
+      "symbol": [
+        { "shape": "rect", "x": 0, "z": 0, "w": 1, "d": 1 },
+        { "shape": "line", "x1": -0.5, "z1": 0.4, "x2": 0.5, "z2": 0.4 }
+      ]
+    }
+  ]
+}

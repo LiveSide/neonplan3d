@@ -13,6 +13,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
+from pathlib import Path
+import re
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
@@ -36,6 +39,71 @@ PACK_PUBLIC_KEYS: dict[str, str] = {
 # keys that may only sign furniture of their own: "studio.*" packs without Pro features (a leaked studio key
 # cannot unlock anything)
 STUDIO_KEYS = {"bdac241ae58b"}
+
+# --- FORK d14tk: own furniture (see FORK.md) --------------------------------
+# Upstream accepts packs from the three publisher keys above only. This fork also
+# reads publisher keys of this installation from a JSON file, so anyone can build
+# and import their own furniture with tools/fp3dpack.py.
+#
+# Such a key is restricted like a studio key: it may sign own furniture only -
+# pack ids starting "local." or "studio." and no Pro features. So it cannot
+# unlock anything that is for sale, and it cannot replace a pack that was bought.
+#
+# File: {"<key id>": "<public key, base64>"}, one entry per key, as
+# `fp3dpack.py keygen` prints it. Looked up in this order:
+#   1. $NEONPLAN3D_PUBLISHERS (a file, for tools and tests)
+#   2. <config>/neonplan3d_publishers.json  (survives a HACS update)
+#   3. <integration>/neonplan3d_publishers.json  (lost on update, last resort)
+# Read on every import, so a new key works without restarting Home Assistant.
+LOCAL_KEYS_FILE = "neonplan3d_publishers.json"
+LOCAL_ID_PREFIXES = ("local.", "studio.")
+_KEY_ID = re.compile(r"^[0-9a-f]{12}$")
+_HERE = Path(__file__).resolve().parent
+
+
+def _local_key_files() -> list[Path]:
+    """Where a publisher key file of this installation may sit."""
+    paths = []
+    env = os.environ.get("NEONPLAN3D_PUBLISHERS")
+    if env:
+        paths.append(Path(env))
+    # .../<config>/custom_components/neonplan3d/packs.py -> <config>/
+    paths.append(_HERE.parent.parent / LOCAL_KEYS_FILE)
+    paths.append(_HERE / LOCAL_KEYS_FILE)
+    return paths
+
+
+def local_keys() -> dict[str, str]:
+    """Publisher keys of this installation; empty when no file is there.
+
+    An entry is only taken when the key id matches the public key, so a typo
+    cannot silently shadow one of the keys above.
+    """
+    found: dict[str, str] = {}
+    for path in _local_key_files():
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(raw, dict):
+            continue
+        for kid, public in raw.items():
+            if not isinstance(kid, str) or not isinstance(public, str) or not _KEY_ID.match(kid):
+                continue
+            if kid in PACK_PUBLIC_KEYS:
+                continue
+            try:
+                if key_id(base64.b64decode(public, validate=True)) != kid:
+                    continue
+            except (ValueError, TypeError):
+                continue
+            found[kid] = public
+        if found:
+            break
+    return found
+
+
+# --- /FORK -----------------------------------------------------------------
 
 _ID = vol.All(str, vol.Match(r"^[a-z0-9][a-z0-9_.-]{0,39}$"))
 _TEXT = vol.All(str, vol.Length(min=1, max=80))
@@ -238,7 +306,11 @@ def verify_pack(text: str, keys: dict[str, str] | None = None, instance: str | N
 
     A pack bound to an installation (payload "instance") is only accepted when `instance` is that
     fingerprint; with instance=None the binding is not checked (tools)."""
-    keys = PACK_PUBLIC_KEYS if keys is None else keys
+    # FORK d14tk: also accept this installation's own publisher keys (see FORK.md)
+    local: dict[str, str] = {}
+    if keys is None:
+        local = local_keys()
+        keys = {**PACK_PUBLIC_KEYS, **local}
     if len(text) > MAX_PACK_SIZE:
         raise PackError("too_large")
     try:
@@ -270,6 +342,13 @@ def verify_pack(text: str, keys: dict[str, str] | None = None, instance: str | N
     payload = validate_payload(data["payload"])
     if signature["key"] in STUDIO_KEYS and (not str(payload["id"]).startswith("studio.") or payload["features"]):
         raise PackError("bad_signature", "the studio key signs studio furniture only")
+    # FORK d14tk: an own key signs own furniture only - no Pro features, and no
+    # pack id that could replace one from the shop.
+    if signature["key"] in local and (not str(payload["id"]).startswith(LOCAL_ID_PREFIXES) or payload["features"]):
+        raise PackError(
+            "bad_signature",
+            'an own key signs own furniture only: pack id "local.*" or "studio.*", no features',
+        )
     if instance is not None and payload["instance"] is not None and payload["instance"] != instance:
         raise PackError("wrong_instance", "the pack is bound to another installation")
     return payload
