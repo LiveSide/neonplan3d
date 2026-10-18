@@ -43,7 +43,8 @@ Alles in einer Datei, mit `FORK` markiert:
 | `own-furniture/` | Neu. Anleitung und Beispiel für eigene Möbel. |
 | `custom_components/neonplan3d/manifest.json` | `version` mit Fork-Kennung, `issue_tracker` auf dieses Repo. |
 | `hacs.json` | `name` mit Fork-Kennung. |
-| `tools/fork_release.py` | Neu. Baut das Release-ZIP, weil die Workflows im Fork nicht laufen. |
+| `custom_components/neonplan3d/frontend/neonplan3d.js` | Nur die Versionskonstante, von `tools/fork_release.py --stamp` gesetzt. Siehe unten. |
+| `tools/fork_release.py` | Neu. Stempelt die Version in die Bundles und baut das Release-ZIP, weil die Workflows im Fork nicht laufen. |
 | `FORK.md` | Diese Datei. |
 
 Der Rest ist unverändert. Der Import-Dialog im Editor
@@ -67,10 +68,29 @@ git checkout main
 git merge upstream/main           # oder: git merge v1.21.0
 ```
 
-**Konflikte sind nur in `packs.py` zu erwarten**, und nur dann, wenn das Original
-dort anfasst, was der Fork anfasst: die Importliste am Dateikopf, den Bereich um
-`STUDIO_KEYS` oder `verify_pack()`. Die eigenen Zeilen sind mit `FORK` markiert,
-also gilt beim Auflösen:
+Danach **immer** die Version in die Bundles stempeln:
+
+```bash
+python tools/fork_release.py --stamp
+```
+
+Warum: Das Frontend trägt seine Version als Konstante im gebauten Bundle. Das
+Original liefert dort seine eigene Version, unser `manifest.json` hat die
+vierte Stelle. Ohne Stempel vergleicht das Panel beide und fordert dauerhaft
+zum Neuladen auf (`needs_reload` in `frontend/src/i18n.ts`). Der Stempel
+schreibt die Version aus dem Manifest in `neonplan3d.js`, ohne das Frontend neu
+zu bauen. Der Aufruf ist wiederholbar: ist schon gestempelt, passiert nichts.
+
+**Konflikte sind in zwei Dateien zu erwarten:**
+
+* `custom_components/neonplan3d/frontend/neonplan3d.js` - das gebaute Bundle,
+  das wir gestempelt haben. Immer die Fassung des Originals nehmen
+  (`git checkout --theirs custom_components/neonplan3d/frontend/neonplan3d.js`)
+  und danach neu stempeln. Nie von Hand in dieser Datei editieren.
+* `packs.py`, aber nur wenn das Original dort anfasst, was der Fork anfasst:
+  die Importliste am Dateikopf, den Bereich um `STUDIO_KEYS` oder
+  `verify_pack()`. Die eigenen Zeilen sind mit `FORK` markiert, also gilt beim
+  Auflösen:
 
 1. Die Änderung des Originals übernehmen.
 2. Die mit `FORK` markierten Zeilen daneben wieder einsetzen. Wenn das Original
@@ -100,10 +120,15 @@ freigibt** (Reiter *Actions* im Repo). Solange das nicht passiert ist, baut
 
 ```bash
 # manifest.json: "version": "1.20.2.1"   (Original + vierte Stelle für den Fork)
+python tools/fork_release.py --stamp
 git commit -am "1.20.2.1: ..." && git push
 gh release create v1.20.2.1 --repo d14tk/neonplan3d --title "1.20.2.1" --notes "..."
 python tools/fork_release.py --tag v1.20.2.1
 ```
+
+Nach einem Update muss die Seite im Browser einmal **hart** neu geladen werden
+(in der Companion-App: Einstellungen → Companion-App → Frontend-Cache
+zurücksetzen), sonst läuft dort das alte Bundle weiter.
 
 `gh` nimmt im Klon eines Forks sonst das **Original** als Ziel. Darum überall
 `--repo d14tk/neonplan3d` angeben oder einmal
