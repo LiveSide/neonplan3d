@@ -144,6 +144,26 @@ NEONPLAN3D_PUBLISHERS=/pfad/zu/neonplan3d_publishers.json \
 Im NeonPlan-Panel: **Bearbeiten → Möbel → Möbel-Pack importieren …** und die
 `.fp3dpack`-Datei auswählen. Die Möbel stehen danach im Katalog.
 
+### Viele Packs auf einmal
+
+Für eine ganze Bibliothek ist das Klicken mühsam. `tools/packs_store.py`
+schreibt den Pack-Store über SSH:
+
+```bash
+python tools/packs_store.py list
+python tools/packs_store.py install packs/*.fp3dpack --restart
+python tools/packs_store.py remove local.moebel.bad --restart
+```
+
+Jedes Pack wird vorher genau so geprüft wie beim Import über das Panel — was
+hier durchfällt, käme auch dort nicht an. `--dry-run` zeigt nur, was geschrieben
+würde; der bisherige Store wird davor als Datei gesichert (`--backups`).
+
+Home Assistant liest `.storage` nur beim Start: ohne `--restart` wirkt das
+Einspielen erst beim nächsten Start. Beim SSH-Addon ist der Benutzer `root`;
+mit einem anderen braucht es `--sudo`. Wohin die Verbindung geht, sagen
+`--host`, `--port` und `--ssh-key`.
+
 ## Updates eines eigenen Packs
 
 Dieselbe `id` behalten und `release` hochzählen (`"release": 2`). Beim Import

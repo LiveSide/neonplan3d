@@ -25,6 +25,14 @@ Möbelbibliothek — die freien Sammlungen von Sweet Home 3D bringen mit, was
 einem Modell aus dem Netz fast immer fehlt: die echte Größe des Stücks, seine
 Kategorie und den Namen in zwanzig Sprachen.
 
+Ein drittes Werkzeug nimmt das Einspielen ab. Über das Panel wird jede Datei
+einzeln ausgewählt; `tools/packs_store.py` schreibt den Pack-Store eines Home
+Assistant über SSH und prüft vorher jedes Pack genau so, wie die Integration es
+beim Import tut: Signatur gegen die Schlüssel dieses Repositorys, Inhalt gegen
+das echte Schema, und ein an eine Installation gebundenes Pack gegen deren
+Fingerabdruck. Home Assistant liest `.storage` nur beim Start, darum wirkt das
+Geschriebene erst nach einem Neustart (`--restart` löst ihn aus).
+
 ## Was bewusst nicht geändert ist
 
 Ein eigener Schlüssel darf **nur eigene Möbel** unterschreiben:
