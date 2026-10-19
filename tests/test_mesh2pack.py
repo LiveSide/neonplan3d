@@ -252,10 +252,30 @@ def test_a_loft_top_is_a_span_of_the_item_not_a_ratio() -> None:
     pytest.importorskip("scipy")
     pytest.importorskip("numpy")
     m2p = _tool("mesh2pack")
-    narrow = {"shape": "loft", "x": 0.0, "z": 0.0, "w": 0.8, "d": 0.8, "y": 0.0, "h": 1.0,
-              "tw": 0.2, "td": 0.2, "color": "body"}
-    wide = {"shape": "loft", "x": 0.0, "z": 0.0, "w": 0.2, "d": 0.2, "y": 0.0, "h": 1.0,
-            "tw": 0.8, "td": 0.8, "color": "body"}
+    narrow = {
+        "shape": "loft",
+        "x": 0.0,
+        "z": 0.0,
+        "w": 0.8,
+        "d": 0.8,
+        "y": 0.0,
+        "h": 1.0,
+        "tw": 0.2,
+        "td": 0.2,
+        "color": "body",
+    }
+    wide = {
+        "shape": "loft",
+        "x": 0.0,
+        "z": 0.0,
+        "w": 0.2,
+        "d": 0.2,
+        "y": 0.0,
+        "h": 1.0,
+        "tw": 0.8,
+        "td": 0.8,
+        "color": "body",
+    }
     for part, expected in ((narrow, 0.2), (wide, 0.8)):
         packs.PART_SCHEMA(part)
         drawn = m2p.parts_solid([part], (40, 16, 40))
@@ -265,12 +285,23 @@ def test_a_loft_top_is_a_span_of_the_item_not_a_ratio() -> None:
 
 
 def test_a_loft_top_sits_where_the_item_says() -> None:
-    """"tx" is a centre in the item like "x", not a shift away from the part's own centre."""
+    """ "tx" is a centre in the item like "x", not a shift away from the part's own centre."""
     pytest.importorskip("scipy")
     pytest.importorskip("numpy")
     m2p = _tool("mesh2pack")
-    part = {"shape": "loft", "x": -0.2, "z": 0.0, "w": 0.3, "d": 0.3, "y": 0.0, "h": 1.0,
-            "tw": 0.3, "td": 0.3, "tx": 0.2, "color": "body"}
+    part = {
+        "shape": "loft",
+        "x": -0.2,
+        "z": 0.0,
+        "w": 0.3,
+        "d": 0.3,
+        "y": 0.0,
+        "h": 1.0,
+        "tw": 0.3,
+        "td": 0.3,
+        "tx": 0.2,
+        "color": "body",
+    }
     packs.PART_SCHEMA(part)
     drawn = m2p.parts_solid([part], (40, 16, 40))
     hit = drawn[:, -1, :].any(axis=1).nonzero()[0]
@@ -291,8 +322,9 @@ def test_a_loft_is_written_in_the_items_fractions() -> None:
     assert fields["td"] == pytest.approx(0.08, abs=0.005)
     assert fields["tx"] == pytest.approx(0.25 + 0.5 * 0.24, abs=0.005)
     assert "tz" not in fields  # unmoved: the schema falls back to the part's own centre
-    packs.PART_SCHEMA({"shape": "loft", "x": 0.25, "z": 0.0, "w": 0.24, "d": 0.24, "y": 0.0,
-                       "h": 0.5, "color": "wood", **fields})
+    packs.PART_SCHEMA(
+        {"shape": "loft", "x": 0.25, "z": 0.0, "w": 0.24, "d": 0.24, "y": 0.0, "h": 0.5, "color": "wood", **fields}
+    )
 
 
 def test_the_voxel_is_a_length_not_a_count() -> None:
@@ -317,7 +349,6 @@ def test_the_voxel_is_a_length_not_a_count() -> None:
     assert min(garden) >= 3
 
 
-
 # --- a turned part: the schema's "rot" ------------------------------------
 
 
@@ -327,7 +358,7 @@ def test_a_turned_part_is_measured_turned() -> None:
     Without it every step of a spiral staircase counts as a miss, and the likeness measure
     punishes the very item that reads best.
     """
-    np = pytest.importorskip("numpy")
+    pytest.importorskip("numpy")
     m2p = _tool("mesh2pack")
     plank = {"shape": "box", "x": 0.0, "z": 0.0, "w": 0.8, "d": 0.2, "y": 0.0, "h": 1.0, "color": "body"}
     turned = {**plank, "rot": 90}
@@ -342,10 +373,9 @@ def test_a_turned_part_is_measured_turned() -> None:
 
 def test_a_part_turned_by_a_half_quarter_lies_on_its_diagonal() -> None:
     """At 45 degrees a plank is neither across nor deep: it reaches into both corners."""
-    np = pytest.importorskip("numpy")
+    pytest.importorskip("numpy")
     m2p = _tool("mesh2pack")
-    part = {"shape": "box", "x": 0.0, "z": 0.0, "w": 0.7, "d": 0.14, "y": 0.0, "h": 1.0,
-            "color": "body", "rot": 45}
+    part = {"shape": "box", "x": 0.0, "z": 0.0, "w": 0.7, "d": 0.14, "y": 0.0, "h": 1.0, "color": "body", "rot": 45}
     packs.PART_SCHEMA(part)
     plan = m2p.parts_solid([part], (40, 8, 40))[:, 4, :]
     corner = 0.7 / 2 * 0.7071 + 0.14 / 2 * 0.7071  # half the diagonal reach, both ways
@@ -368,8 +398,7 @@ def test_the_preview_draws_a_turned_part_turned() -> None:
     def item(part: dict[str, object]) -> dict[str, object]:
         return {"id": "x", "name": {"en": "X"}, "size": [1.0, 1.0, 0.4], "parts": [part]}
 
-    turned = item({"shape": "box", "x": 0, "z": 0, "w": 0.8, "d": 0.2, "y": 0, "h": 1,
-                   "color": "body", "rot": 90})
+    turned = item({"shape": "box", "x": 0, "z": 0, "w": 0.8, "d": 0.2, "y": 0, "h": 1, "color": "body", "rot": 90})
     built = item({"shape": "box", "x": 0, "z": 0, "w": 0.2, "d": 0.8, "y": 0, "h": 1, "color": "body"})
     drawn = np.asarray(m2p.render_parts(turned, 120), dtype=int)
     want = np.asarray(m2p.render_parts(built, 120), dtype=int)

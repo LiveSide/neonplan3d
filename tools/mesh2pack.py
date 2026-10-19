@@ -814,9 +814,7 @@ def grown_parts(
     return made
 
 
-def layered_parts(
-    mask: np.ndarray, role: str, budget: int, shape: tuple[int, int, int]
-) -> list[dict[str, Any]]:
+def layered_parts(mask: np.ndarray, role: str, budget: int, shape: tuple[int, int, int]) -> list[dict[str, Any]]:
     """A block read layer by layer: one turned box per layer, joined as far as it carries on."""
     nx, ny, nz = shape
     made: list[dict[str, Any]] = []
@@ -842,13 +840,15 @@ def block_quality(parts: list[dict[str, Any]], mask: np.ndarray, shape: tuple[in
     around it, so a box that sticks out is counted against itself)."""
     if not parts:
         return -1.0
-    where = [np.nonzero(mask.any(axis=(1, 2)))[0], np.nonzero(mask.any(axis=(0, 2)))[0], np.nonzero(mask.any(axis=(0, 1)))[0]]
+    where = [
+        np.nonzero(mask.any(axis=(1, 2)))[0],
+        np.nonzero(mask.any(axis=(0, 2)))[0],
+        np.nonzero(mask.any(axis=(0, 1)))[0],
+    ]
     if any(not len(w) for w in where):
         return -1.0
     pad = 3
-    region = tuple(
-        (max(0, int(w[0]) - pad), min(shape[i], int(w[-1]) + 1 + pad)) for i, w in enumerate(where)
-    )
+    region = tuple((max(0, int(w[0]) - pad), min(shape[i], int(w[-1]) + 1 + pad)) for i, w in enumerate(where))
     drawn = parts_solid(parts, shape, region)  # type: ignore[arg-type]
     inside = mask[region[0][0] : region[0][1], region[1][0] : region[1][1], region[2][0] : region[2][1]]
     union = int((drawn | inside).sum())
