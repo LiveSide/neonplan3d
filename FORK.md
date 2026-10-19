@@ -15,6 +15,16 @@ Dieser Fork ergänzt genau eine Sache: **eine Installation darf eigene
 Herausgeber-Schlüssel führen.** Damit kann jeder seine eigenen Möbel bauen,
 unterschreiben und importieren.
 
+Dazu kommen zwei Werkzeuge, die das Bauen abnehmen. Ein Möbel besteht hier aus
+Quadern, Zylindern und Lofts, nicht aus Dreiecken — ein Mesh lässt sich also
+nicht einfach importieren. `tools/mesh2pack.py` zerlegt ein 3D-Modell in genau
+diese Teile: erst nach Materialien und zusammenhängenden Stücken, dann wird
+jedes mit den größten Kästen ausgelegt, die hineinpassen.
+`tools/sh3d_import.py` setzt darauf auf und liest eine ganze
+Möbelbibliothek — die freien Sammlungen von Sweet Home 3D bringen mit, was
+einem Modell aus dem Netz fast immer fehlt: die echte Größe des Stücks, seine
+Kategorie und den Namen in zwanzig Sprachen.
+
 ## Was bewusst nicht geändert ist
 
 Ein eigener Schlüssel darf **nur eigene Möbel** unterschreiben:
@@ -41,6 +51,9 @@ Alles in einer Datei, mit `FORK` markiert:
 | `custom_components/neonplan3d/packs.py` → `verify_pack()` | Zwei Einschübe, beide mit `# FORK d14tk` kommentiert: lokale Schlüssel zu den Herausgeber-Schlüsseln dazunehmen, und die Beschränkung auf eigene Möbel durchsetzen. |
 | `tests/test_packs_fork.py` | Neu. Hält die Beschränkung fest: eigene Möbel gehen, Pro-Erweiterungen und fremde Pack-IDs nicht. |
 | `own-furniture/` | Neu. Anleitung und Beispiel für eigene Möbel. |
+| `tools/mesh2pack.py` | Neu. Formt aus einem 3D-Modell (OBJ, GLB, STL, …) die Quader und Zylinder eines Pack-Möbels, misst die Ähnlichkeit und zeichnet eine Vorschau. Braucht `numpy`, `scipy`, `trimesh`, `Pillow`. |
+| `tools/sh3d_import.py` | Neu. Liest eine Sweet-Home-3D-Möbelbibliothek (`.sh3f`) und macht daraus fertige Packs, je ein Pack pro Raum. |
+| `tests/test_mesh2pack.py` | Neu. Hält fest, was die beiden Werkzeuge liefern müssen: eine hohle Hülle wird massiv, ein offenes Regalfach bleibt offen, jedes erzeugte Möbel besteht `ITEM_SCHEMA`. |
 | `custom_components/neonplan3d/manifest.json` | `version` mit Fork-Kennung, `issue_tracker` auf dieses Repo. |
 | `hacs.json` | `name` mit Fork-Kennung. |
 | `frontend/src/viewer/earth.ts` | `coverAbove()`: nur Flächen auf dem Gelände decken einen Lichtschacht zu. Ein Balkon im Obergeschoss zog den Schachtrand sonst meterhoch zu sich hinauf. Upstream gemeldet als [#602](https://github.com/Mastershort/neonplan3d/issues/602). |
