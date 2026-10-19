@@ -123,6 +123,19 @@ PLANT_WORDS = (
 )
 
 
+def decode_properties(raw: bytes) -> str:
+    """A Sweet Home 3D catalogue file as text.
+
+    Java property files are ISO-8859-1 by specification, and that is what the Sweet Home 3D
+    libraries ship; reading them as UTF-8 turned every umlaut into U+FFFD. Some third-party
+    libraries do use UTF-8, so try that first and fall back to Latin-1, which never fails.
+    """
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode("iso-8859-1")
+
+
 def read_properties(text: str) -> dict[int, dict[str, str]]:
     """A Sweet Home 3D catalogue file as {index: {key: value}}."""
     out: dict[int, dict[str, str]] = {}
@@ -139,13 +152,13 @@ def catalogue(sh3f: Path, languages: tuple[str, ...] = ("de", "en")) -> list[dic
     if base_name is None:
         raise SystemExit(f"{sh3f.name}: no PluginFurnitureCatalog.properties")
     root = base_name[: -len("PluginFurnitureCatalog.properties")]
-    base = read_properties(archive.read(base_name).decode("utf-8", "replace"))
+    base = read_properties(decode_properties(archive.read(base_name)))
 
     translated: dict[str, dict[int, dict[str, str]]] = {}
     for lang in languages:
         member = f"{root}PluginFurnitureCatalog_{lang}.properties"
         if member in names:
-            translated[lang] = read_properties(archive.read(member).decode("utf-8", "replace"))
+            translated[lang] = read_properties(decode_properties(archive.read(member)))
 
     pieces = []
     for index, entry in sorted(base.items()):
@@ -245,6 +258,7 @@ def one(job: dict[str, Any]) -> dict[str, Any] | None:
             ),
             max_parts=job["parts"],
             grid=job["grid"],
+            cell=job["cell"],
             tol=job["tol"],
             plantish=any(word in label for word in PLANT_WORDS),
             extras=traits(entry),
@@ -272,7 +286,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--by-room", action="store_true", help="one pack per room instead of one big one")
     parser.add_argument("--publisher", default="Eigenbau")
     parser.add_argument("--parts", type=int, default=46, help="most parts per item")
-    parser.add_argument("--grid", type=int, default=24, help="voxels along the longest side")
+    parser.add_argument("--grid", type=int, default=24, help="fewest voxels along the longest side")
+    parser.add_argument("--cell", type=float, default=0.045, help="voxel edge in metres (what sets the detail)")
     parser.add_argument("--tol", type=float, default=0.8, help="how solid an added slice must be")
     parser.add_argument("--max-items", type=int, default=120, help="most items per pack")
     parser.add_argument("--sample", type=int, default=0, help="only convert this many (to try it out)")
@@ -309,6 +324,7 @@ def main(argv: list[str] | None = None) -> int:
                         "id": slug(entry["_names"].get("en") or entry.get("name", "item"), used),
                         "parts": args.parts,
                         "grid": args.grid,
+                        "cell": args.cell,
                         "tol": args.tol,
                         "library": library.name,
                     }

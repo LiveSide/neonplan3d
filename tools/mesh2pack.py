@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import colorsys
 import json
+import math
 from pathlib import Path
 import sys
 from typing import Any
@@ -263,6 +264,28 @@ def normalise(mesh: Any, size: tuple[float, float, float] | None) -> tuple[Any, 
 # --- voxels ----------------------------------------------------------------
 
 
+MAX_GRID = 96
+
+
+def voxels(span: np.ndarray, grid: int, cell: float) -> tuple[int, int, int]:
+    """Cells per axis for a piece `span` metres big: `cell` metres each, `grid` at the least.
+
+    Counting cells per longest side instead makes the cell grow with the piece. A 3.5 m staircase
+    came out at 15 cm a cell while its steps are 17 cm high and 28 cm deep, so one step got a cell
+    and the next one two, every edge landed somewhere else, and the stairs read as a heap of
+    blocks. Saying the cell as a length gives a big piece the detail it needs. Small furniture
+    keeps the count it had, which is finer than `cell` anyway, and MAX_GRID holds the grid of a
+    very large piece (a garden, a slope) where it still fits in memory.
+    """
+    longest = max(float(np.max(span)), 1e-9)
+    count = min(MAX_GRID, max(grid, round(longest / max(cell, 1e-3))))
+    return (
+        max(3, round(count * float(span[0]) / longest)),
+        max(3, round(count * float(span[1]) / longest)),
+        max(3, round(count * float(span[2]) / longest)),
+    )
+
+
 def between(surface: np.ndarray, axis: int) -> np.ndarray:
     """Cells that lie between the first and the last hit of the surface along `axis`."""
     moved = np.moveaxis(surface, axis, -1)
@@ -344,6 +367,67 @@ def blocks(
 
 # --- covering a block with boxes -------------------------------------------
 
+# How far off square a block may be read as turned, and how finely the angle is looked for. A
+# block only turns when an upright rectangle around its plan is TURN_GAIN times larger than the
+# tightest turned one; below that the angle is noise and tilting the part would only hurt.
+TURN_STEP = 3.0
+TURN_GAIN = 1.25
+
+
+def main_angle(plan: np.ndarray, step: float = TURN_STEP) -> tuple[float, float]:
+    """The turn of a block's footprint, and what turning it with it buys.
+
+    Returns the angle in degrees (the shortest way round, -45 to 45) at which an upright
+    rectangle around `plan` is smallest, and how much larger the unturned rectangle is. A gain of
+    1 means the block already stands square and must be left alone - a round top fits every angle
+    equally and would otherwise be tilted for nothing.
+    """
+    points = np.argwhere(plan).astype(float)
+    if len(points) < 4:
+        return 0.0, 1.0
+    points -= points.mean(axis=0)
+    px, pz = points[:, 0], points[:, 1]
+    best_area, best_deg, upright = None, 0.0, 1.0
+    for degrees in np.arange(-45.0, 45.0, step):
+        angle = np.radians(degrees)
+        cos_a, sin_a = np.cos(angle), np.sin(angle)
+        across = px * cos_a + pz * sin_a
+        along = -px * sin_a + pz * cos_a
+        area = (across.max() - across.min() + 1.0) * (along.max() - along.min() + 1.0)
+        if abs(degrees) < step / 2:
+            upright = area
+        if best_area is None or area < best_area:
+            best_area, best_deg = area, float(degrees)
+    return best_deg, upright / max(best_area or 1.0, 1e-9)
+
+
+def upright(solid: np.ndarray, degrees: float) -> np.ndarray:
+    """A block turned back by `degrees` around the vertical, so what lay at that angle stands square.
+
+    Nearest-neighbour, so the block stays the solid it was; the grid grows to hold the corners.
+    """
+    from scipy.ndimage import rotate
+
+    return rotate(solid, -degrees, axes=(0, 2), order=0, reshape=True, prefilter=False).astype(bool)
+
+
+def turn_back(
+    box: list[int], turned: tuple[int, ...], shape: tuple[int, int, int], degrees: float
+) -> tuple[float, float]:
+    """Where the centre of a box found in the turned grid sits in the item, as x/z fractions.
+
+    The turned grid is larger than the item's and holds it centred, so the way back is: measure
+    from its middle, turn by `degrees`, and read it off the item's own grid.
+    """
+    angle = np.radians(degrees)
+    cos_a, sin_a = np.cos(angle), np.sin(angle)
+    across = (box[0] + box[3]) / 2.0 - turned[0] / 2.0
+    along = (box[2] + box[5]) / 2.0 - turned[2] / 2.0
+    return (
+        min(0.5, max(-0.5, (across * cos_a - along * sin_a) / shape[0])),
+        min(0.5, max(-0.5, (across * sin_a + along * cos_a) / shape[2])),
+    )
+
 
 def grow(solid: np.ndarray, box: list[int], tol: float, limit: tuple[int, int, int]) -> None:
     """Grow `box` (x0, y0, z0, x1, y1, z1, half-open) as far as the solid carries it.
@@ -415,22 +499,115 @@ def cover(solid: np.ndarray, max_parts: int, tol: float = 0.7, rest_stop: float 
     return boxes
 
 
+def turned_box(plan: np.ndarray) -> tuple[float, float, float, float, float] | None:
+    """The smallest turned rectangle around a footprint: centre x, centre z, width, depth, angle.
+
+    Lengths are in cells, the angle in degrees around the vertical axis, the way PART_SCHEMA
+    writes "rot". The step of a winder staircase is a wedge pointing somewhere between the axes:
+    upright it needs a staircase of slivers, turned it is one box.
+    """
+    xs, zs = np.nonzero(plan)
+    if not len(xs):
+        return None
+    px, pz = xs + 0.5, zs + 0.5
+    best: tuple[float, int, float, float, float, float] | None = None
+    for degrees in range(0, 90, 3):
+        angle = math.radians(degrees)
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        u = px * cos_a + pz * sin_a
+        v = -px * sin_a + pz * cos_a
+        # a cell is a square, so its own width counts on top of the span between the centres
+        width = float(u.max() - u.min()) + 1.0
+        depth = float(v.max() - v.min()) + 1.0
+        if best is None or width * depth < best[0]:
+            best = (width * depth, degrees, float(u.min() + u.max()) / 2, float(v.min() + v.max()) / 2, width, depth)
+    _, degrees, ucen, vcen, width, depth = best
+    angle = math.radians(degrees)
+    cos_a, sin_a = math.cos(angle), math.sin(angle)
+    return (ucen * cos_a - vcen * sin_a, ucen * sin_a + vcen * cos_a, width, depth, float(degrees))
+
+
+def _carries_on(run: dict[str, float], box: tuple[float, float, float, float, float]) -> bool:
+    """Is this layer's box the same body as the one below, only one layer higher?"""
+    x, z, width, depth, degrees = box
+    turn = abs(run["rot"] - degrees)
+    return (
+        min(turn, 90 - turn) <= 6
+        and abs(run["x"] - x) <= 1.5
+        and abs(run["z"] - z) <= 1.5
+        and abs(run["w"] - width) <= 1.5
+        and abs(run["d"] - depth) <= 1.5
+    )
+
+
+def turned_cover(solid: np.ndarray, max_parts: int, crumb: int = 3) -> list[dict[str, float]]:
+    """Cover a block with turned boxes: one per layer, joined as far as the body carries on.
+
+    A spiral staircase is a column with a wedge hanging off it every few layers. Growing boxes
+    against the grid cannot tell that - every wedge breaks into slivers along the axes. Reading
+    it layer by layer does: each wedge becomes one turned box, and the column, which stands in
+    every layer, becomes a single one.
+    """
+    from scipy.ndimage import label
+
+    _, ny, _ = solid.shape
+    neighbourhood = np.ones((3, 3), dtype=bool)
+    done: list[dict[str, float]] = []
+    runs: list[dict[str, float]] = []
+    for y in range(ny):
+        plan = solid[:, y, :]
+        fresh: list[tuple[float, float, float, float, float]] = []
+        if plan.any():
+            tagged, count = label(plan, structure=neighbourhood)
+            for piece in range(1, count + 1):
+                mask = tagged == piece
+                if int(mask.sum()) < crumb:  # a stray cell, not a part of the piece
+                    continue
+                box = turned_box(mask)
+                if box is not None:
+                    fresh.append(box)
+        carried: list[dict[str, float]] = []
+        for box in fresh:
+            goes_on = next((r for r in runs if _carries_on(r, box)), None)
+            if goes_on is not None:
+                runs.remove(goes_on)
+                goes_on["y1"] = y + 1
+                carried.append(goes_on)
+            else:
+                x, z, width, depth, degrees = box
+                carried.append({"x": x, "z": z, "w": width, "d": depth, "rot": degrees, "y0": y, "y1": y + 1})
+        done.extend(runs)
+        runs = carried
+    done.extend(runs)
+    done.sort(key=lambda b: -(b["w"] * b["d"] * (b["y1"] - b["y0"])))
+    return done[:max_parts]
+
+
 def share_out(sizes: list[int], budget: int) -> list[int]:
-    """How many parts each block gets: one each, the rest by size (damped, so small blocks count)."""
+    """How many parts each block gets: by size, and only to as many blocks as can be shown.
+
+    Giving every block one part first starves the piece the eye is looking for. A spiral
+    staircase arrives as a column with its steps plus thirty railing posts: one part each left
+    three for the stairs, and the item came out as a heap of sticks. Blocks come in biggest
+    first, and only the first few are served, so the main body always gets a real share. What
+    is left out is small by definition - a post among thirty of them.
+    """
     if not sizes:
         return []
-    count = min(len(sizes), budget)
-    sizes = sizes[:count]
-    shares = [1] * count
-    left = budget - count
+    # one part each, but only to as many blocks as can still be more than a single box; a crowd
+    # of small ones (the posts of a railing) would otherwise leave nothing for the body
+    served = min(len(sizes), max(5, budget // 3))
+    shares = [1] * served
+    left = budget - served
     if left > 0:
-        weight = np.array(sizes, dtype=float) ** 0.55
+        # by size, barely damped: a leg is told by its one part, a body needs many
+        weight = np.array(sizes[:served], dtype=float) ** 0.85
         weight /= weight.sum()
         extra = np.floor(weight * left).astype(int)
         for i in np.argsort(-(weight * left - extra))[: left - int(extra.sum())]:
             extra[i] += 1
         shares = [s + int(e) for s, e in zip(shares, extra, strict=True)]
-    return shares
+    return shares + [0] * (len(sizes) - served)
 
 
 def shape_of(solid: np.ndarray, box: list[int]) -> tuple[str, dict[str, float]]:
@@ -477,9 +654,11 @@ def shape_of(solid: np.ndarray, box: list[int]) -> tuple[str, dict[str, float]]:
             if (min(tw / max(bw, 1e-9), td / max(bd, 1e-9)) < 0.72) or (
                 max(tw / max(bw, 1e-9), td / max(bd, 1e-9)) > 1.38
             ):
+                # measured against this box, not against the item: loft_fields turns it into
+                # the fractions the pack is written in
                 extra = {
-                    "tw": max(0.05, min(1.0, tw / max(bw, 1e-9))),
-                    "td": max(0.05, min(1.0, td / max(bd, 1e-9))),
+                    "tw": max(0.05, min(2.0, tw / max(bw, 1e-9))),
+                    "td": max(0.05, min(2.0, td / max(bd, 1e-9))),
                 }
                 if abs(tcx - bcx) > 0.06:
                     extra["tx"] = tcx - bcx
@@ -489,14 +668,46 @@ def shape_of(solid: np.ndarray, box: list[int]) -> tuple[str, dict[str, float]]:
     return "box", extra
 
 
+def loft_fields(measure: dict[str, float], x: float, z: float, w: float, d: float) -> dict[str, float]:
+    """A loft's top rectangle in the item's own fractions, the way PART_SCHEMA reads it.
+
+    shape_of measures the top against the part's own box: how much of it is left up there and how
+    far it has moved. The schema means something else by those names - "tw" is a span of the item
+    like "w", "tx" a centre like "x" - and NeonPlan draws them that way. Writing the measure
+    straight into the pack makes a chair leg end in a top as wide as a third of the chair.
+    """
+    fields = {
+        "tw": min(1.0, max(0.001, w * measure.get("tw", 1.0))),
+        "td": min(1.0, max(0.001, d * measure.get("td", 1.0))),
+    }
+    if "tx" in measure:
+        fields["tx"] = min(0.5, max(-0.5, x + measure["tx"] * w))
+    if "tz" in measure:
+        fields["tz"] = min(0.5, max(-0.5, z + measure["tz"] * d))
+    return fields
+
+
 # --- how good is it --------------------------------------------------------
 
 
-def parts_solid(parts: list[dict[str, Any]], shape: tuple[int, int, int]) -> np.ndarray:
-    """Draw an item's parts back into a voxel grid, to compare them with the model."""
+def parts_solid(
+    parts: list[dict[str, Any]],
+    shape: tuple[int, int, int],
+    region: tuple[tuple[int, int], tuple[int, int], tuple[int, int]] | None = None,
+) -> np.ndarray:
+    """Draw an item's parts back into a voxel grid, to compare them with the model.
+
+    With `region` ((x0, x1), (y0, y1), (z0, z1)) only that corner of the grid is drawn. That is
+    what weighing up two ways of covering one block needs: the fractions stay the item's, the
+    array is only as big as the block.
+    """
     nx, ny, nz = shape
-    grid = np.zeros(shape, dtype=bool)
-    gx, gy, gz = np.mgrid[0:nx, 0:ny, 0:nz]
+    (rx0, rx1), (ry0, ry1), (rz0, rz1) = region or ((0, nx), (0, ny), (0, nz))
+    out = (max(0, rx1 - rx0), max(0, ry1 - ry0), max(0, rz1 - rz0))
+    grid = np.zeros(out, dtype=bool)
+    if not all(out):
+        return grid
+    gx, gy, gz = np.mgrid[rx0:rx1, ry0:ry1, rz0:rz1]
     fx = (gx + 0.5) / nx - 0.5
     fy = (gy + 0.5) / ny
     fz = (gz + 0.5) / nz - 0.5
@@ -505,20 +716,32 @@ def parts_solid(parts: list[dict[str, Any]], shape: tuple[int, int, int]) -> np.
         level = (fy >= y0) & (fy < y1)
         if not level.any():
             continue
+        plan_x, plan_z = fx, fz
+        turn = float(part.get("rot") or 0.0)
+        if turn:
+            # The viewer turns a part around its own centre, in metres (furniture.ts: b.rotated).
+            # The grid's cells are square in metres, its fractions are not, so the turn is done in
+            # cells: a point belongs to the part when turning it back lands inside the upright one.
+            angle = np.radians(turn)
+            cos_a, sin_a = np.cos(angle), np.sin(angle)
+            ux, uz = (fx - part["x"]) * nx, (fz - part["z"]) * nz
+            plan_x = part["x"] + (ux * cos_a + uz * sin_a) / nx
+            plan_z = part["z"] + (-ux * sin_a + uz * cos_a) / nz
         if part["shape"] == "loft":
-            # the cross-section tapers with height
+            # the cross-section tapers with height towards the top rectangle, which PART_SCHEMA
+            # gives in the same fractions as the bottom one and defaults to the bottom
             t = np.clip((fy - y0) / max(part["h"], 1e-9), 0, 1)
-            half_w = part["w"] / 2 * (1 + t * (part.get("tw", 1.0) - 1))
-            half_d = part["d"] / 2 * (1 + t * (part.get("td", 1.0) - 1))
-            cx = part["x"] + t * part.get("tx", 0.0)
-            cz = part["z"] + t * part.get("tz", 0.0)
+            half_w = (part["w"] + t * (part.get("tw", part["w"]) - part["w"])) / 2
+            half_d = (part["d"] + t * (part.get("td", part["d"]) - part["d"])) / 2
+            cx = part["x"] + t * (part.get("tx", part["x"]) - part["x"])
+            cz = part["z"] + t * (part.get("tz", part["z"]) - part["z"])
         else:
-            half_w = np.full(shape, part["w"] / 2)
-            half_d = np.full(shape, part["d"] / 2)
-            cx = np.full(shape, part["x"])
-            cz = np.full(shape, part["z"])
-        dx = np.abs(fx - cx)
-        dz = np.abs(fz - cz)
+            half_w = np.full(out, part["w"] / 2)
+            half_d = np.full(out, part["d"] / 2)
+            cx = np.full(out, part["x"])
+            cz = np.full(out, part["z"])
+        dx = np.abs(plan_x - cx)
+        dz = np.abs(plan_z - cz)
         if part["shape"] == "cyl":
             inside = (dx / np.maximum(half_w, 1e-9)) ** 2 + (dz / np.maximum(half_d, 1e-9)) ** 2 <= 1.0
         else:
@@ -542,6 +765,96 @@ def _round(value: float, digits: int = 4) -> float:
     return 0.0 if out == 0 else out
 
 
+def grown_parts(
+    mask: np.ndarray, role: str, budget: int, shape: tuple[int, int, int], tol: float
+) -> list[dict[str, Any]]:
+    """A block covered by boxes grown against the grid, as fractions of the item.
+
+    A block that lies at an angle - a diagonal brace, a cabinet across a corner - is covered in
+    a grid turned with it and written back with "rot", because upright boxes can only
+    stair-case along such a block.
+    """
+    nx, ny, nz = shape
+    degrees, gain = main_angle(mask.any(axis=1))
+    slanted = gain >= TURN_GAIN and abs(degrees) >= TURN_STEP
+    block = upright(mask, degrees) if slanted else mask
+    made: list[dict[str, Any]] = []
+    for box in cover(block, budget, tol=tol):
+        x0, y0, z0, x1, y1, z1 = box
+        kind, extra = shape_of(block, box)
+        # a turned box may reach along the item's diagonal, which is more than the schema's
+        # longest span, so it is cut to that
+        width = min(1.0, max(0.004, (x1 - x0) / nx))
+        depth = min(1.0, max(0.004, (z1 - z0) / nz))
+        if kind == "cyl":
+            # the viewer takes the smaller of the two as the diameter, so say what we mean
+            width = depth = min(width, depth)
+        if slanted:
+            centre_x, centre_z = turn_back(box, block.shape, shape, degrees)
+        else:
+            centre_x = (x0 + x1) / 2.0 / nx - 0.5
+            centre_z = (z0 + z1) / 2.0 / nz - 0.5
+        part: dict[str, Any] = {
+            "shape": kind,
+            "x": _round(centre_x),
+            "z": _round(centre_z),
+            "w": _round(width),
+            "d": _round(depth),
+            "y": _round(y0 / ny),
+            "h": _round(max(0.004, (y1 - y0) / ny)),
+            "color": role,
+        }
+        if slanted:
+            part["rot"] = _round(degrees, 1)
+        if kind == "loft":
+            extra = loft_fields(extra, part["x"], part["z"], width, depth)
+        for key, value in extra.items():
+            part[key] = _round(value)
+        made.append(part)
+    return made
+
+
+def layered_parts(
+    mask: np.ndarray, role: str, budget: int, shape: tuple[int, int, int]
+) -> list[dict[str, Any]]:
+    """A block read layer by layer: one turned box per layer, joined as far as it carries on."""
+    nx, ny, nz = shape
+    made: list[dict[str, Any]] = []
+    for box in turned_cover(mask, budget):
+        part: dict[str, Any] = {
+            "shape": "box",
+            "x": _round(min(0.5, max(-0.5, box["x"] / nx - 0.5))),
+            "z": _round(min(0.5, max(-0.5, box["z"] / nz - 0.5))),
+            "w": _round(min(1.0, max(0.004, box["w"] / nx))),
+            "d": _round(min(1.0, max(0.004, box["d"] / nz))),
+            "y": _round(box["y0"] / ny),
+            "h": _round(max(0.004, (box["y1"] - box["y0"]) / ny)),
+            "color": role,
+        }
+        if box["rot"] >= TURN_STEP / 2:
+            part["rot"] = _round(box["rot"], 1)
+        made.append(part)
+    return made
+
+
+def block_quality(parts: list[dict[str, Any]], mask: np.ndarray, shape: tuple[int, int, int]) -> float:
+    """How well a block's own parts cover it, measured on its corner of the grid (and a little
+    around it, so a box that sticks out is counted against itself)."""
+    if not parts:
+        return -1.0
+    where = [np.nonzero(mask.any(axis=(1, 2)))[0], np.nonzero(mask.any(axis=(0, 2)))[0], np.nonzero(mask.any(axis=(0, 1)))[0]]
+    if any(not len(w) for w in where):
+        return -1.0
+    pad = 3
+    region = tuple(
+        (max(0, int(w[0]) - pad), min(shape[i], int(w[-1]) + 1 + pad)) for i, w in enumerate(where)
+    )
+    drawn = parts_solid(parts, shape, region)  # type: ignore[arg-type]
+    inside = mask[region[0][0] : region[0][1], region[1][0] : region[1][1], region[2][0] : region[2][1]]
+    union = int((drawn | inside).sum())
+    return float((drawn & inside).sum()) / union if union else 0.0
+
+
 def build_item(
     path: Path,
     item_id: str,
@@ -553,44 +866,28 @@ def build_item(
     plantish: bool = False,
     extras: dict[str, Any] | None = None,
     report: dict[str, Any] | None = None,
+    cell: float = 0.045,
 ) -> dict[str, Any]:
     """A pack item for the model at `path`; `report` collects how well it came out."""
     mesh, groups = load_faces(path, plantish=plantish)
     mesh, real = normalise(mesh, size)
     span = mesh.bounds[1] - mesh.bounds[0]
-    longest = max(float(span.max()), 1e-9)
-    shape = (
-        max(3, round(grid * float(span[0]) / longest)),
-        max(3, round(grid * float(span[1]) / longest)),
-        max(3, round(grid * float(span[2]) / longest)),
-    )
+    shape = voxels(span, grid, cell)
     found = blocks(mesh, groups, shape)
     shares = share_out([int(mask.sum()) for mask, _ in found], max_parts)
 
-    nx, ny, nz = shape
     parts: list[dict[str, Any]] = []
     for (mask, role), budget in zip(found, shares, strict=False):
-        for box in cover(mask, budget, tol=tol):
-            x0, y0, z0, x1, y1, z1 = box
-            kind, extra = shape_of(mask, box)
-            width = max(0.004, (x1 - x0) / nx)
-            depth = max(0.004, (z1 - z0) / nz)
-            if kind == "cyl":
-                # the viewer takes the smaller of the two as the diameter, so say what we mean
-                width = depth = min(width, depth)
-            part: dict[str, Any] = {
-                "shape": kind,
-                "x": _round((x0 + x1) / 2.0 / nx - 0.5),
-                "z": _round((z0 + z1) / 2.0 / nz - 0.5),
-                "w": _round(width),
-                "d": _round(depth),
-                "y": _round(y0 / ny),
-                "h": _round(max(0.004, (y1 - y0) / ny)),
-                "color": role,
-            }
-            for key, value in extra.items():
-                part[key] = _round(value)
-            parts.append(part)
+        if budget <= 0:  # a block the budget could not reach: a post among thirty of them
+            continue
+        # Two ways to cover a block, and the one that fits it better wins. Growing boxes against
+        # the grid is right for a body that stands square; reading the block layer by layer is
+        # right where the shape turns as it rises - the steps of a spiral staircase, which
+        # upright boxes can only break into slivers.
+        choices = [grown_parts(mask, role, budget, shape, tol)]
+        if budget >= 3:
+            choices.append(layered_parts(mask, role, budget, shape))
+        parts.extend(max(choices, key=lambda made: block_quality(made, mask, shape)))
     if not parts:  # a model we could not voxelize: one block, so the item still works
         parts = [{"shape": "box", "x": 0, "z": 0, "w": 1, "d": 1, "y": 0, "h": 1, "color": "body"}]
 
@@ -629,10 +926,9 @@ def render_parts(item: dict[str, Any], width: int = 320) -> Any:
         cx, cz = part["x"] * sw, part["z"] * sd
         w, d = part["w"] * sw, part["d"] * sd
         y0, h = part["y"] * sh, part["h"] * sh
-        tw = part.get("tw", 1.0) * w
-        td = part.get("td", 1.0) * d
-        tx = cx + part.get("tx", 0.0) * sw
-        tz = cz + part.get("tz", 0.0) * sd
+        # the top rectangle is given like the bottom one (PART_SCHEMA), not as a ratio
+        tw, td = part.get("tw", part["w"]) * sw, part.get("td", part["d"]) * sd
+        tx, tz = part.get("tx", part["x"]) * sw, part.get("tz", part["z"]) * sd
         if part["shape"] == "cyl":
             steps = 16
             ang = np.linspace(0, 2 * np.pi, steps, endpoint=False)
@@ -643,6 +939,15 @@ def render_parts(item: dict[str, Any], width: int = 320) -> Any:
             corners = np.array([[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]])
             ring_lo = np.stack([cx + corners[:, 0] * w, np.full(4, y0), cz + corners[:, 1] * d], axis=1)
             ring_hi = np.stack([tx + corners[:, 0] * tw, np.full(4, y0 + h), tz + corners[:, 1] * td], axis=1)
+        turn = float(part.get("rot") or 0.0)
+        if turn:
+            # around the part's own centre, in metres, the way the viewer does it (b.rotated)
+            angle = np.radians(turn)
+            cos_a, sin_a = np.cos(angle), np.sin(angle)
+            for ring in (ring_lo, ring_hi):
+                ux, uz = ring[:, 0] - cx, ring[:, 2] - cz
+                ring[:, 0] = cx + ux * cos_a - uz * sin_a
+                ring[:, 2] = cz + ux * sin_a + uz * cos_a
         n = len(ring_lo)
         for i in range(n):
             j = (i + 1) % n
@@ -740,7 +1045,8 @@ def main(argv: list[str] | None = None) -> int:
     one.add_argument("--name", required=True, help='"de=Stuhl,en=Chair"')
     one.add_argument("--size", nargs=3, type=float, metavar=("W", "D", "H"), help="real size in metres")
     one.add_argument("--parts", type=int, default=28, help="most parts to use (max 60)")
-    one.add_argument("--grid", type=int, default=30, help="voxels along the longest side")
+    one.add_argument("--grid", type=int, default=30, help="fewest voxels along the longest side")
+    one.add_argument("--cell", type=float, default=0.045, help="voxel edge in metres (what sets the detail)")
     one.add_argument("--tol", type=float, default=0.7, help="how solid an added slice must be")
     one.add_argument("--plant", action="store_true", help="greenery: green may become the plant colour")
     one.add_argument("--surface", action="store_true", help="its top carries other items")
@@ -783,6 +1089,7 @@ def main(argv: list[str] | None = None) -> int:
             tuple(args.size) if args.size else None,
             max_parts=min(args.parts, 60),
             grid=args.grid,
+            cell=args.cell,
             tol=args.tol,
             plantish=args.plant,
             extras=extras,
