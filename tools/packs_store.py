@@ -36,10 +36,15 @@ import time
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location("fp3d_packs", ROOT / "custom_components" / "neonplan3d" / "packs.py")
-assert _spec and _spec.loader
-packs = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(packs)
+# Under the tests the integration is imported as a package already; reusing that module keeps
+# one PackError class, so what this tool raises is what a test catches. Run as a script nothing
+# of it is loaded and the file is read directly (packs.py needs no Home Assistant).
+packs = sys.modules.get("custom_components.neonplan3d.packs")
+if packs is None:
+    _spec = importlib.util.spec_from_file_location("fp3d_packs", ROOT / "custom_components" / "neonplan3d" / "packs.py")
+    assert _spec and _spec.loader
+    packs = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(packs)
 
 STORE = "/config/.storage/neonplan3d.packs"
 UUID = "/config/.storage/core.uuid"

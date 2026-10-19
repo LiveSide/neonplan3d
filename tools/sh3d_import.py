@@ -36,12 +36,17 @@ from mesh2pack import build_item
 
 # the integration's own schema, so a bad item is caught here and not when Home Assistant refuses
 # the whole pack
-_spec = importlib.util.spec_from_file_location(
-    "fp3d_packs", Path(__file__).resolve().parent.parent / "custom_components" / "neonplan3d" / "packs.py"
-)
-assert _spec and _spec.loader
-packs = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(packs)
+# Under the tests the integration is imported as a package already; reusing that module keeps
+# one PackError class, so what this tool raises is what a test catches. Run as a script nothing
+# of it is loaded and the file is read directly (packs.py needs no Home Assistant).
+packs = sys.modules.get("custom_components.neonplan3d.packs")
+if packs is None:
+    _spec = importlib.util.spec_from_file_location(
+        "fp3d_packs", Path(__file__).resolve().parent.parent / "custom_components" / "neonplan3d" / "packs.py"
+    )
+    assert _spec and _spec.loader
+    packs = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(packs)
 
 # Categories we do not take over. NeonPlan 3D draws doors and windows itself, as part of the wall.
 SKIP_CATEGORIES = {"Doors and windows"}
