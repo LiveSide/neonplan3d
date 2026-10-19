@@ -100,6 +100,38 @@ und schreibt sie ins Bundle. Wer baut, braucht `--stamp` aus
 `tools/fork_release.py` also nicht; das Skript bleibt für den Fall, dass nur
 die Versionsnummer geändert wird.
 
+## Die Python-Tests laufen lassen
+
+Maßgeblich ist die CI (`.github/workflows/ci.yml`): Linux, Python 3.13,
+`pip install -r requirements_test.txt ruff mypy`, dann `ruff check`,
+`ruff format --check`, `mypy` und `pytest`. `requirements_test.txt` pinnt
+`pytest-homeassistant-custom-component` **absichtlich nicht** — damit wird immer
+gegen die aktuelle Home-Assistant-Version getestet, und ein Upstream-Merge zeigt
+sofort, was eine neue HA-Version kaputt macht.
+
+Die `2025.1.0` in `hacs.json` ist davon unberührt: das ist die Mindestversion, die
+HACS prüft, nicht die Testversion. Wer ein venv mit HA 2025.1 baut, bekommt rund
+30 Fehlschläge und ebenso viele Errors — nicht wegen des Forks, sondern weil die
+Testfixtures von `pytest-homeassistant-custom-component` zur jeweiligen HA-Version
+gehören. Gemessen am 2026-10-19: HA 2025.1.4 → 33 failed / 29 errors,
+HA 2026.2.3 → 125 passed.
+
+Unter Windows kommt Home Assistant nicht einmal durch den Import (`fcntl`,
+`resource`). Was dafür nötig ist, steht in
+[`tests/windows/README.md`](tests/windows/README.md) — kurz:
+
+```bash
+uv venv --python 3.13 "$HOME/.venvs/neonplan3d-test"   # HA verlangt >=3.13.2
+export VIRTUAL_ENV="$HOME/.venvs/neonplan3d-test"
+echo "lru-dict==1.4.1" > overrides.txt                 # HA pinnt 1.3.0, kein cp313-Wheel
+uv pip install --override overrides.txt -r requirements_test.txt
+PYTHONPATH="$(pwd);$(pwd)/tests/windows" "$HOME/.venvs/neonplan3d-test/Scripts/python.exe" -m pytest -p np3d_win_sockets -q
+```
+
+`scipy` und `trimesh` stehen in `requirements_test.txt`, weil die Geometrietests zu
+`tools/mesh2pack.py` sich sonst selbst überspringen: 14 Tests, die stillschweigend
+nichts prüfen.
+
 ## Updates des Originals einpflegen
 
 Der Fork hat zwei Remotes: `origin` (dieses Repo) und `upstream` (das Original).
