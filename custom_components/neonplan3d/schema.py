@@ -658,6 +658,11 @@ FLOOR_SCHEMA = vol.Schema(
         vol.Optional("ha_floor", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # the camera this floor opens with (None = the house view's side)
         vol.Optional("start_view", default=None): vol.Any(None, START_VIEW_SCHEMA),
+        # FORK d14tk: part of the floor above or below, not a storey of its own (a street level with garages
+        # half a storey under the flat, reached by outdoor stairs); None = a storey. True was "above" in an early build.
+        vol.Optional("attached", default=None): vol.Any(
+            None, vol.All(vol.Any(True, "above", "below"), lambda v: "above" if v is True else v)
+        ),
     },
     extra=vol.ALLOW_EXTRA,
 )

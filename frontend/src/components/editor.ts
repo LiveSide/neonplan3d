@@ -33,7 +33,7 @@ import { bestFace, clampField, faceAt, faceCompass, fieldFace, fieldModules, GRO
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import { storedImageIds } from "../transfer.ts";
 import { fromWall, furnitureOnWall, openingsOnWall, roomEdgeFrame, slideAlong, toWall, type WallFrame } from "../geometry/wall-frame.ts";
-import { type CarLinks, type Background, OUTDOOR_TOP, sidelightLayout, DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS,
+import { type CarLinks, type Background, floorAttach, type FloorAttach, OUTDOOR_TOP, sidelightLayout, DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS,
   normalizeBuilding,
   furnitureFootprint,
   type FreeWall,
@@ -9717,6 +9717,19 @@ export class Fp3dEditor extends LitElement {
                   </div>`
                 : nothing}
               ${this.len(this.t("height"), floor.height, (v) => this.updateFloor({ height: Math.max(1, v) }), 0.05, 1)}
+              ${floors.length > 1
+                ? html`<label class="fp3d-field fp3d-wide" title=${this.t("floor_attached_hint")}
+                    >${this.t("floor_attached")}
+                    <select
+                      ?disabled=${!admin}
+                      @change=${(e: Event) => this.updateFloor({ attached: ((e.target as HTMLSelectElement).value || null) as FloorAttach | null })}
+                    >
+                      <option value="" ?selected=${!floorAttach(floor)}>${this.t("floor_attached_none")}</option>
+                      <option value="above" ?selected=${floorAttach(floor) === "above"}>${this.t("floor_attached_above")}</option>
+                      <option value="below" ?selected=${floorAttach(floor) === "below"}>${this.t("floor_attached_below")}</option>
+                    </select></label
+                  >`
+                : nothing}
               ${Object.keys(this.hass?.floors ?? {}).length
                 ? html`<label class="fp3d-field fp3d-wide"
                     >${this.t("ha_floor")}

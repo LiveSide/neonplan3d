@@ -332,6 +332,36 @@ export interface Floor {
   ha_floor: string | null;
   /** The camera this floor opens with (#182): another side than the house view; null = the house view's side. */
   start_view?: StartView | null;
+  /**
+   * Part of the floor above or below rather than a storey of its own: a street level with garages half a storey below
+   * the flat and reached by its outdoor stairs, a split level. It shows together with that floor (no gap in the house
+   * view, in place and at full strength when either is opened) and has no floor label of its own. Null: a storey.
+   */
+  attached?: FloorAttach | null;
+}
+
+/** The neighbouring floor an attached floor belongs to. */
+export type FloorAttach = "above" | "below";
+
+/** Which neighbour a floor belongs to (an early build stored `true` for the floor above). */
+export function floorAttach(floor: Pick<Floor, "attached">): FloorAttach | null {
+  const a = floor.attached as FloorAttach | boolean | null | undefined;
+  return a === true ? "above" : a === "above" || a === "below" ? a : null;
+}
+
+/**
+ * The levels of a floor list ordered bottom to top: an index per floor; floors joined by `attached` share one. A floor
+ * attached to the floor above shares its level, one attached to the floor below shares that one's.
+ */
+export function floorLevels(ordered: readonly Pick<Floor, "attached">[]): number[] {
+  const out: number[] = [];
+  let level = -1;
+  ordered.forEach((f, i) => {
+    const joined = i > 0 && (floorAttach(ordered[i - 1]) === "above" || floorAttach(f) === "below");
+    if (!joined) level++;
+    out.push(level);
+  });
+  return out;
 }
 
 /** A wall drawn on its own, from a to b along its centre line. */

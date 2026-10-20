@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { emptyBuilding, floorElevation, newFloor, outdoorZones, zonesOf, openingPreset, openingStyle, normalizeBuilding, outdoorDrop, outdoorGround, resizeFurniture, roomTiles, sidelightLayout, spotGrid, surfaceHeight, type Furniture } from "./model.ts";
+import { emptyBuilding, floorAttach, floorElevation, floorLevels, newFloor, outdoorZones, zonesOf, openingPreset, openingStyle, normalizeBuilding, outdoorDrop, outdoorGround, resizeFurniture, roomTiles, sidelightLayout, spotGrid, surfaceHeight, type Furniture } from "./model.ts";
 
 test("a sidelight sits opposite the hinge, on the hinge side when asked, and keeps the leaf at least half a metre", () => {
   const none = {};
@@ -189,4 +189,25 @@ test("outdoor areas with a Home Assistant area act as rooms; hedges, fences and 
   const zones = outdoorZones(floor);
   assert.deepEqual(zones.map((z) => [z.id, z.name, z.area_id, z.outdoor]), [["g", "Garten", "garden", true]]);
   assert.deepEqual(zonesOf(floor).map((z) => z.id), ["r", "g"]);
+});
+
+test("attached floors share a level with the floor above or below", () => {
+  // a street level with garages half a storey under the flat, reached by outdoor stairs: one level with the flat
+  assert.deepEqual(floorLevels([{ attached: "above" }, {}, {}]), [0, 0, 1]);
+  // a split level attached to the floor below it
+  assert.deepEqual(floorLevels([{}, { attached: "below" }, {}]), [0, 0, 1]);
+  // storeys of their own
+  assert.deepEqual(floorLevels([{}, { attached: null }, {}]), [0, 1, 2]);
+  // a chain: street level, flat, mezzanine over the flat
+  assert.deepEqual(floorLevels([{ attached: "above" }, {}, { attached: "below" }, {}]), [0, 0, 0, 1]);
+  // nothing above or below to belong to: a level of its own
+  assert.deepEqual(floorLevels([{ attached: "below" }]), [0]);
+  assert.deepEqual(floorLevels([{}, { attached: "above" }]), [0, 1]);
+});
+
+test("an early attached flag (true) means the floor above", () => {
+  assert.equal(floorAttach({ attached: true as unknown as "above" }), "above");
+  assert.equal(floorAttach({ attached: "below" }), "below");
+  assert.equal(floorAttach({}), null);
+  assert.equal(floorAttach({ attached: "sideways" as unknown as "above" }), null);
 });

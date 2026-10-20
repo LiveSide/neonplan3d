@@ -4,6 +4,7 @@ import pytest
 import voluptuous as vol
 
 from custom_components.neonplan3d.schema import (
+    FLOOR_SCHEMA,
     FURNITURE_SCHEMA,
     HOLOGRAM_SCHEMA,
     OPENING_SCHEMA,
@@ -168,3 +169,19 @@ def test_live_director_is_off_unless_switched_on() -> None:
         SETTINGS_SCHEMA({**base, "director": {"motion": "cats"}})
     with pytest.raises(vol.Invalid):
         SETTINGS_SCHEMA({**base, "director": {"hold": 2}})
+
+
+FLOOR = {"id": "f1", "name": "Wohnung", "elevation": 0, "height": 2.5, "cut_height": 1.2, "rooms": [], "openings": [], "furniture": [], "placements": [], "background": None}
+
+
+def test_floor_attached_to_the_floor_above_or_below() -> None:
+    # FORK d14tk: a street level with garages half a storey under the flat belongs to the flat above it
+    assert FLOOR_SCHEMA(FLOOR)["attached"] is None
+    assert FLOOR_SCHEMA({**FLOOR, "attached": "above"})["attached"] == "above"
+    assert FLOOR_SCHEMA({**FLOOR, "attached": "below"})["attached"] == "below"
+    # an early build of the fork stored True for the floor above
+    assert FLOOR_SCHEMA({**FLOOR, "attached": True})["attached"] == "above"
+    with pytest.raises(vol.Invalid):
+        FLOOR_SCHEMA({**FLOOR, "attached": "sideways"})
+    with pytest.raises(vol.Invalid):
+        FLOOR_SCHEMA({**FLOOR, "attached": False})
