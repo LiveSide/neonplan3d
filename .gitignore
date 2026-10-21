@@ -17,3 +17,8 @@ neonplan3d.zip
 # Fork: tools/packs_store.py legt den Store einer Installation hier ab, bevor es
 # schreibt. Darin stecken auch gekaufte Packs, das Repo ist oeffentlich.
 backups/
+
+# Fork: die Publisher-Datei dieser Installation und der memsearch-Index gehoeren
+# niemandem ausser dieser Maschine, das Repo ist oeffentlich.
+neonplan3d_publishers.json
+.memsearch/

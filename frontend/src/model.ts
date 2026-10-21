@@ -65,6 +65,14 @@ export interface Room {
 
 export type OpeningType = "door" | "window" | "garage";
 
+/** Where a window gets its board / sill: automatic, none, only inside or only outside (#655). */
+export type SillBoard = "auto" | "none" | "inside" | "outside";
+export const SILL_BOARDS: readonly SillBoard[] = ["auto", "none", "inside", "outside"];
+
+/** Where a window's frame sits across the wall: in the middle (default), flush with the outer or with the inner face. */
+export type FramePos = "middle" | "outside" | "inside";
+export const FRAME_POSITIONS: readonly FramePos[] = ["middle", "outside", "inside"];
+
 /** Entity link of an opening: null = assigned automatically by area, "none" = no entity. */
 export type EntityRef = string | null;
 
@@ -126,6 +134,19 @@ export interface Opening {
   well_rim?: number | null;
   /** Highlight in 3D while open (null, default) or while closed (a WC or a child's room door). */
   mark?: "closed" | null;
+  /**
+   * Windows: the window board inside and the sill outside. "auto" (default): both from a sill height of
+   * 0.3 m, none for a window that sits directly on another opening of the same wall (a transom light, a
+   * split floor-to-ceiling front, #655); "none", "inside" or "outside" force it.
+   */
+  // FORK d14tk: a window keeps its own sill board (see FORK.md)
+  sill_board?: SillBoard | null;
+  /**
+   * Windows: where the frame sits across the wall. "middle" (default, also null) as before; "outside" flush
+   * with the outer face (a window set into the insulation, a deep reveal inside), "inside" flush with the room.
+   */
+  // FORK d14tk: where the frame sits in the wall (see FORK.md)
+  frame_pos?: FramePos | null;
   /** Ask before moving the blind or garage door; it then does not follow a swipe either. */
   confirm?: boolean;
   cover: EntityRef;
@@ -365,6 +386,38 @@ export interface Floor {
   ha_floor: string | null;
   /** The camera this floor opens with (#182): another side than the house view; null = the house view's side. */
   start_view?: StartView | null;
+  /**
+   * Part of the floor above or below rather than a storey of its own: a street level with garages half a storey below
+   * the flat and reached by its outdoor stairs, a split level. It shows together with that floor (no gap in the house
+   * view, in place and at full strength when either is opened) and has no floor label of its own. Null: a storey.
+   */
+  // FORK d14tk: a floor can belong to the floor above or below it (see FORK.md)
+  attached?: FloorAttach | null;
+}
+
+/** The neighbouring floor an attached floor belongs to. */
+export type FloorAttach = "above" | "below";
+
+/** Which neighbour a floor belongs to (an early build stored `true` for the floor above). */
+// --- FORK d14tk: attached floors, a level that is not a storey of its own (see FORK.md) ---
+export function floorAttach(floor: Pick<Floor, "attached">): FloorAttach | null {
+  const a = floor.attached as FloorAttach | boolean | null | undefined;
+  return a === true ? "above" : a === "above" || a === "below" ? a : null;
+}
+
+/**
+ * The levels of a floor list ordered bottom to top: an index per floor; floors joined by `attached` share one. A floor
+ * attached to the floor above shares its level, one attached to the floor below shares that one's.
+ */
+export function floorLevels(ordered: readonly Pick<Floor, "attached">[]): number[] {
+  const out: number[] = [];
+  let level = -1;
+  ordered.forEach((f, i) => {
+    const joined = i > 0 && (floorAttach(ordered[i - 1]) === "above" || floorAttach(f) === "below");
+    if (!joined) level++;
+    out.push(level);
+  });
+  return out;
 }
 
 /** A wall drawn on its own, from a to b along its centre line. */
@@ -674,6 +727,12 @@ export interface BuildingSettings {
   rain_warning?: boolean;
   /** Rain from a weather station of your own (a rain sensor or a rain rate) instead of the weather entity (D407). */
   rain_entity?: string | null;
+  /**
+   * Only for the warning: an entity that says when an open window is worth a warning (a rain sensor, a rain rate above
+   * 0.1 mm/h, or a binary sensor of your own such as "heavy rain or rain with strong wind"). The rain in 3D keeps
+   * following the weather entity or rain_entity, so light rain still shows. Null: the warning follows the rain.
+   */
+  rain_warning_entity?: string | null;
   /** Warnings name the device after the room (default on); off = only "Room · Smoke" when the warning has a room (#374). */
   alert_names?: boolean;
   /** An entity that reports a power outage (a grid or UPS sensor); null = no outage warning (#214). */

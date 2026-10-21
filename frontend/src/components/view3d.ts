@@ -3310,6 +3310,7 @@ export class Fp3dView3d extends LitElement {
       furnitureId: f.id,
       pack: item ? f.type : null,
       lightY: item ? (item.mount === "ceiling" ? base : base + f.h * 0.85) : undefined,
+      lightAt: item ? glowCentre(item, f, base) : undefined,
       // a running colour effect – not a "mode" some integrations report as their effect (LocalTuya: "white",
       // "colour"; others "manual", "default", an empty one)
       effect: !!st && st.state === "on" && typeof st.attributes.effect === "string" && !/^(none|off|solid|static|normal|white|colou?r|rgb|manual|default|-|)$/i.test(st.attributes.effect.trim()),
@@ -6627,4 +6628,30 @@ function markerHeight(f: Furniture): number {
   // wall TV and wall cabinet: above the item (their height above the floor comes from mountBase)
   if (f.type === "tv_wall" || f.type === "kitchen_wall") return f.h + 0.25;
   return f.h + 0.35;
+}
+
+/**
+ * The middle of a pack lamp's glowing parts in the plan (x, height above the floor, z), so its halo and its light sit
+ * in the glass (a lantern standing off the wall); undefined when the item has no glowing parts.
+ */
+// FORK d14tk: a pack lamp lights from its glowing parts, not from the middle of the item (see FORK.md)
+export function glowCentre(
+  item: { parts: { x: number; z: number; y: number; w: number; d: number; h: number; glow?: boolean }[] },
+  f: { x: number; z: number; w: number; d: number; h: number; rotation: number; mirror?: boolean | null },
+  base: number,
+): [number, number, number] | undefined {
+  const parts = item.parts.filter((p) => p.glow);
+  if (!parts.length) return undefined;
+  const x0 = Math.min(...parts.map((p) => p.x - p.w / 2));
+  const x1 = Math.max(...parts.map((p) => p.x + p.w / 2));
+  const z0 = Math.min(...parts.map((p) => p.z - p.d / 2));
+  const z1 = Math.max(...parts.map((p) => p.z + p.d / 2));
+  const y0 = Math.min(...parts.map((p) => p.y));
+  const y1 = Math.max(...parts.map((p) => p.y + p.h));
+  const lx = ((x0 + x1) / 2) * f.w * (f.mirror ? -1 : 1);
+  const lz = ((z0 + z1) / 2) * f.d;
+  const a = (f.rotation * Math.PI) / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [f.x + lx * c - lz * s, base + ((y0 + y1) / 2) * f.h, f.z + lx * s + lz * c];
 }

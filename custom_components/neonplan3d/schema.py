@@ -168,6 +168,11 @@ OPENING_SCHEMA = vol.Schema(
         vol.Optional("well_rim", default=None): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=-0.3, max=1))),
         # highlight in 3D while open (None) or while closed ("closed": a WC or a child's room door)
         vol.Optional("mark", default=None): vol.Any(None, vol.In(["closed"])),
+        # windows: board inside and sill outside, "auto" (from 0.3 m sill height, none for a window
+        # directly above another opening), "none", "inside" or "outside"
+        vol.Optional("sill_board", default="auto"): vol.Any(None, vol.In(["auto", "none", "inside", "outside"])),
+        # windows: frame in the middle of the wall (None, "middle"), flush with the outer face or the room
+        vol.Optional("frame_pos", default=None): vol.Any(None, vol.In(["middle", "outside", "inside"])),
         # ask before moving the blind or garage door (no moving by a swipe then)
         vol.Optional("confirm", default=False): bool,
         vol.Optional("cover", default=None): _ENTITY_REF,
@@ -696,6 +701,11 @@ FLOOR_SCHEMA = vol.Schema(
         vol.Optional("ha_floor", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # the camera this floor opens with (None = the house view's side)
         vol.Optional("start_view", default=None): vol.Any(None, START_VIEW_SCHEMA),
+        # FORK d14tk: part of the floor above or below, not a storey of its own (a street level with garages
+        # half a storey under the flat, reached by outdoor stairs); None = a storey. True was "above" in an early build.
+        vol.Optional("attached", default=None): vol.Any(
+            None, vol.All(vol.Any(True, "above", "below"), lambda v: "above" if v is True else v)
+        ),
     },
     extra=vol.ALLOW_EXTRA,
 )
@@ -756,6 +766,9 @@ SETTINGS_SCHEMA = vol.Schema(
         vol.Optional("rain_warning", default=True): bool,
         # rain from an own weather station (a rain sensor or rain rate) instead of the weather entity
         vol.Optional("rain_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # FORK d14tk: only for the window warning, the entity that says when rain is worth a warning
+        # (heavy rain, rain with strong wind); the rain in 3D keeps following the weather
+        vol.Optional("rain_warning_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # warnings name the device after the room
         vol.Optional("alert_names", default=True): bool,
         # an entity that reports a power outage (None = no outage warning)

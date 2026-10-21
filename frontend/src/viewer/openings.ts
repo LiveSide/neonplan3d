@@ -101,6 +101,62 @@ function flatPanel(buf: GeoBuffer, tf: Tf, x0: number, x1: number, n0: number, n
   buf.tri(a, c, d, color, color, color, [0, v0, 1, v1, 0, v1], fold);
 }
 
+/**
+ * True when another opening of the same wall sits directly below this one – its span along the wall
+ * overlapping by at least half of the narrower one, and its top at (or up to 0.3 m under) this
+ * window's sill: a transom light over a window or door, or a split floor-to-ceiling front. Such an
+ * upper part has no sill of its own (#655).
+ */
+export function stackedOnOpening(info: OpeningInfo, infos: readonly OpeningInfo[]): boolean {
+  const [ax, az] = info.axis;
+  for (const other of infos) {
+    if (other === info || other.opening.id === info.opening.id) continue;
+    // the same wall line: parallel axes, and its start on this opening's wall axis
+    const dot = ax * other.axis[0] + az * other.axis[1];
+    if (Math.abs(dot) < 0.999) continue;
+    const dx = other.start[0] - info.start[0];
+    const dz = other.start[1] - info.start[1];
+    if (Math.abs(dx * az - dz * ax) > 0.03) continue;
+    // its span in this opening's x
+    const u = dx * ax + dz * az;
+    const u0 = dot > 0 ? u : u - other.width;
+    const u1 = u0 + other.width;
+    const overlap = Math.min(info.width, u1) - Math.max(0, u0);
+    if (overlap < Math.min(info.width, other.width) * 0.5) continue;
+    const gap = info.sill - other.top;
+    if (gap >= -0.05 && gap <= 0.3) return true;
+  }
+  return false;
+}
+
+/** Which of the window board (inside) and the sill (outside) a window gets, by its setting and position. */
+export function sillBoards(info: OpeningInfo, infos: readonly OpeningInfo[]): { inside: boolean; outside: boolean } {
+  // FORK d14tk: the window's own sill board (see FORK.md)
+  const mode = info.opening.sill_board ?? "auto";
+  if (mode === "none") return { inside: false, outside: false };
+  if (mode === "inside" || mode === "outside") {
+    const room = info.sill > 0.05;
+    return { inside: room && mode === "inside", outside: room && mode === "outside" };
+  }
+  const auto = info.sill > 0.3 && !stackedOnOpening(info, infos);
+  return { inside: auto, outside: auto && info.exterior };
+}
+
+/**
+ * Where a window's frame sits across the wall (its centre plane, n towards the room): in the middle of the
+ * wall, or flush with the outer face or with the room face by the window's frame_pos. The frame is 0.07 deep
+ * and the sash sits 0.06 in front of it on the room side; a wall too thin for that keeps the middle.
+ */
+export function frameMid(info: OpeningInfo): number {
+  const centre = (info.faceRoom - info.faceOut) / 2;
+  if (info.opening.type !== "window") return centre;
+  // FORK d14tk: the frame's place in the wall (see FORK.md)
+  const pos = info.opening.frame_pos ?? "middle";
+  if (pos === "outside") return Math.min(centre, -info.faceOut + 0.035);
+  if (pos === "inside") return Math.max(centre, info.faceRoom - 0.095);
+  return centre;
+}
+
 export interface OpeningParts {
   frames: BufferGeometry;
   glass: BufferGeometry;
@@ -129,7 +185,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
     const { sill: S, top: T, bucket } = info;
     // local frame: x from the opening start along the wall, n from the wall axis towards the room
     const tf: Tf = (x, n, y) => [info.start[0] + info.axis[0] * x + info.toRoom[0] * n, y, info.start[1] + info.axis[1] * x + info.toRoom[1] * n];
-    const mid = (info.faceRoom - info.faceOut) / 2;
+    const mid = frameMid(info);
     // highlighted while open, or while closed when the opening asks for it (and a sensor knows)
     const markClosed = info.opening.mark === "closed";
     // a passage (wall opening without a door) shows nothing but the gap in the wall
@@ -253,11 +309,10 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
       splitBox(frames, tf, W - fw, W, mid - fd, mid + fd, S, T, frameC, frameTop, cut, bucket);
       splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, S, S + (S > 0.05 ? fw : 0.03), frameC, frameTop, cut, bucket);
       splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, T - fw, T, frameC, frameTop, cut, bucket);
-      // window board inside and sill outside
-      if (S > 0.3) {
-        splitBox(frames, tf, -0.04, W + 0.04, mid + fd, info.faceRoom + 0.07, S - 0.03, S, new Color(SILL), frameTop, cut, bucket);
-        if (info.exterior) splitBox(frames, tf, -0.03, W + 0.03, -info.faceOut - 0.06, mid - fd, S - 0.04, S - 0.02, new Color(SILL), frameTop, cut, bucket);
-      }
+      // window board inside and sill outside (by the window's setting; none on a transom light, #655)
+      const boards = sillBoards(info, infos);
+      if (boards.inside) splitBox(frames, tf, -0.04, W + 0.04, mid + fd, info.faceRoom + 0.07, S - 0.03, S, new Color(SILL), frameTop, cut, bucket);
+      if (boards.outside) splitBox(frames, tf, -0.03, W + 0.03, -info.faceOut - 0.06, mid - fd, S - 0.04, S - 0.02, new Color(SILL), frameTop, cut, bucket);
       // sashes: each rotates into the room around its hinge, or tilts around its bottom edge; a
       // double window (or French door) has two sashes meeting in the middle, each tilting on its own
       const sw = 0.055;

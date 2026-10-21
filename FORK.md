@@ -66,13 +66,206 @@ Alles in einer Datei, mit `FORK` markiert:
 | `hacs.json` | `name` mit Fork-Kennung. |
 | `frontend/src/viewer/earth.ts` | `coverAbove()`: nur Flächen auf dem Gelände decken einen Lichtschacht zu. Ein Balkon im Obergeschoss zog den Schachtrand sonst meterhoch zu sich hinauf. Upstream gemeldet als [#602](https://github.com/Mastershort/neonplan3d/issues/602). |
 | `frontend/src/viewer/earth.test.ts` | Neuer Test dazu: Balkon oben hebt nicht, Balkon im Erdgeschoss hebt weiter. |
-| `custom_components/neonplan3d/frontend/*.js` | Die gebauten Bundles. Vier der sieben sind bitgleich mit denen des Originals, nur `neonplan3d.js`, `-3d.js` und `-editor.js` tragen die Änderung und die Fork-Versionsnummer. |
+| `custom_components/neonplan3d/frontend/*.js` | Die gebauten Bundles. Seit 1.20.2.3 weichen `neonplan3d.js`, `-3d.js`, `-editor.js`, `-card-editor.js` und `-fun.js` vom Original ab (Änderungen bzw. Fork-Versionsnummer), `-voice.js` und `-timetravel.js` sind bitgleich. Dazu `site/import/neonplan-import.js` (Texte aus `i18n.ts`). |
 | `tools/fork_release.py` | Neu. Stempelt die Version in die Bundles und baut das Release-ZIP, weil die Workflows im Fork nicht laufen. |
+| `frontend/src/viewer/lighting.ts`, `lighting.test.ts` | Wände blocken Licht mit ihrem Footprint, Säulen werfen Schatten. Siehe [Weitere Änderungen im Frontend](#weitere-änderungen-im-frontend-12023-und-12024). |
+| `frontend/src/model.ts`, `model.test.ts`, `viewer/viewer3d.ts`, `components/editor.ts`, `i18n.ts`, `custom_components/neonplan3d/schema.py`, `tests/test_schema.py` | Etagenfeld `attached`: eine Etage gehört zur Etage darüber oder darunter (Straßenniveau mit Garagen unter der Wohnung). Siehe unten. |
+| `frontend/src/components/view3d.ts`, `viewer/viewer3d.ts` | Pack-Lampen leuchten aus der Mitte ihrer leuchtenden Teile. Siehe unten. |
 | `FORK.md` | Diese Datei. |
 
 Der Rest ist unverändert. Der Import-Dialog im Editor
 (**Möbel → Möbel-Pack importieren …**) und `tools/fp3dpack.py` zum Unterschreiben
 gehören zum Original und werden nur benutzt.
+
+## Weitere Änderungen im Frontend (1.20.2.3 und 1.20.2.4)
+
+Vier Korrekturen aus dem Betrieb, alle mit Tests. Sie betreffen nur die
+Darstellung; am gespeicherten Plan ändert sich nichts außer dem neuen, optionalen
+Etagenfeld `attached` und der Einstellung `rain_warning_entity`.
+
+### Wände werfen Schatten mit ihrer ganzen Dicke, Säulen werfen Schatten
+
+**Problem.** Eine Lampe an der Außenseite einer Außenwand leuchtet um die
+Hausecke herum: der Rasen vor der Nachbarwand und eine Nische hinter der Ecke
+werden hell, obwohl die Wand dazwischen steht. Säulen werfen gar keinen Schatten.
+
+**Ursache.** `shadowed()` in `frontend/src/viewer/lighting.ts` prüft nur, ob die
+Linie Lampe → Punkt die Linie `a → b` einer Wand kreuzt. Bei einer Außenwand ist
+das die Raumkante, also die *Innenseite*; die Wand wächst von dort nach außen.
+Eine Lampe außen an der Fassade (6 cm vor der Außenfläche, 36 cm vor der
+Raumkante bei 30 cm Wand) strahlt an dieser Linie vorbei, sobald der Strahl durch
+die Ecke geht: das 30 × 30 cm große Eckstück wird von keiner Linie abgedeckt.
+Möbel sind grundsätzlich keine Lichtblocker, also auch Säulen nicht.
+
+**Lösung.**
+
+* `Blocker` hat ein optionales `outline`. Für Wände ist das ihr Footprint aus
+  `generateWalls()` (mit Gehrung, deckt die Ecke ab). `shadowed()` prüft nach
+  der Mittellinie zusätzlich jede Kante des Umrisses, mit Höhe und Öffnungen wie
+  bisher (die Kreuzung wird dafür auf die Wandachse projiziert). Liegt die Lampe
+  selbst im Umriss (in die Wand eingelassen), gilt wie bisher nur die Linie.
+* Säulen werden als Blocker in ihrer Lichtzone eingetragen: Möbeltyp mit
+  `column`, `pillar` oder `saeule` als Namensteil (`columnOutline()`), Sockel
+  höchstens 0,30 m. Runde Typen (`round`, `circle`, `rund`) als 16-Eck, alle
+  anderen als gedrehtes Rechteck. Höhe = Montagehöhe + Höhe des Möbels.
+
+**Tests.** `lighting.test.ts`: Lampe außen an einer 0,24 m dicken Wand, der Punkt
+hinter der Ecke bleibt dunkel, der freie Punkt daneben hell; Säule wirft Schatten,
+ein Sofa nicht, über eine niedrige Säule scheint das Licht hinweg.
+
+### Eine Etage kann zur Etage darüber oder darunter gehören
+
+**Problem.** Nicht jede Etage ist ein Stockwerk. Beispiel aus diesem Haus: Die
+Garagen liegen 0,84 m tiefer als die Wohnung auf Straßenniveau und sind nur über
+die Außentreppen erreichbar. Sie brauchen eine eigene Etage (sonst stünden sie auf
+Wohnungshöhe), gehören aber zum selben Geschoss. Als eigene Etage werden sie in
+der Hausansicht mit Abstand unter die Wohnung gezogen, beim Öffnen der Wohnung
+abgedunkelt und 0,4 m abgesenkt (oder je nach Einstellung ausgeblendet), beim
+Öffnen des Straßenniveaus fliegt die Wohnung weg, und das Etikett
+„Straßenniveau · 2 Räume“ steht in der Hausansicht.
+
+**Lösung.** Neues optionales Etagenfeld `attached`: `"above"` (gehört zur Etage
+darüber), `"below"` (gehört zur Etage darunter) oder `null` (eigenes Stockwerk,
+Standard). Im Editor unter den Etageneinstellungen: **Gehört zu: eigene Etage /
+Etage darüber / Etage darunter** (nur bei mehr als einer Etage).
+
+* `floorLevels()` in `model.ts` fasst Etagen zu Ebenen zusammen: Etage *i* und
+  *i+1* (nach Höhe sortiert) bilden eine Ebene, wenn *i* `"above"` oder *i+1*
+  `"below"` hat. Ketten sind erlaubt (Straßenniveau, Wohnung, Galerie über der
+  Wohnung). Ohne Nachbarn auf der angegebenen Seite bleibt es eine eigene Ebene.
+* `viewer3d.ts` `applyTargets()`: In der Hausansicht zählt der Abstand
+  („Auseinander“) pro Ebene statt pro Etage. Wird eine Etage geöffnet, stehen alle
+  Etagen ihrer Ebene an ihrem Platz und voll sichtbar; Etagen darüber und darunter
+  verhalten sich wie bisher.
+* `updateLabels()`: Eine verbundene Etage hat kein eigenes Etagen-Etikett.
+* `schema.py` `FLOOR_SCHEMA`: `attached` = `None`, `"above"` oder `"below"`.
+  Ein früher Stand dieses Forks speicherte `true`; das wird als `"above"`
+  gelesen (Frontend `floorAttach()` und Schema).
+
+**Tests.** `model.test.ts`: Ebenen für oben, unten, Kette, ohne Nachbarn und das
+alte `true`; `tests/test_schema.py`: gültige Werte, `true` → `"above"`, ungültige
+Werte werden abgelehnt.
+
+### Lampen aus Möbel-Packs leuchten aus ihren leuchtenden Teilen
+
+**Problem.** Bei einer Wandlaterne aus einem Pack (23,5 cm tief, Glaszylinder
+13 cm vor der Wand) schwebt der Leuchtpunkt frei vor der Lampe.
+
+**Ursache.** `buildHalos()` setzt den Halo jeder Lampe vom Typ `wall` auf
+Mitte + Tiefe/2 + 5 cm nach vorn, auf halber Höhe; die Lichtquelle sitzt bei
+Pack-Lampen auf 85 % der Höhe (`lightY`). Bei flachen Wandlampen passt das,
+bei tiefen nicht.
+
+**Lösung.** `glowCentre()` in `components/view3d.ts` nimmt die Mitte der Teile
+mit `glow: true` (Begrenzungsquader in Breite, Tiefe und Höhe, gedreht und
+gespiegelt wie das Möbel) und gibt sie als `lightAt` an den Viewer. Halo und
+Lichtquelle sitzen dort. Packs ohne leuchtende Teile verhalten sich wie bisher.
+
+### Regenwarnung mit eigener Schwelle (1.20.2.4)
+
+**Problem.** Die Warnung „Fenster offen bei Regen“ lässt die Räume schon bei
+leichtem Regen blinken. Gewünscht ist: Regen in 3D schon bei leichtem Regen,
+die Warnung aber erst bei kräftigem Regen oder bei mäßigem Regen mit starkem
+Wind (ein gekipptes Fenster bei Nieselregen ist kein Problem).
+
+**Ursache.** `findAlerts()` in `frontend/src/alerts.ts` warnt, sobald es regnet:
+nach `rain_entity` (eigene Wetterstation, > 0,1 mm/h oder an) oder nach dem
+Zustand der Wetter-Entität (`rainy`, `pouring`, …). Dieselbe `rain_entity`
+steuert auch den Regen in 3D (`weatherState()`). Eine Schwelle nur für die
+Warnung lässt sich damit nicht setzen, ohne den Regen in 3D mit abzuschalten.
+
+**Lösung.** Neue Einstellung `rain_warning_entity` (nur für die Warnung):
+
+* Ist sie gesetzt und meldet sie etwas, entscheidet sie allein, ob ein offenes
+  Fenster warnt: ein Binärsensor (an = warnen) oder eine Regenrate
+  (über 0,1 mm/h), gelesen wie `rain_entity` über `stationRain()`.
+* Meldet sie nichts (`unavailable`, `unknown`), gilt wie bisher `rain_entity`
+  bzw. die Wetter-Entität. Der Schalter `rain_warning` schaltet die Warnung
+  weiterhin ganz ab.
+* Der Regen in 3D bleibt unberührt.
+* Editor: unter „Warnung: Fenster offen bei Regen“ die Auswahl
+  **Regenwarnung nur bei** (Binärsensoren und Regenquellen).
+* `SETTINGS_SCHEMA`: `rain_warning_entity` (`None` oder Entity-ID).
+
+Beispiel für die Entität (Trigger-Template, alle 10 Minuten aus der
+met.no-Vorhersage der nächsten Stunde):
+
+```yaml
+- trigger:
+    - trigger: time_pattern
+      minutes: "/10"
+    - trigger: homeassistant
+      event: start
+    - trigger: event
+      event_type: event_template_reloaded
+    - trigger: state
+      entity_id: weather.forecast_home
+  action:
+    - action: weather.get_forecasts
+      target:
+        entity_id: weather.forecast_home
+      data:
+        type: hourly
+      response_variable: vorhersage
+  binary_sensor:
+    - name: "Regenwarnung Fenster"
+      unique_id: regenwarnung_fenster_metno
+      state: >-
+        {% set f = (vorhersage['weather.forecast_home'].forecast | default([]) | first) or {} %}
+        {% set regen = f.precipitation | default(0) | float(0) %}
+        {% set wind = f.wind_speed | default(0) | float(0) %}
+        {{ regen >= 2.5 or (regen >= 1.0 and wind >= 39) }}
+```
+
+(kräftiger Regen ab 2,5 mm/h, mäßiger ab 1 mm/h, starker Wind ab 39 km/h =
+Beaufort 6)
+
+**Tests.** `alerts.test.ts`: leichter Regen mit eigener Entität aus → keine
+Warnung, an → Warnung, `rain_warning` aus → keine, Entität `unavailable` →
+wieder nach dem Regen; `tests/test_schema.py`: Standard `None`, Wert bleibt.
+
+### Fensterbank pro Fenster und Rahmenlage in der Wand (1.20.2.5)
+
+**Fensterbank.** Übernommen aus dem Original (Beta 1.25.0, Commit 1646030,
+Issue #655): Feld `sill_board` (`auto` / `none` / `inside` / `outside`), Auswahl
+im Fensterformular, Schema, Texte in allen Sprachen. Gleiches Datenformat wie im
+Original, beim Update auf 1.25 geht nichts verloren.
+
+**Rahmenlage.** Der feste Fensterrahmen sitzt im Original immer in der Mitte der
+Wand (`viewer/openings.ts`: „fixed frame in the middle of the wall“). Bei
+Fenstern in der Dämmebene (bündig mit der Außenwand, tiefe Laibung innen) steht
+er damit eine halbe Wanddicke zu weit innen.
+
+* Neues Feld `frame_pos` an Fenstern: `null`/`middle` (wie bisher), `outside`
+  (Rahmen bündig mit der Außenseite), `inside` (bündig mit der Innenseite).
+* `frameMid()` in `viewer/openings.ts` liefert die Rahmenebene; Flügel,
+  Fensterbank innen und Festverglasung (`glass_wall`) folgen ihr. Türen und
+  Garagentore bleiben in der Mitte, eine zu dünne Wand auch.
+* Editor: „Rahmen in der Wand“ im Fensterformular. `OPENING_SCHEMA`:
+  `frame_pos` (`None`, `middle`, `outside`, `inside`).
+* Tests: `viewer/openings.test.ts` (Mitte, außen, innen, Tür, dünne Wand),
+  `tests/test_schema.py`.
+
+### Geänderte Dateien
+
+| Datei | Änderung |
+|---|---|
+| `frontend/src/viewer/lighting.ts` | `Blocker.outline`, `columnOutline()`, Umrissprüfung in `shadowed()`, Säulen als Blocker |
+| `frontend/src/viewer/lighting.test.ts` | 2 Tests (Hausecke, Säule) |
+| `frontend/src/model.ts` | `Floor.attached`, `FloorAttach`, `floorAttach()`, `floorLevels()`, `Settings.rain_warning_entity` |
+| `frontend/src/model.test.ts` | 2 Tests (Ebenen, altes `true`) |
+| `frontend/src/viewer/viewer3d.ts` | `levels()`, `applyTargets()`, `updateLabels()`, `lightAt` in `lightSources()` und `buildHalos()` |
+| `frontend/src/components/view3d.ts` | `glowCentre()`, `lightAt` für Pack-Lampen |
+| `frontend/src/components/editor.ts` | Auswahl „Gehört zu“ in den Etageneinstellungen, „Regenwarnung nur bei“ in den Wetter-Einstellungen |
+| `frontend/src/i18n.ts` | Texte Deutsch und Englisch (`floor_attached*`, `rain_warning_entity*`) |
+| `custom_components/neonplan3d/schema.py` | `attached` in `FLOOR_SCHEMA`, `rain_warning_entity` in `SETTINGS_SCHEMA` |
+| `tests/test_schema.py` | 2 Tests |
+| `frontend/src/alerts.ts`, `alerts.test.ts` | `rain_warning_entity` entscheidet die Fensterwarnung (1.20.2.4), 1 Test |
+| `custom_components/neonplan3d/frontend/*.js`, `site/import/neonplan-import.js` | neu gebaut (`npm run build`) |
+| `custom_components/neonplan3d/manifest.json` | Version 1.20.2.3, mit der Regenwarnung 1.20.2.4 |
+
+Frontend: 415 Tests grün, `tsc --noEmit` sauber, alle Bundles im Budget
+(`neonplan3d-3d.js` 780,0 von 780 KB, damit am Limit). Python: `tests/test_schema.py` 15 grün.
 
 ## Das Frontend bauen
 
@@ -89,7 +282,7 @@ Linux). Stattdessen eine lokale Kopie:
 # 2. dort:
 cd frontend
 npm ci
-npm test            # 410 Tests
+npm test            # 415 Tests
 npm run typecheck
 npm run build       # schreibt nach ../custom_components/neonplan3d/frontend/
 # 3. die erzeugten *.js zurück ins Repo kopieren

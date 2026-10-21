@@ -3,7 +3,7 @@ import { test } from "node:test";
 import type { Floor, Opening, Room } from "../model.ts";
 import { newFloor } from "../model.ts";
 import { buildFloorGeometry } from "./build.ts";
-import { buildLightSurface, lightColors, type LightSource, shadowed, zoneOf } from "./lighting.ts";
+import { buildLightSurface, columnOutline, lightColors, type LightSource, shadowed, zoneOf } from "./lighting.ts";
 
 function rect(id: string, x0: number, z0: number, x1: number, z1: number): Room {
   return { id, name: id, area_id: null, points: [[x0, z0], [x1, z0], [x1, z1], [x0, z1]], floor_material: "wood" };
@@ -189,6 +189,29 @@ test("shadowed: a wall between lamp and point, its height and its openings", () 
   assert.equal(shadowed(s, [{ ...wall, h: 0.5 }], 4, 0, 3), false);
   // past the wall's end
   assert.equal(shadowed({ x: 0, y: 1.5, z: 5 }, [wall], 4, 0, 5), false);
+});
+
+test("a lamp on the outer face of an exterior wall does not light around the thick house corner", () => {
+  // house 0..4 x 0..3 (room points are the inner faces, the 0.24 exterior wall grows outwards); lamp on the outer face
+  // of the wall x = 4, near the corner: the lawn in front of the wall z = 3 lies behind the corner and stays dark
+  const floor = { ...newFloor("f", "F", 0), rooms: [rect("a", 0, 0, 4, 3)] };
+  const geo = buildFloorGeometry(floor, 0.24, 0.12);
+  const s = buildLightSurface(floor, geo.walls2d, geo.wallBuckets, geo.openings, 0.25);
+  const lampAt = { x: 4.3, y: 2, z: 2.6 };
+  assert.equal(shadowed(lampAt, s.blockers, 3.6, 0.02, 4.5), true);
+  assert.equal(shadowed(lampAt, s.blockers, 5.0, 0.02, 4.5), false);
+});
+
+test("a column casts a shadow, other furniture does not", () => {
+  const col = { type: "pack:mastershort.architecture:column_round", x: 2, z: 2, w: 0.3, d: 0.3, rotation: 0 };
+  assert.equal(columnOutline(col)?.length, 16);
+  assert.equal(columnOutline({ ...col, type: "sofa" }), null);
+  assert.equal(columnOutline({ ...col, type: "pack:local.garten:column_square" })?.length, 4);
+  const blocker = { a: [2, 2] as [number, number], b: [2, 2] as [number, number], h: 2.5, ra: 0, rb: 0, gaps: [], outline: columnOutline(col)! };
+  assert.equal(shadowed({ x: 0, y: 2, z: 2 }, [blocker], 4, 0, 2), true);
+  assert.equal(shadowed({ x: 0, y: 2, z: 2 }, [blocker], 4, 0, 3), false);
+  // over a low column
+  assert.equal(shadowed({ x: 0, y: 2, z: 2 }, [{ ...blocker, h: 0.5 }], 4, 1.5, 2), false);
 });
 
 test("doors on one wall line between several rooms lead into the room they sit in (#444)", () => {

@@ -55,6 +55,13 @@ export interface Blocker {
   rb: number;
   /** Openings along the wall: s from a in metres, y from the floor. */
   gaps: { s0: number; s1: number; y0: number; y1: number }[];
+  /**
+   * The blocker's outline in the plan (a wall's footprint, a column's cross section). The centre line alone lets
+   * light slip around the thick corner of an exterior wall when the lamp hangs on its outer face; the outline
+   * closes that gap and lets solid furniture such as columns cast a shadow.
+   */
+  // FORK d14tk: see the comment above - a wall blocks with its whole thickness (see FORK.md)
+  outline?: Vec2[];
 }
 
 const LIFT = 0.012;
@@ -179,7 +186,7 @@ export function buildLightSurface(
     const bucket = wallBuckets[wi];
     const gaps = openingSpans(w, u, len, openings);
     const sideRoom = (id: string | null, outer: boolean) => (id ? floor.rooms.findIndex((r) => r.id === id) : outer ? outside : -1);
-    blockers.push({ a: w.a, b: w.b, h: H, ra: sideRoom(w.roomLeft, false), rb: sideRoom(w.roomRight, w.exterior), gaps });
+    blockers.push({ a: w.a, b: w.b, h: H, ra: sideRoom(w.roomLeft, false), rb: sideRoom(w.roomRight, w.exterior), gaps, ...(w.footprint?.length >= 3 ? { outline: w.footprint } : {}) });
     // the cells break at the cut and at every sill, top and side of an opening, so the hole a window
     // leaves in the lit face matches the window (a cell is lit or dark as a whole)
     const marks = (vals: number[], lo: number, hi: number) =>
@@ -224,6 +231,17 @@ export function buildLightSurface(
     }
   });
 
+  // columns: solid from the floor up, they cast a shadow in the zone they stand in
+  for (const f of floor.furniture ?? []) {
+    // FORK d14tk: columns cast a shadow too (see FORK.md)
+    const outline = columnOutline(f);
+    if (!outline) continue;
+    const ri = floor.rooms.findIndex((r) => r.points.length >= 3 && pointInPolygon([f.x, f.z], r.points));
+    const zone = ri < 0 ? outside : ri;
+    const c: Vec2 = [f.x, f.z];
+    blockers.push({ a: c, b: c, h: (f.mount_y ?? 0) + f.h, ra: zone, rb: zone, gaps: [], outline });
+  }
+
   // doors between two rooms
   const doors: LightSurface["doors"] = [];
   for (const o of openings) {
@@ -256,6 +274,23 @@ function withinWall(w: Wall, o: OpeningInfo): boolean {
   const mz = o.start[1] + o.axis[1] * (o.width / 2);
   const s = ((mx - w.a[0]) * dx + (mz - w.a[1]) * dz) / len;
   return s > -0.05 && s < len + 0.05;
+}
+
+/** Furniture types that stand as solid columns (built-in pack items and own packs: "column", "pillar"). */
+const COLUMN = /(^|[:_])(column|pillar|saeule)(_|$)/i;
+
+/** Cross section of a column in the plan: a 16-gon for a round one, the rotated rectangle otherwise; null for other furniture. */
+export function columnOutline(f: { type: string; x: number; z: number; w: number; d: number; rotation?: number | null; mount_y?: number | null }): Vec2[] | null {
+  if (!COLUMN.test(f.type) || f.w <= 0 || f.d <= 0 || (f.mount_y ?? 0) > 0.3) return null;
+  const a = ((f.rotation ?? 0) * Math.PI) / 180;
+  const ca = Math.cos(a);
+  const sa = Math.sin(a);
+  const at = (lx: number, lz: number): Vec2 => [f.x + lx * ca - lz * sa, f.z + lx * sa + lz * ca];
+  if (/round|circle|rund/i.test(f.type)) {
+    const n = 16;
+    return Array.from({ length: n }, (_, i) => at((Math.cos((2 * Math.PI * i) / n) * f.w) / 2, (Math.sin((2 * Math.PI * i) / n) * f.d) / 2));
+  }
+  return [at(-f.w / 2, -f.d / 2), at(f.w / 2, -f.d / 2), at(f.w / 2, f.d / 2), at(-f.w / 2, f.d / 2)];
 }
 
 /** Door and window areas on a wall, along its axis (s from wall.a) and in height. */
@@ -381,8 +416,8 @@ export function lightColors(surface: LightSurface, sources: LightSource[], stren
 
 /**
  * Whether a wall stands between a lamp and a point: the line between them crosses the wall's centre
- * line below its top and not through an opening. A point on the lamp's side of a wall (its lit face sits
- * in front of the centre line) is never shadowed by that wall.
+ * line or its outline (footprint, column) below its top and not through an opening. A point on the lamp's side of a
+ * wall (its lit face sits in front of the wall) is never shadowed by that wall.
  */
 export function shadowed(s: { x: number; y: number; z: number }, walls: readonly Blocker[], px: number, py: number, pz: number): boolean {
   const dx = px - s.x;
@@ -404,6 +439,38 @@ export function shadowed(s: { x: number; y: number; z: number }, walls: readonly
     const along = k * Math.hypot(ex, ez);
     if (w.gaps.some((g) => along > g.s0 && along < g.s1 && y > g.y0 && y < g.y1)) continue;
     return true;
+  }
+  // the outlines: a lamp inside one (mounted into the wall) is left to the centre line
+  for (const w of walls) {
+    const o = w.outline;
+    if (!o || pointInPolygon([s.x, s.z], o)) continue;
+    const ex = w.b[0] - w.a[0];
+    const ez = w.b[1] - w.a[1];
+    const len = Math.hypot(ex, ez);
+    for (let i = 0; i < o.length; i++) {
+      const p = o[i];
+      const q = o[(i + 1) % o.length];
+      const fx = q[0] - p[0];
+      const fz = q[1] - p[1];
+      const den = dx * fz - dz * fx;
+      if (Math.abs(den) < 1e-12) continue;
+      const ax = p[0] - s.x;
+      const az = p[1] - s.z;
+      const t = (ax * fz - az * fx) / den;
+      if (t <= 1e-6 || t >= 1 - 1e-6) continue;
+      const k = (ax * dz - az * dx) / den;
+      if (k < 0 || k > 1) continue;
+      const y = s.y + (py - s.y) * t;
+      if (y >= w.h) continue;
+      if (len > 1e-6) {
+        // openings: the crossing measured along the wall's axis
+        const cx = s.x + dx * t - w.a[0];
+        const cz = s.z + dz * t - w.a[1];
+        const along = (cx * ex + cz * ez) / len;
+        if (w.gaps.some((g) => along > g.s0 && along < g.s1 && y > g.y0 && y < g.y1)) continue;
+      }
+      return true;
+    }
   }
   return false;
 }
