@@ -221,6 +221,8 @@ test("a lock sits on the main leaf of a double door, not on the seam (#645)", ()
   const lit = { type: "door" as const, style: "sidelight" as const, width: 1.6, leaves: 1 as const };
   const l = sidelightLayout(1.6, "sidelight", true, {})!;
   assert.ok(Math.abs(lockAlong(lit, true) - (l.x0 + l.x1) / 2) < 1e-9);
+});
+
 // --- FORK d14tk: attached floors, a level that is not a storey of its own (see FORK.md) ---
 test("attached floors share a level with the floor above or below", () => {
   // a street level with garages half a storey under the flat, reached by outdoor stairs: one level with the flat
