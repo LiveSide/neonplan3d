@@ -204,7 +204,8 @@ export function wasteCalendars(floors: readonly { furniture: readonly Furniture[
 
 /** Events of the next `days` days of the waste calendars, by calendar; a calendar that fails is left out. */
 // six weeks ahead: bins emptied every two or four weeks show their next pickup too (#585)
-export async function fetchPickups(hass: HomeAssistant, calendars: readonly string[], now = new Date(), days = 42): Promise<Map<string, Pickup[]>> {
+// FORK d14tk: 120 days, so a collection held a few times a year (paper by local clubs) shows its days too
+export async function fetchPickups(hass: HomeAssistant, calendars: readonly string[], now = new Date(), days = 120): Promise<Map<string, Pickup[]>> {
   const out = new Map<string, Pickup[]>();
   const api = (hass as unknown as { callApi?: <T>(method: string, path: string) => Promise<T> }).callApi;
   if (!api) return out;
