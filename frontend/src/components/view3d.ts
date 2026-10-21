@@ -35,7 +35,7 @@ import { carState, type CarState, heatSensorOn, roomClimateValue,
 } from "../devices.ts";
 import { alertColor, alertEntities, alertSources, alertText, findAlerts, isOutage, type Alert, type AlertSources } from "../alerts.ts";
 import { iconPath, iconSvg, mdiIcon } from "../icons.ts";
-import { binColors, binDue, binNext, doorsOf, fetchPickups, FinishedMemory, fridgeOpenTooLong, hassCountry, isFinishedState, mailboxPost, nextFridgeCheck, plantThirsty, remainingMinutes, remainingText, serviceDue, setHouseholdCountry, wasteCalendars, isPackPlant, type HouseholdItem, type Pickup } from "../household.ts";
+import { binColors, binDue, binNext, doorsOf, fetchPickups, FinishedMemory, fridgeOpenTooLong, hassCountry, isBin, isFinishedState, mailboxPost, nextFridgeCheck, plantThirsty, remainingMinutes, remainingText, serviceDue, setHouseholdCountry, wasteCalendars, isPackPlant, type HouseholdItem, type Pickup } from "../household.ts";
 import { deviceSensors, energySummary, fetchSolarRows, fetchTodayChange, fieldLevels, fieldPowers, findConsumers, flowColor, flowSegments, gridPoint, powerSensorFor, readPower, solarCurvePath, solarDayFromStats, type Consumer, type EnergySummary, type StatRow } from "../energy.ts";
 import { fieldFace, fieldSize } from "../solar.ts";
 import { type CustomButton, type EntityRef, DEFAULT_HOLOGRAM, lockAlong, type PoolPipe, type SolarField, uid } from "../model.ts";
@@ -2520,12 +2520,12 @@ export class Fp3dView3d extends LitElement {
         // Haushalt Pro: a bin glows the evening before its pickup, a mailbox while post lies in it, a plant while it
         // is thirsty
         const plant = (f.type === "plant" || isPackPlant(f.type)) && !!f.moisture && f.moisture !== "none";
-        if (f.type === "waste_bin" || f.type === "mailbox" || plant) {
+        if (isBin(f) || f.type === "mailbox" || plant) {
           const hh = household ? this.householdState(hass, floor, f) : null;
           if (hh?.screen) screens.set(f.id, hh.screen);
           if (hh?.marker) markers.push(hh.marker);
           // a tap on the bin itself shows its next pickups (on the mailbox or the plant: their sensor)
-          const src = f.type === "waste_bin" ? f.bin_source : f.type === "mailbox" ? f.entity : f.moisture;
+          const src = isBin(f) ? f.bin_source : f.type === "mailbox" ? f.entity : f.moisture;
           if (household && typeof src === "string" && src !== "none") targets.set(f.id, `hh:${src}#${f.id}`);
           if (hh?.item) today.push(hh.item);
           if (!plant) continue;
@@ -2744,7 +2744,7 @@ export class Fp3dView3d extends LitElement {
    * timer also lets the bins start and stop glowing at their hours (14:00 the day before, noon on the day).
    */
   private watchHousehold(hass: HomeAssistant, b: Building): void {
-    const items = b.floors.flatMap((f) => f.furniture).filter((f) => f.type === "waste_bin" || f.type === "mailbox");
+    const items = b.floors.flatMap((f) => f.furniture).filter((f) => isBin(f) || f.type === "mailbox");
     const on = hasFeature("household") && items.length > 0 && !this.replay;
     const calendars = on ? wasteCalendars(b.floors) : [];
     const key = calendars.join(",");
@@ -2972,7 +2972,7 @@ export class Fp3dView3d extends LitElement {
       const n = parseInt(hex.slice(1), 16);
       return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
     };
-    if (f.type === "waste_bin") {
+    if (isBin(f)) {
       const src = typeof f.bin_source === "string" && f.bin_source !== "none" ? f.bin_source : null;
       if (!src) return null;
       const due = binDue(f, hass, this.pickups, new Date(), { from: this.building?.settings.household?.bin_from, until: this.building?.settings.household?.bin_until });
@@ -4674,7 +4674,7 @@ export class Fp3dView3d extends LitElement {
     // Haushalt Pro: a bin shows its next pickups; a mailbox's or a plant's pin opens its sensor
     if (entityId.startsWith("hh:")) {
       const [id, furnitureId] = entityId.slice(3).split("#");
-      const bin = this.building?.floors.flatMap((f) => f.furniture).find((f) => f.id === furnitureId && f.type === "waste_bin");
+      const bin = this.building?.floors.flatMap((f) => f.furniture).find((f) => f.id === furnitureId && isBin(f));
       if (bin) {
         this._binInfo = { furnitureId, x, y };
         clearTimeout(this.binInfoTimer);

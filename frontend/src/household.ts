@@ -187,10 +187,18 @@ export function pickupsOf(events: readonly CalEvent[]): Pickup[] {
     .sort((a, b) => a.day.getTime() - b.day.getTime());
 }
 
+/**
+ * FORK d14tk: a waste bin – the built-in one, or a pack item given a kind of waste (bin_kind), e.g. an indoor
+ * sorting bin that shows the days to the next paper pickup.
+ */
+export function isBin(f: Pick<Furniture, "type" | "bin_kind">): boolean {
+  return f.type === "waste_bin" || (f.type.startsWith("pack:") && !!f.bin_kind);
+}
+
 /** The calendars the bins read (each fetched once for all bins on it). */
 export function wasteCalendars(floors: readonly { furniture: readonly Furniture[] }[]): string[] {
   const out = new Set<string>();
-  for (const f of floors.flatMap((x) => x.furniture)) if (f.type === "waste_bin" && typeof f.bin_source === "string" && f.bin_source.startsWith("calendar.")) out.add(f.bin_source);
+  for (const f of floors.flatMap((x) => x.furniture)) if (isBin(f) && typeof f.bin_source === "string" && f.bin_source.startsWith("calendar.")) out.add(f.bin_source);
   return [...out];
 }
 
@@ -366,7 +374,7 @@ export function mailboxPost(f: Pick<Furniture, "entity" | "mailbox_door">, hass:
 
 /** The entity fields of the household items, for the watched list. */
 export function householdEntities(f: Furniture): EntityRef[] {
-  if (f.type === "waste_bin") return [f.bin_source ?? null];
+  if (isBin(f)) return [f.bin_source ?? null];
   if (f.type === "mailbox") return [f.entity ?? null, f.mailbox_door ?? null];
   return householdExtras(f);
 }
