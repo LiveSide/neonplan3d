@@ -101,9 +101,7 @@ def test_own_key_cannot_sign_module_code(own_key) -> None:
     """Module code is JavaScript the loader runs, not furniture. Upstream holds its own studio key
     to the same line (STUDIO_KEYS), so an own key must not sign it either."""
     private, kid = own_key
-    source = copy.deepcopy(PAYLOAD) | {
-        "module": {"api": 1, "kind": "voice", "code": "export default () => {};"}
-    }
+    source = copy.deepcopy(PAYLOAD) | {"module": {"api": 1, "kind": "voice", "code": "export default () => {};"}}
     with pytest.raises(packs.PackError) as err:
         packs.verify_pack(pack(private, kid, source))
     assert err.value.code == "bad_signature"

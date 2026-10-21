@@ -384,9 +384,7 @@ def verify_pack(text: str, keys: dict[str, str] | None = None, instance: str | N
     # pack id that could replace one from the shop. Upstream holds its own studio key to the same
     # line (STUDIO_KEYS above); "module" is a pack's JavaScript, which is not furniture.
     if signature["key"] in local and (
-        not str(payload["id"]).startswith(LOCAL_ID_PREFIXES)
-        or payload["features"]
-        or payload.get("module")
+        not str(payload["id"]).startswith(LOCAL_ID_PREFIXES) or payload["features"] or payload.get("module")
     ):
         raise PackError(
             "bad_signature",
