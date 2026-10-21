@@ -62,6 +62,10 @@ export type OpeningType = "door" | "window" | "garage";
 export type SillBoard = "auto" | "none" | "inside" | "outside";
 export const SILL_BOARDS: readonly SillBoard[] = ["auto", "none", "inside", "outside"];
 
+/** Where a window's frame sits across the wall: in the middle (default), flush with the outer or with the inner face. */
+export type FramePos = "middle" | "outside" | "inside";
+export const FRAME_POSITIONS: readonly FramePos[] = ["middle", "outside", "inside"];
+
 /** Entity link of an opening: null = assigned automatically by area, "none" = no entity. */
 export type EntityRef = string | null;
 
@@ -127,6 +131,11 @@ export interface Opening {
    * split floor-to-ceiling front, #655); "none", "inside" or "outside" force it.
    */
   sill_board?: SillBoard | null;
+  /**
+   * Windows: where the frame sits across the wall. "middle" (default, also null) as before; "outside" flush
+   * with the outer face (a window set into the insulation, a deep reveal inside), "inside" flush with the room.
+   */
+  frame_pos?: FramePos | null;
   /** Ask before moving the blind or garage door; it then does not follow a swipe either. */
   confirm?: boolean;
   cover: EntityRef;

@@ -224,6 +224,28 @@ Beaufort 6)
 Warnung, an → Warnung, `rain_warning` aus → keine, Entität `unavailable` →
 wieder nach dem Regen; `tests/test_schema.py`: Standard `None`, Wert bleibt.
 
+### Fensterbank pro Fenster und Rahmenlage in der Wand (1.20.2.5)
+
+**Fensterbank.** Übernommen aus dem Original (Beta 1.25.0, Commit 1646030,
+Issue #655): Feld `sill_board` (`auto` / `none` / `inside` / `outside`), Auswahl
+im Fensterformular, Schema, Texte in allen Sprachen. Gleiches Datenformat wie im
+Original, beim Update auf 1.25 geht nichts verloren.
+
+**Rahmenlage.** Der feste Fensterrahmen sitzt im Original immer in der Mitte der
+Wand (`viewer/openings.ts`: „fixed frame in the middle of the wall“). Bei
+Fenstern in der Dämmebene (bündig mit der Außenwand, tiefe Laibung innen) steht
+er damit eine halbe Wanddicke zu weit innen.
+
+* Neues Feld `frame_pos` an Fenstern: `null`/`middle` (wie bisher), `outside`
+  (Rahmen bündig mit der Außenseite), `inside` (bündig mit der Innenseite).
+* `frameMid()` in `viewer/openings.ts` liefert die Rahmenebene; Flügel,
+  Fensterbank innen und Festverglasung (`glass_wall`) folgen ihr. Türen und
+  Garagentore bleiben in der Mitte, eine zu dünne Wand auch.
+* Editor: „Rahmen in der Wand“ im Fensterformular. `OPENING_SCHEMA`:
+  `frame_pos` (`None`, `middle`, `outside`, `inside`).
+* Tests: `viewer/openings.test.ts` (Mitte, außen, innen, Tür, dünne Wand),
+  `tests/test_schema.py`.
+
 ### Geänderte Dateien
 
 | Datei | Änderung |

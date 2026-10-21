@@ -116,10 +116,12 @@ import {
   DOOR_STYLES,
   WINDOW_STYLES,
   SILL_BOARDS,
+  FRAME_POSITIONS,
   openingStyle,
   isFrontDoor,
   type OpeningStyle,
   type SillBoard,
+  type FramePos,
   type ScreenPicture,
   STAIR_TYPES,
   setTerrain,
@@ -10213,6 +10215,14 @@ export class Fp3dEditor extends LitElement {
               >${this.t("sill_board")}
               <select ?disabled=${!admin} @change=${(e: Event) => this.updateOpening({ sill_board: ((e.target as HTMLSelectElement).value || "auto") as SillBoard })}>
                 ${SILL_BOARDS.map((m) => html`<option value=${m} ?selected=${(o.sill_board ?? "auto") === m}>${this.t(`sill_board_${m}`)}</option>`)}
+              </select></label
+            >`
+          : nothing}
+        ${window
+          ? html`<label class="fp3d-field fp3d-wide" title=${this.t("frame_pos_hint")}
+              >${this.t("frame_pos")}
+              <select ?disabled=${!admin} @change=${(e: Event) => { const v = (e.target as HTMLSelectElement).value as FramePos; this.updateOpening({ frame_pos: v === "middle" ? null : v }); }}>
+                ${FRAME_POSITIONS.map((m) => html`<option value=${m} ?selected=${(o.frame_pos ?? "middle") === m}>${this.t(`frame_pos_${m}`)}</option>`)}
               </select></label
             >`
           : nothing}

@@ -159,6 +159,8 @@ OPENING_SCHEMA = vol.Schema(
         # windows: board inside and sill outside, "auto" (from 0.3 m sill height, none for a window
         # directly above another opening), "none", "inside" or "outside"
         vol.Optional("sill_board", default="auto"): vol.Any(None, vol.In(["auto", "none", "inside", "outside"])),
+        # windows: frame in the middle of the wall (None, "middle"), flush with the outer face or the room
+        vol.Optional("frame_pos", default=None): vol.Any(None, vol.In(["middle", "outside", "inside"])),
         # ask before moving the blind or garage door (no moving by a swipe then)
         vol.Optional("confirm", default=False): bool,
         vol.Optional("cover", default=None): _ENTITY_REF,
