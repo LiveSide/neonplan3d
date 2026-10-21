@@ -2992,8 +2992,8 @@ export class Fp3dView3d extends LitElement {
         // FORK d14tk: a pack bin may stand in a stack (sorting bins): its tag sits on its front, not on its lid
         const r = (f.rotation * Math.PI) / 180;
         const n: [number, number] = [-Math.sin(r), Math.cos(r)];
-        const out = f.d / 2 + 0.01;
-        this.binHolos.push({ floorId: floor.id, x: f.x + n[0] * out, z: f.z + n[1] * out, y: mountBase(floor, f) + f.h * 0.5 - 0.04, name: label, color: hex, when: text, soon: due.days <= 1, n });
+        const out = f.d * 0.15;
+        this.binHolos.push({ floorId: floor.id, x: f.x + n[0] * out, z: f.z + n[1] * out, y: mountBase(floor, f) + f.h * 0.3, name: label, color: hex, when: text, soon: due.days <= 1, n });
       }
       return { item: due.days <= 1 ? { icon: "trash-can-outline", text: `${label}: ${text}`, entity: src, hot: due.glow } : undefined };
     }
