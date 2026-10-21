@@ -104,6 +104,27 @@ test("a window may stay open in the rain; a weather station's own rain sensor de
   assert.equal(findAlerts(hass, b, alertSources(hass, b), links).filter((a) => a.kind === "window_rain").length, 1);
 });
 
+test("an entity of its own decides the rain warning alone; light rain does not warn (FORK d14tk)", () => {
+  const { hass, b, links } = setup();
+  const rains = () => findAlerts(hass, b, alertSources(hass, b), links).filter((a) => a.kind === "window_rain").length;
+  // light rain: the weather says rainy, but the own sensor ("heavy rain or rain with strong wind") is off
+  hass.states["weather.zuhause"].state = "rainy";
+  hass.states["binary_sensor.regenwarnung"] = { entity_id: "binary_sensor.regenwarnung", state: "off", attributes: {} } as never;
+  b.settings.rain_warning_entity = "binary_sensor.regenwarnung";
+  assert.equal(rains(), 0);
+  hass.states["binary_sensor.regenwarnung"].state = "on";
+  assert.equal(rains(), 1);
+  // the switch for the warning still wins
+  b.settings.rain_warning = false;
+  assert.equal(rains(), 0);
+  b.settings.rain_warning = true;
+  // while the own sensor reports nothing, the rain decides as before
+  hass.states["binary_sensor.regenwarnung"].state = "unavailable";
+  assert.equal(rains(), 1);
+  hass.states["weather.zuhause"].state = "sunny";
+  assert.equal(rains(), 0);
+});
+
 test("a power outage: grid sensors off, helpers on, a UPS on battery, a low mains voltage (#214)", () => {
   const st = (entity_id: string, state: string, attributes: Record<string, unknown> = {}) => ({ entity_id, state, attributes });
   assert.equal(isOutage(st("binary_sensor.netz", "off", { device_class: "power" })), true);

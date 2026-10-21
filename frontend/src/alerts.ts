@@ -34,6 +34,8 @@ export interface AlertSources {
   outage: string | null;
   /** A weather station's rain sensor or rain rate, used instead of the weather entity (D407). */
   rain?: string | null;
+  /** Only for the window warning: the entity that decides when rain is worth a warning (settings.rain_warning_entity). */
+  warnRain?: string | null;
   /** Pool Pro: the pools whose water values are watched. */
   pools: { floorId: string; areaId: string; ids: string[] }[];
   /** Haushalt Pro: the fridges with door sensors (their doors may not stand open too long). */
@@ -68,12 +70,14 @@ export function alertSources(hass: HomeAssistant, building: Building, weatherId?
     : [];
   const rainId = building.settings.rain_warning === false ? null : building.settings.rain_entity;
   const rain = rainId && hass.states[rainId] ? rainId : null;
-  return { rooms, alarms: ids.filter((id) => id.startsWith("alarm_control_panel.")), weather, outage, pools, rain, fridges };
+  const warnId = building.settings.rain_warning === false ? null : building.settings.rain_warning_entity;
+  const warnRain = warnId && hass.states[warnId] ? warnId : null;
+  return { rooms, alarms: ids.filter((id) => id.startsWith("alarm_control_panel.")), weather, outage, pools, rain, warnRain, fridges };
 }
 
 /** Entities whose state changes may raise or clear a warning. */
 export function alertEntities(sources: AlertSources): string[] {
-  return [...sources.rooms.flatMap((r) => r.sensors), ...sources.alarms, ...(sources.weather ? [sources.weather] : []), ...(sources.outage ? [sources.outage] : []), ...(sources.rain ? [sources.rain] : []), ...(sources.pools ?? []).flatMap((p) => p.ids), ...(sources.fridges ?? []).flatMap((f) => f.ids)];
+  return [...sources.rooms.flatMap((r) => r.sensors), ...sources.alarms, ...(sources.weather ? [sources.weather] : []), ...(sources.outage ? [sources.outage] : []), ...(sources.rain ? [sources.rain] : []), ...(sources.warnRain ? [sources.warnRain] : []), ...(sources.pools ?? []).flatMap((p) => p.ids), ...(sources.fridges ?? []).flatMap((f) => f.ids)];
 }
 
 /** The active warnings, rooms first, then the house-wide alarm. */
@@ -88,7 +92,9 @@ export function findAlerts(hass: HomeAssistant, building: Building, sources: Ale
   }
   // a weather station of its own answers first; without one the weather entity's condition counts
   const station = sources.rain ? stationRain(hass, sources.rain) : null;
-  const raining = station !== null ? station > 0 : !!sources.weather && RAIN_STATES.has(hass.states[sources.weather]?.state ?? "");
+  // an entity of its own for the warning (heavy rain only, say) decides alone while it reports; the rain in 3D is untouched
+  const warn = sources.warnRain ? stationRain(hass, sources.warnRain) : null;
+  const raining = warn !== null ? warn > 0 : station !== null ? station > 0 : !!sources.weather && RAIN_STATES.has(hass.states[sources.weather]?.state ?? "");
   if (raining) {
     for (const floor of building.floors) {
       for (const o of floor.openings) {

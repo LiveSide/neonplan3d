@@ -185,3 +185,11 @@ def test_floor_attached_to_the_floor_above_or_below() -> None:
         FLOOR_SCHEMA({**FLOOR, "attached": "sideways"})
     with pytest.raises(vol.Invalid):
         FLOOR_SCHEMA({**FLOOR, "attached": False})
+
+
+def test_rain_warning_entity() -> None:
+    # FORK d14tk: an entity of its own for the window warning only (heavy rain, rain with strong wind)
+    base = {"wall_exterior": 0.3, "wall_interior": 0.12, "grid": 0.05}
+    assert SETTINGS_SCHEMA(base)["rain_warning_entity"] is None
+    warn = SETTINGS_SCHEMA({**base, "rain_warning_entity": "binary_sensor.regenwarnung"})
+    assert warn["rain_warning_entity"] == "binary_sensor.regenwarnung"

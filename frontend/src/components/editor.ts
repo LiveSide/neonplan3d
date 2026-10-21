@@ -12348,7 +12348,17 @@ export class Fp3dEditor extends LitElement {
         >
         ${this.hass
           ? html`${this.entitySelect(this.t("rain_entity"), s.rain_entity ?? null, undefined, this.entityOptions((id) => isRainSource(this.hass!, id)), (v) => set({ rain_entity: v === "none" ? null : v }))}
-              <p class="fp3d-sub fp3d-wide">${this.t("rain_entity_hint")}</p>`
+              <p class="fp3d-sub fp3d-wide">${this.t("rain_entity_hint")}</p>
+              ${s.rain_warning !== false
+                ? html`${this.entitySelect(
+                      this.t("rain_warning_entity"),
+                      s.rain_warning_entity ?? null,
+                      undefined,
+                      this.entityOptions((id) => id.startsWith("binary_sensor.") || isRainSource(this.hass!, id)),
+                      (v) => set({ rain_warning_entity: v === "none" ? null : v }),
+                    )}
+                    <p class="fp3d-sub fp3d-wide">${this.t("rain_warning_entity_hint")}</p>`
+                : nothing}`
           : nothing}
         <label class="fp3d-check fp3d-wide" title=${this.t("alert_names_hint")}
           ><input type="checkbox" .checked=${s.alert_names !== false} @change=${(ev: Event) => set({ alert_names: (ev.target as HTMLInputElement).checked })} />

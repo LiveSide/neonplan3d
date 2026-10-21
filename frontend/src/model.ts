@@ -665,6 +665,12 @@ export interface BuildingSettings {
   rain_warning?: boolean;
   /** Rain from a weather station of your own (a rain sensor or a rain rate) instead of the weather entity (D407). */
   rain_entity?: string | null;
+  /**
+   * Only for the warning: an entity that says when an open window is worth a warning (a rain sensor, a rain rate above
+   * 0.1 mm/h, or a binary sensor of your own such as "heavy rain or rain with strong wind"). The rain in 3D keeps
+   * following the weather entity or rain_entity, so light rain still shows. Null: the warning follows the rain.
+   */
+  rain_warning_entity?: string | null;
   /** Warnings name the device after the room (default on); off = only "Room · Smoke" when the warning has a room (#374). */
   alert_names?: boolean;
   /** An entity that reports a power outage (a grid or UPS sensor); null = no outage warning (#214). */

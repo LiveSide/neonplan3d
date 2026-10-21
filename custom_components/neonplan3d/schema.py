@@ -722,6 +722,9 @@ SETTINGS_SCHEMA = vol.Schema(
         vol.Optional("rain_warning", default=True): bool,
         # rain from an own weather station (a rain sensor or rain rate) instead of the weather entity
         vol.Optional("rain_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # FORK d14tk: only for the window warning, the entity that says when rain is worth a warning
+        # (heavy rain, rain with strong wind); the rain in 3D keeps following the weather
+        vol.Optional("rain_warning_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # warnings name the device after the room
         vol.Optional("alert_names", default=True): bool,
         # an entity that reports a power outage (None = no outage warning)
