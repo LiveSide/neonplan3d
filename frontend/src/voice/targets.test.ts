@@ -1,39 +1,78 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { emptyBuilding, newFloor, type Room } from "../model.ts";
-import { showTarget, type Shown } from "./targets.ts";
+import { showTarget, SYNONYMS, type Shown } from "./targets.ts";
 
 const room = (id: string, name: string): Room => ({ id, name, area_id: null, points: [], floor_material: "wood" });
 const building = {
   ...emptyBuilding(),
-  floors: [{ ...newFloor("eg", "Erdgeschoss", 0), rooms: [room("wz", "Wohnzimmer"), room("fl", "Flur"), room("ga", "Garten")] }],
+  floors: [{ ...newFloor("eg", "Erdgeschoss", 0), rooms: [room("wz", "Wohnzimmer"), room("fl", "Flur"), room("ga", "Garten"), room("hw", "HWR")] }],
 };
+const dev = (entity: string, name: string, room: string, camera = false): Shown => ({ id: entity, entity, name, room, camera });
 const devices: Shown[] = [
-  { entity: "camera.haustuer", name: "Kamera Haustür", room: "Flur", camera: true },
-  { entity: "camera.garten", name: "Garten Cam", room: "Garten", camera: true },
-  { entity: "switch.waschmaschine", name: "Waschmaschine", room: "", camera: false },
-  { entity: "light.stehlampe", name: "Stehlampe", room: "Wohnzimmer", camera: false },
-  { entity: "light.flur", name: "Flur Licht", room: "Flur", camera: false },
-  { entity: "light.wz", name: "Wohnzimmer Decke", room: "Wohnzimmer", camera: false },
+  dev("camera.haustuer", "Kamera Haustür", "Flur", true),
+  dev("camera.garten", "Garten Cam", "Garten", true),
+  dev("switch.waschmaschine", "Waschmaschine", "", false),
+  dev("light.stehlampe", "Stehlampe", "Wohnzimmer"),
+  dev("light.flur", "Flur Licht", "Flur"),
+  dev("light.wz", "Wohnzimmer Decke", "Wohnzimmer"),
 ];
 
-const t = (s: string) => showTarget(s, building, devices);
+const t = (s: string, d: readonly Shown[] = devices) => showTarget(s, building, d);
+const id = (r: ReturnType<typeof t>) => (r as { id: string } | null)?.id;
 
 test("devices by name, with a word that asks to see them", () => {
-  assert.deepEqual(t("Zeig die Waschmaschine"), { kind: "device", entity: "switch.waschmaschine", name: "Waschmaschine", camera: false });
-  assert.equal((t("Wo ist die Stehlampe") as { entity: string }).entity, "light.stehlampe");
+  assert.deepEqual(t("Zeig die Waschmaschine"), { kind: "device", id: "switch.waschmaschine", entity: "switch.waschmaschine", name: "Waschmaschine", camera: false });
+  assert.equal(id(t("Wo ist die Stehlampe")), "light.stehlampe");
   // naming a device without asking to see it is for Assist
   assert.equal(t("Flur Licht an"), null);
 });
 
 test("cameras: by name, by 'camera' and their room, or all of them", () => {
-  assert.equal((t("Zeig die Kamera Haustür") as { entity: string }).entity, "camera.haustuer");
-  assert.equal((t("zeig die Kamera im Garten") as { entity: string }).entity, "camera.garten");
+  assert.equal(id(t("Zeig die Kamera Haustür")), "camera.haustuer");
+  // a compound: "Haustürkamera" is "Haustür" and "Kamera"; so is "Gartencam"
+  assert.equal(id(t("Zeig die Haustürkamera")), "camera.haustuer");
+  assert.equal(id(t("zeig mal die Gartencam")), "camera.garten");
+  assert.equal(id(t("zeig die Kamera im Garten")), "camera.garten");
   assert.equal(t("Zeig mir die Kameras")?.kind, "cameras");
+});
+
+test("own aliases: a device by its further names, a room by its own", () => {
+  const items: Shown[] = [{ id: "media_player.tv", entity: "media_player.tv", name: "Smart TV Pro", names: ["Smart TV Pro", "Wohnzimmerfernseher", "Glotze"], room: "Wohnzimmer", camera: false }];
+  assert.equal(id(t("Zeig den Wohnzimmerfernseher", items)), "media_player.tv");
+  assert.equal(id(t("wo ist die Glotze", items)), "media_player.tv");
+  const b = { ...building, floors: [{ ...building.floors[0], rooms: [{ ...room("wz", "Wohnzimmer"), aliases: ["Stube"] }] }] };
+  assert.equal(showTarget("Zeig die Stube", b, [])?.kind, "room");
 });
 
 test("rooms stay rooms when a device only shares their name", () => {
   assert.deepEqual(t("Zeig das Wohnzimmer"), { kind: "room", floorId: "eg", roomId: "wz", name: "Wohnzimmer" });
-  assert.equal((t("Zeig die Wohnzimmer Decke") as { entity: string }).entity, "light.wz");
+  assert.equal(id(t("Zeig die Wohnzimmer Decke")), "light.wz");
   assert.equal(t("Garten")?.kind, "room");
+});
+
+test("furniture answers to its kind, its own name, everyday words and its sensor's name without the measuring word", () => {
+  const items: Shown[] = [
+    { id: "sensor.waschmaschine_leistung", entity: "sensor.waschmaschine_leistung", name: "Waschmaschine", names: ["Waschmaschine", "Waschmaschine Leistung", ...SYNONYMS.washer], room: "HWR", camera: false },
+    { id: "furniture:t1", entity: null, name: "Trockner", names: ["Trockner", ...SYNONYMS.dryer], room: "HWR", camera: false },
+    { id: "media_player.tv", entity: "media_player.tv", name: "Fernseher", names: ["Samsung TV", "Fernseher", ...SYNONYMS.tv_board], room: "Wohnzimmer", camera: false },
+    { id: "furniture:p1", entity: null, name: "Poolpumpe", names: ["Poolpumpe", ...SYNONYMS.pool_pump], room: "Garten", camera: false },
+    { id: "furniture:h1", entity: null, name: "Heizkörper", names: ["Heizkörper", ...SYNONYMS.radiator], room: "Flur", camera: false },
+    { id: "furniture:h2", entity: null, name: "Heizkörper", names: ["Heizkörper", ...SYNONYMS.radiator], room: "Wohnzimmer", camera: false },
+  ];
+  // the sensor is "Waschmaschine Leistung", asked for as the machine
+  assert.equal(id(t("Zeig die Waschmaschine", items)), "sensor.waschmaschine_leistung");
+  assert.equal(id(t("Läuft die Wäsche? zeig mal", items)), "sensor.waschmaschine_leistung");
+  // without any entity, by its kind
+  assert.equal(id(t("Wo ist der Trockner", items)), "furniture:t1");
+  // everyday words
+  assert.equal(id(t("Zeig den Fernseher", items)), "media_player.tv");
+  assert.equal(id(t("zeig mal die Glotze", items)), "media_player.tv");
+  assert.equal(id(t("wo ist die Poolpumpe", items)), "furniture:p1");
+  assert.equal(id(t("zeig die Pumpe", items)), "furniture:p1");
+  // two of a kind: the one in the room named, else the first
+  assert.equal(id(t("Zeig die Heizung im Wohnzimmer", items)), "furniture:h2");
+  assert.equal(id(t("Zeig die Heizung", items)), "furniture:h1");
+  // the room still wins over a device that only shares its name
+  assert.equal(t("Zeig das Wohnzimmer", items)?.kind, "room");
 });

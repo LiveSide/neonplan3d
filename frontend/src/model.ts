@@ -23,6 +23,8 @@ export interface Room {
   climate?: RoomClimate | null;
   id: string;
   name: string;
+  /** Further names the voice answers to ("Stube", "Lounge"). */
+  aliases?: string[];
   area_id: string | null;
   /** The camera the room opens with when it is tapped in 3D (null: framed from above). */
   start_view?: StartView | null;
@@ -39,6 +41,11 @@ export interface Room {
    * wall. An edge that other rooms split into parts may carry a list instead: one height per part, in order.
    */
   wall_heights?: WallHeight[];
+  /**
+   * Sloping walls (D569): the height of the wall at the edge's start and end corner (index = edge); the top runs
+   * straight between them – a lean-to, a garage on a slope. null = the edge's plain height.
+   */
+  wall_slopes?: ([number, number] | null)[];
   /**
    * Ceiling height of this room in m (null = the floor height): its walls end there unless a neighbour is
    * taller, and its ceiling lamps hang from it – a 2.5 m living room beside a 5 m garage (#30).
@@ -90,6 +97,8 @@ export interface Opening {
   sidelight_width2?: number | null;
   /** Contact of the second leaf (null = none). */
   contact2: string | null;
+  /** Door: its smart lock (lock.*) – shown as a pin at the door, locked or not (D636). */
+  lock?: EntityRef;
   /** Windows: which sensors report the sash (null: a contact, plus a tilt sensor when one is set). */
   sensor?: "contact" | "handle" | "contact_tilt" | null;
   /** The same for the second leaf of a double window, with its own tilt sensor. */
@@ -135,6 +144,12 @@ export interface ScreenPicture {
   image: string;
 }
 
+/** One gang of a wall switch or socket: what it switches (the same entity may sit on several) and what it draws. */
+export interface Gang {
+  entity: string | null;
+  power?: string | null;
+}
+
 export interface Furniture {
   /** Fixed against moving by accident. */
   locked?: boolean | null;
@@ -155,6 +170,8 @@ export interface Furniture {
   variant: string | null;
   /** Own name (e.g. "Wechselrichter Nord"); null = the type's name. */
   name?: string | null;
+  /** Further names the voice answers to ("Wohnzimmerfernseher", "Glotze"). */
+  aliases?: string[];
   /** The own name shows as a small label under its marker in 3D. */
   show_name?: boolean;
   /** Lamps: how strongly the lamp glows in 3D, 0.1–1.5 (1 = as bright as the light reports) – #181. */
@@ -194,6 +211,8 @@ export interface Furniture {
   moisture_min?: number | null;
   /** Haushalt Pro, washer, dryer, dishwasher: the time left (minutes, an end time or "H:MM"). */
   remaining?: EntityRef;
+  /** Radiator: a sensor that says whether it heats (a valve's work state, an opening percentage) when the thermostat does not (D637). */
+  heat_sensor?: EntityRef;
   /** Haushalt Pro: a consumable or service of the item (a filter, salt, rinse aid): due when on, at or below `service_min`, or its date. */
   service?: EntityRef;
   /** Haushalt Pro: the number (percent or days left) at or below which the service is due (null = 10). */
@@ -238,12 +257,24 @@ export interface Furniture {
   state_split?: "left_right" | "top_bottom" | null;
   /** Lamps: a second entity whose colour and brightness the lamp shows while the linked switch is on (a relay switches the light, the bulb itself knows its colour). */
   color_entity?: EntityRef;
+  /** Any electric item: a sensor whose value stands at its symbol – a boiler's water temperature, a humidity (D619). */
+  extra?: EntityRef;
   /** Mirrored (left-right) – an L-sofa the other way round, a cabinet with its door on the other side. */
   mirror?: boolean;
   /** LED strip: tilt about its length (°; 0 = lying flat, 90 = its face points sideways, e.g. along a roof slope). */
   tilt?: number;
+  /** LED strip: rising along its length (°; up the stairs, a handrail; D539); its height above the floor is its middle. */
+  rise?: number;
   /** LED strip: standing upright – its length runs up from the mount height (door frame, light column). */
   upright?: boolean;
+  /** Ceiling fan with light (D606): its fan entity – the blades turn with its speed (the light is `entity`). */
+  fan?: EntityRef;
+  /** Wi-Fi access point (D582): a sensor with the number of connected clients (its status is `entity`). */
+  clients?: EntityRef;
+  /** Water heater: a sensor with the water temperature (else the heater's own current temperature). */
+  water_temp?: EntityRef;
+  /** Wall switch and socket (D523, D540, #593): one entry per gang – the entity it switches and, for a socket, its power sensor. */
+  gangs?: Gang[] | null;
   /** Screens: pictures shown while an entity is in a state (first match wins; "*" = any state). */
   pictures?: ScreenPicture[];
   /** Screens: what shows around a rule picture – a dark screen (default) or a white one (for dark logos). */
@@ -269,6 +300,8 @@ export interface Placement {
   /** Fixed against moving by accident. */
   locked?: boolean | null;
   entity_id: string;
+  /** Further names the voice answers to. */
+  aliases?: string[];
   x: number;
   z: number;
   /** Height above the floor; null = default for the device kind (and lamp mount). */
@@ -592,6 +625,8 @@ export const PET_FURS_OF: Record<Pet["kind"], readonly string[]> = {
 export const DOG_BREEDS = ["dachshund", "pug", "terrier", "labrador", "shepherd"] as const;
 
 export interface BuildingSettings {
+  /** The background behind the 3D house (null: the look's own sky): a colour, a gradient or a picture. */
+  backdrop?: { kind?: "color" | "gradient" | "image" | null; color?: string | null; color2?: string | null; image?: string | null; dim?: number | null } | null;
   /**
    * Kamera-Cockpit: the live director – which events make a screen (that has it switched on) show them by itself.
    * Every event is off unless switched on.
@@ -610,6 +645,10 @@ export interface BuildingSettings {
     alerts?: boolean;
     /** Seconds before the view goes back (the doorbell twice as long; default 30). */
     hold?: number | null;
+    /** Looking through a camera shows its live stream instead of a still every few seconds (D589; off: old tablets). */
+    live?: boolean;
+    /** Own triggers (D615): an entity that goes on or open (a second doorbell, the garage door) and the camera to show. */
+    triggers?: { entity: string; camera: string | null }[] | null;
   } | null;
   /** Fun pack "pets": the animals and whether they are shown. */
   pets?: { on: boolean; list: Pet[] } | null;
@@ -644,7 +683,9 @@ export interface BuildingSettings {
   /** The ground around the house: its height and the earth around cellars. */
   terrain?: Terrain | null;
   /** Haushalt Pro: from which hour the day before a bin glows (null = 14) and until which hour on the day (null = 12). */
-  household?: { bin_from?: number | null; bin_until?: number | null } | null;
+  household?: { bin_from?: number | null; bin_until?: number | null; notes?: EntityRef } | null;
+  /** The floor the editor opens with (null: the first of the list) (D418). */
+  editor_floor?: string | null;
   /** Fun pack "Halloween": the ghost that floats through the house now and then (on unless switched off). */
   halloween?: { ghost?: boolean } | null;
   /** Plan lock: rooms, walls, doors, windows and outdoor areas cannot be moved by accident. */
@@ -864,6 +905,8 @@ export interface PoolLinks {
   ph?: EntityRef;
   /** Chlorine: redox/ORP in mV or free chlorine in mg/l (ppm). */
   chlorine?: EntityRef;
+  /** Salt (a salt-water pool): mg/l or ppm. */
+  salt?: EntityRef;
   /** Pool cover (a cover entity): it slides over the water as far as it is closed. */
   cover?: EntityRef;
   /** Pool Pro: the pool's ports (skimmer, bottom drain, inlets) and the waste drain the backwash goes to. */
@@ -1200,11 +1243,16 @@ export const FURNITURE_TYPES = [
   "awning",
   "waste_bin",
   "mailbox",
+  "wall_switch",
+  "wall_socket",
+  "lamp_fan",
+  "wifi_ap",
+  "water_heater",
 ] as const;
 
 /** Furniture library sections (the editor lists them in this order). */
 export const FURNITURE_GROUPS: Record<string, FurnitureType[]> = {
-  lights: ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "lamp_floor", "lamp_uplight", "lamp_table", "lamp_wall", "led_strip", "lamp_bollard", "lamp_garden"],
+  lights: ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "lamp_fan", "lamp_floor", "lamp_uplight", "lamp_table", "lamp_wall", "led_strip", "lamp_bollard", "lamp_garden"],
   living: ["sofa", "sofa_l", "sofa_u", "armchair", "stool", "coffee_table", "tv_board", "tv_wall", "sideboard", "shelf", "plant", "rug"],
   dining: ["table", "table_round", "chair", "bench", "corner_bench", "bar_stool"],
   kitchen: ["kitchen", "kitchen_wall", "kitchen_tall", "island", "worktop", "sink", "stove", "dishwasher", "fridge"],
@@ -1214,6 +1262,7 @@ export const FURNITURE_GROUPS: Record<string, FurnitureType[]> = {
   vehicles: ["parking"],
   outdoor: ["awning"],
   household: ["waste_bin", "mailbox"],
+  switches: ["wall_switch", "wall_socket", "wifi_ap", "water_heater"],
 };
 
 /** Energy devices: placed and set up in the Energy tool (stored like furniture, not in the library). */
@@ -1228,6 +1277,7 @@ export const ENERGY_DEVICES = ["meter", "inverter", "home_battery", "wallbox", "
 /** Lamps: drawn live (they glow with their light) and tapped directly in 3D. */
 export const LAMP_TYPES = new Set<string>([
   "lamp_ceiling",
+  "lamp_fan",
   "lamp_downlight",
   "lamp_spot",
   "lamp_panel",
@@ -1250,18 +1300,21 @@ export const WALL_LAMP_Y = 1.75;
  * light (a downstand beam, ceiling beams) start under the ceiling and can be lowered (#287).
  */
 export function canLift(f: Pick<Furniture, "type">): boolean {
-  if (["lamp_ceiling", "lamp_panel", "lamp_pendant", "stairwell", "parking"].includes(f.type) || STAIR_TYPES.has(f.type)) return false;
+  if (["lamp_pendant", "lamp_fan", "stairwell", "parking"].includes(f.type) || STAIR_TYPES.has(f.type)) return false;
   const item = packItem(f.type);
   return !(item?.mount === "ceiling" && item.light);
 }
 
 /**
- * Spots and downlights sit under the ceiling but can be lowered, say under a wall cabinet to light the worktop
- * (#311): their height above the floor is that of their underside, this far below the top they hang from.
+ * Spots, downlights, ceiling lamps and LED panels sit under the ceiling but can be lowered – under a wall cabinet to
+ * light the worktop (#311), under a staircase: their height above the floor is that of their underside, this far
+ * below the top they hang from. Without a height of their own they stay at the ceiling.
  */
-export const LIFT_SPOTS = new Set<string>(["lamp_downlight", "lamp_spot"]);
+export const LIFT_SPOTS = new Set<string>(["lamp_downlight", "lamp_spot", "lamp_ceiling", "lamp_panel"]);
 export function spotDepth(type: string, h: number): number {
-  return type === "lamp_spot" ? Math.max(0.06, h) + 0.008 : 0.02;
+  if (type === "lamp_spot") return Math.max(0.06, h) + 0.008;
+  if (type === "lamp_ceiling" || type === "lamp_panel") return Math.max(0.02, h) + 0.005;
+  return 0.02;
 }
 
 /** Built-in stairs: they reach up to the next floor and cut its opening (the straight one and the U-stair). */
@@ -1357,6 +1410,11 @@ export function builtinBase(f: Pick<Furniture, "type" | "h"> & { variant?: strin
     case "mailbox":
       // a wall mailbox and a mailbox bank hang on the wall
       return f.variant === "bank" ? 0.75 : f.variant === "pole" || f.variant === "pillar" || f.variant === "parcel" ? 0 : 1.0;
+    case "wall_switch":
+      return 1.05;
+    case "wall_socket":
+      // an outdoor socket sits a little higher
+      return f.variant === "outdoor" ? 0.5 : 0.3;
     case "inverter":
       return 1.1;
     case "wallbox":
@@ -1368,13 +1426,66 @@ export function builtinBase(f: Pick<Furniture, "type" | "h"> & { variant?: strin
   }
 }
 
-export function surfaceHeight(floor: Floor, x: number, z: number): number {
+/** A worktop is only its slab; above this height its underside leaves room to stand things under it. */
+const WORKTOP_SLAB = 0.04;
+const HIGH_SLAB = 1.2;
+
+/**
+ * Where something placed at (x, z) stands: on the highest surface there (a table, a worktop), else the floor. A
+ * worktop high up (a step of stairs built from worktops, a shelf board) has room beneath it: what fits under it stays
+ * on the floor (#614) – one at kitchen or bar height still carries what is put on it.
+ */
+export function surfaceHeight(floor: Floor, x: number, z: number, itemH = 0): number {
   let top = 0;
   for (const f of floor.furniture) {
     if (!(SURFACES.has(f.type) || packItem(f.type)?.surface) || !pointInPolygon([x, z], furnitureFootprint(f))) continue;
+    if (f.type === "worktop" && itemH > 0 && f.h - WORKTOP_SLAB >= HIGH_SLAB && itemH <= f.h - WORKTOP_SLAB - 0.02) continue;
     top = Math.max(top, f.h);
   }
   return top;
+}
+
+/** "Glotze, Wohnzimmerfernseher" → the names, trimmed, empty ones dropped (at most 12). */
+export function splitAliases(text: string): string[] | undefined {
+  const out = text.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 12);
+  return out.length ? out : undefined;
+}
+
+/** Wall switches and sockets: up to four gangs in one frame, each with its own entity (D523, #593). */
+export const GANG_TYPES = new Set<string>(["wall_switch", "wall_socket"]);
+export const MAX_GANGS = 4;
+
+/** The gangs of a wall switch or socket (at least one, empty when nothing is linked). */
+export function gangsOf(f: Pick<Furniture, "gangs">): Gang[] {
+  const g = (f.gangs ?? []).slice(0, MAX_GANGS);
+  return g.length ? g : [{ entity: null }];
+}
+
+/** Width of a frame with n gangs (a single one 8.5 cm, each more 7.1 cm). */
+export function gangPlateWidth(n: number): number {
+  return Math.round((0.085 + 0.071 * (Math.max(1, Math.min(MAX_GANGS, n)) - 1)) * 1000) / 1000;
+}
+
+/** The different entities a wall switch or socket switches (two sockets on one relay count once). */
+export function gangEntities(f: Pick<Furniture, "gangs">): string[] {
+  return [...new Set(gangsOf(f).map((g) => g.entity).filter((e): e is string => !!e && e !== "none"))];
+}
+
+/** Wi-Fi access point and water heater: technical items with their own form (D582). */
+export const TECH_TYPES = new Set<string>(["wifi_ap", "water_heater"]);
+/** Their sizes by mounting: a disc on the ceiling or a plate on the wall; a standing tank or a slim one on the wall. */
+export const TECH_SIZE: Record<string, [number, number, number]> = {
+  "wifi_ap:": [0.2, 0.2, 0.04],
+  "wifi_ap:wall": [0.16, 0.04, 0.16],
+  "water_heater:": [0.56, 0.56, 1.5],
+  "water_heater:wall": [0.5, 0.27, 0.8],
+};
+
+/** Where an access point or water heater hangs by default: an access point under the ceiling or high on the wall, a slim tank at 1.1 m. */
+export function techBase(f: { type: string; variant?: string | null; h: number }, ceiling: number): number | null {
+  if (f.type === "wifi_ap") return f.variant === "wall" ? 2.1 : Math.max(0, ceiling - f.h);
+  if (f.type === "water_heater") return f.variant === "wall" ? 1.1 : 0;
+  return null;
 }
 
 export const ELECTRIC_FURNITURE = new Set<string>([
@@ -1468,9 +1579,17 @@ export const FURNITURE_SIZE: Record<FurnitureType, [number, number, number]> = {
   // a 240 l wheelie bin; a wall mailbox
   waste_bin: [0.58, 0.73, 1.07],
   mailbox: [0.38, 0.14, 0.34],
+  // a single plate; more gangs make it wider (gangPlateWidth)
+  wall_switch: [0.085, 0.012, 0.085],
+  wall_socket: [0.085, 0.014, 0.085],
+  // a ceiling access point (a UniFi disc); a standing hot water tank
+  wifi_ap: [0.2, 0.2, 0.04],
+  water_heater: [0.56, 0.56, 1.5],
   robot_vacuum: [0.36, 0.5, 0.1],
   parking: [2.6, 5.2, 0.02],
   lamp_pendant: [0.4, 0.4, 0.8],
+  // blade span, and the drop from the ceiling to the bottom of its light
+  lamp_fan: [1.3, 1.3, 0.45],
   lamp_floor: [0.4, 0.4, 1.7],
   lamp_table: [0.28, 0.28, 0.45],
   lamp_wall: [0.22, 0.12, 0.2],
@@ -1715,6 +1834,7 @@ export const LAMP_MODEL: Record<string, LampModel> = {
   lamp_bollard: "bollard",
   lamp_garden: "garden",
   lamp_pendant: "pendant",
+  lamp_fan: "fan",
   lamp_floor: "floor",
   lamp_table: "table",
   lamp_wall: "wall",

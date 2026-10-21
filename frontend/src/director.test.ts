@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Director, STOP_MS, doorbellCamera, doorbellEntities, doorbellRang, type Shot } from "./director.ts";
+import { Director, STOP_MS, triggerFired, doorbellCamera, doorbellEntities, doorbellRang, type Shot } from "./director.ts";
 import type { HassEntity, HomeAssistant } from "./types.ts";
 
 function st(entity_id: string, state: string, attributes: Record<string, unknown> = {}): HassEntity {
@@ -94,4 +94,15 @@ test("offers: priority, cooldown, someone at the screen", () => {
   d.touch(207_000);
   assert.deepEqual(d.due(206_000 + 60_000), { shot: bell, back: false });
   assert.equal(d.due(400_000), null);
+});
+
+test("own triggers: an event's new stamp, or an entity going on or open (D615)", () => {
+  const now = Date.parse("2026-10-17T10:00:05.000Z");
+  assert.equal(triggerFired(st("cover.garage", "closed"), st("cover.garage", "opening"), now), true);
+  assert.equal(triggerFired(st("cover.garage", "opening"), st("cover.garage", "open"), now), false);
+  assert.equal(triggerFired(st("binary_sensor.tor", "off"), st("binary_sensor.tor", "on"), now), true);
+  assert.equal(triggerFired(st("lock.tuer", "locked"), st("lock.tuer", "unlocked"), now), true);
+  assert.equal(triggerFired(st("event.klingel2", "2026-10-17T09:00:00.000Z"), st("event.klingel2", "2026-10-17T10:00:00.000Z"), now), true);
+  assert.equal(triggerFired(st("cover.garage", "unavailable"), st("cover.garage", "open"), now), false);
+  assert.equal(triggerFired(undefined, st("cover.garage", "open"), now), false);
 });

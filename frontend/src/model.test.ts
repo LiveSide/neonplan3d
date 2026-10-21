@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { emptyBuilding, floorElevation, newFloor, outdoorZones, zonesOf, openingPreset, openingStyle, normalizeBuilding, outdoorDrop, outdoorGround, resizeFurniture, roomTiles, sidelightLayout, spotGrid, surfaceHeight, type Furniture } from "./model.ts";
+import { emptyBuilding, gangEntities, gangPlateWidth, gangsOf, floorElevation, newFloor, outdoorZones, zonesOf, openingPreset, openingStyle, normalizeBuilding, outdoorDrop, outdoorGround, resizeFurniture, roomTiles, sidelightLayout, spotGrid, surfaceHeight, type Furniture } from "./model.ts";
 
 test("a sidelight sits opposite the hinge, on the hinge side when asked, and keeps the leaf at least half a metre", () => {
   const none = {};
@@ -189,4 +189,24 @@ test("outdoor areas with a Home Assistant area act as rooms; hedges, fences and 
   const zones = outdoorZones(floor);
   assert.deepEqual(zones.map((z) => [z.id, z.name, z.area_id, z.outdoor]), [["g", "Garten", "garden", true]]);
   assert.deepEqual(zonesOf(floor).map((z) => z.id), ["r", "g"]);
+});
+
+test("a wall switch or socket has one to four gangs; the same entity on two sockets counts once (#593)", () => {
+  assert.deepEqual(gangsOf({ gangs: null }), [{ entity: null }]);
+  assert.equal(gangsOf({ gangs: Array.from({ length: 6 }, () => ({ entity: null })) }).length, 4);
+  assert.equal(gangPlateWidth(1), 0.085);
+  assert.equal(gangPlateWidth(3), 0.227);
+  assert.equal(gangPlateWidth(9), gangPlateWidth(4));
+  assert.deepEqual(gangEntities({ gangs: [{ entity: "switch.relais" }, { entity: "switch.relais" }, { entity: "none" }, { entity: "light.flur" }] }), ["switch.relais", "light.flur"]);
+});
+
+test("a lamp fits under a high worktop step and stands on the floor; on a kitchen worktop it stands on top (#614)", () => {
+  const floor = newFloor("f", "F", 0);
+  const top = (h: number): Furniture => ({ id: `w${h}`, type: "worktop", x: 1, z: 1, rotation: 0, w: 1, d: 0.6, h, variant: null });
+  floor.furniture = [top(1.6)];
+  assert.equal(surfaceHeight(floor, 1, 1, 0.45), 0);
+  assert.equal(surfaceHeight(floor, 1, 1, 1.8), 1.6);
+  assert.equal(surfaceHeight(floor, 1, 1), 1.6);
+  floor.furniture = [top(0.92)];
+  assert.equal(surfaceHeight(floor, 1, 1, 0.45), 0.92);
 });

@@ -13,7 +13,7 @@ test("a lamp switched by a relay takes colour and brightness from its colour ent
   // the bulb unavailable: the relay's own (plain) glow
   assert.deepEqual(lightGlow(relay as never, { ...bulb, state: "unavailable" } as never)!.color, [1, 0.71, 0.28]);
 });
-import { climateModeGlow, cooktopLevel, onlyColor, appColor, carLocked, areaEntities, otherAreaEntities, roomClimateSensors, roomClimateValue, unassignedEntities, autoPlace, entityName, fridgeDoors, furnitureEntities, groupByDevice, isActive, kindOf, lightGlow, openingEntities, openingState, powerSensorsOf, primaryEntities, roomPanelEntities, windowPosition, confirmEntities, robotRoom, robotRoomSensor, roomKey, vacuumCleaning } from "./devices.ts";
+import { isRelevant, apOnline, fanSpeed, climateModeGlow, cooktopLevel, onlyColor, appColor, carLocked, areaEntities, otherAreaEntities, roomClimateSensors, roomClimateValue, unassignedEntities, autoPlace, entityName, fridgeDoors, furnitureEntities, groupByDevice, isActive, kindOf, lightGlow, openingEntities, openingState, powerSensorsOf, primaryEntities, roomPanelEntities, windowPosition, confirmEntities, robotRoom, robotRoomSensor, roomKey, vacuumCleaning } from "./devices.ts";
 import type { Floor, Opening, Room } from "./model.ts";
 import { centroid, newFloor, pointInPolygon } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
@@ -137,10 +137,10 @@ test("doors and windows get blinds and contacts of their room's area, or the one
   };
   const links = openingEntities(hass, [floor]);
   // the only blind of the area serves every window without its own choice; sensors go one per window
-  assert.deepEqual(links.get("w1"), { cover: "cover.rollo", contact: "binary_sensor.f1", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false });
-  assert.deepEqual(links.get("w2"), { cover: "cover.rollo", contact: "binary_sensor.f2", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false });
-  assert.deepEqual(links.get("w3"), { cover: null, contact: "binary_sensor.tuer", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false });
-  assert.deepEqual(links.get("d"), { cover: null, contact: "binary_sensor.tuer", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false });
+  assert.deepEqual(links.get("w1"), { cover: "cover.rollo", contact: "binary_sensor.f1", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false, lock: null });
+  assert.deepEqual(links.get("w2"), { cover: "cover.rollo", contact: "binary_sensor.f2", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false, lock: null });
+  assert.deepEqual(links.get("w3"), { cover: null, contact: "binary_sensor.tuer", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false, lock: null });
+  assert.deepEqual(links.get("d"), { cover: null, contact: "binary_sensor.tuer", tilt: null, contact2: null, tilt2: null, position: null, positionInverted: false, tiltAngle: null, tiltMax: null, tiltOffset: null, tiltInvert: false, shut: false, lock: null });
 });
 
 test("a position sensor drives the blind live, as a percentage or a fraction", () => {
@@ -526,6 +526,33 @@ test("a window marked 'ask first' puts its blind on the confirm list", () => {
   assert.equal(confirmEntities(hass, [floor]).has("cover.rollo"), true);
 });
 
+test("an access point is online, offline or unknown by what its status entity says (D582)", () => {
+  const st = (state: string) => ({ entity_id: "binary_sensor.ap", state, attributes: {} }) as unknown as Parameters<typeof apOnline>[0];
+  for (const s of ["on", "connected", "online", "home", "12"]) assert.equal(apOnline(st(s)), true, s);
+  for (const s of ["off", "disconnected", "not_home", "unavailable"]) assert.equal(apOnline(st(s)), false, s);
+  assert.equal(apOnline(st("unknown")), null);
+  assert.equal(apOnline(undefined), null);
+});
+
+test("a ceiling fan's blades turn with its percentage, at a middle speed without one, not at all when off", () => {
+  const st = (state: string, attributes: Record<string, unknown> = {}) => ({ entity_id: "fan.decke", state, attributes }) as unknown as Parameters<typeof fanSpeed>[0];
+  assert.equal(fanSpeed(st("on", { percentage: 33 })), 0.33);
+  assert.equal(fanSpeed(st("on")), 0.6);
+  assert.equal(fanSpeed(st("on", { percentage: 250 })), 1);
+  assert.equal(fanSpeed(st("off", { percentage: 66 })), 0);
+  assert.equal(fanSpeed(undefined), 0);
+});
+
+test("a wall switch marked 'ask first' puts every gang's entity on the confirm list", () => {
+  const hass = hassWith();
+  const sw = { id: "ws", type: "wall_switch", x: 1, z: 0, rotation: 0, w: 0.156, d: 0.012, h: 0.085, variant: null, gangs: [{ entity: "light.flur" }, { entity: "switch.garten" }], confirm: true };
+  const floor: Floor = { ...newFloor("f", "F", 0), furniture: [sw] };
+  const out = confirmEntities(hass, [floor]);
+  assert.ok(out.has("light.flur") && out.has("switch.garten"));
+  floor.furniture = [{ ...sw, confirm: false }];
+  assert.equal(confirmEntities(hass, [floor]).has("light.flur"), false);
+});
+
 test("a status sensor (a 3D printer) counts as active while it prints", () => {
   const st = (state: string, dc = "enum") => ({ entity_id: "sensor.drucker_status", state, attributes: { device_class: dc } });
   assert.equal(isActive(st("running")), true);
@@ -751,4 +778,20 @@ test("a lamp with one colour only glows for that colour (customer mail: yellow =
   assert.equal(onlyColor(g([0, 0.3, 1]), "#ffd400"), null);
   assert.equal(onlyColor(g([1, 0.95, 0.9]), "#ffd400"), null);
   assert.ok(onlyColor(g([1, 0, 0]), null));
+});
+
+test("water values of a pool count as sensors: pH by its class, redox and salt by their units (D600)", () => {
+  const hass = {
+    states: {
+      "sensor.pool_ph": { entity_id: "sensor.pool_ph", state: "7.2", attributes: { device_class: "ph" } },
+      "sensor.pool_redox": { entity_id: "sensor.pool_redox", state: "720", attributes: { unit_of_measurement: "mV" } },
+      "sensor.pool_salt": { entity_id: "sensor.pool_salt", state: "3200", attributes: { unit_of_measurement: "mg/L" } },
+      "sensor.pool_firmware": { entity_id: "sensor.pool_firmware", state: "1.2", attributes: {} },
+    },
+    entities: {},
+  } as unknown as Parameters<typeof isRelevant>[0];
+  assert.equal(isRelevant(hass, "sensor.pool_ph"), true);
+  assert.equal(isRelevant(hass, "sensor.pool_redox"), true);
+  assert.equal(isRelevant(hass, "sensor.pool_salt"), true);
+  assert.equal(isRelevant(hass, "sensor.pool_firmware"), false);
 });

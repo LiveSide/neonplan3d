@@ -85,6 +85,12 @@ function copyFonts() {
   }
 }
 
+// editor 860 KB on 2026-10-19 for sloping walls, the background section and the 1.21 texts
+// main 632 KB and 3D 792 KB on 2026-10-19 for wall switches and sockets (gangs with their own entities, #593) and their texts
+// card editor 256 KB on 2026-10-19 for the 1.21 texts (3D lock, full screen, ceiling fan)
+// main 640 KB on 2026-10-19 for the access point and the water heater (D582) and their texts
+// main 648 KB on 2026-10-19 for the settings menu and the module loader texts
+// editor 872 KB on 2026-10-19 for the settings menu, the side bar grip and the extra value
 // main 620 KB and card editor 250 KB on 2026-10-17 for the live director (Kamera-Cockpit) and its texts; the microphone probe has its own bundle
 // raised 2026-10-06 for the 1.12 round (outdoor round, hip-end solar, marker names): still small enough for old wall tablets;
 // main raised to 440 KB on 2026-10-08 for the time travel's switch, texts and read-only guards (its own code loads lazily), to 450 KB the same day for room to fix things;; card editor 180 KB the same day (it carries the German and English texts)
@@ -109,7 +115,7 @@ function copyFonts() {
 // editor 800 KB on 2026-10-14 for the awning (form, sensors) and the 1.18.2 fixes
 // main 570 KB, 3D 770 KB and card editor 230 KB on 2026-10-14 for the awnings (five kinds) and their texts
 // main 590 KB, editor 820 KB, card editor 235 KB on 2026-10-15 for the household (bins, mailboxes, Haushalt Pro) and its texts
-const BUDGET = { "neonplan3d.js": 620 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 780 * 1024, "neonplan3d-editor.js": 840 * 1024, "neonplan3d-card-editor.js": 250 * 1024 };
+const BUDGET = { "neonplan3d.js": 664 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 792 * 1024, "neonplan3d-editor.js": 912 * 1024, "neonplan3d-card-editor.js": 264 * 1024 };
 
 copyFonts();
 if (watch) {

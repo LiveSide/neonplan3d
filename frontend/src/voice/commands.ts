@@ -28,7 +28,10 @@ function says(text: string, name: string): boolean {
  * The place a sentence names: a room (the longest name that stands in it wins, "Gäste-WC" before "WC"), else a
  * floor, else the whole house; null when it names none.
  */
-export function findPlace(sentence: string, building: Building, alias?: (room: Room) => string | null | undefined): Place | null {
+/** Further names of a room: its Home Assistant area's name and its own aliases. */
+export type RoomAlias = (room: Room) => string | null | undefined | (string | null | undefined)[];
+
+export function findPlace(sentence: string, building: Building, alias?: RoomAlias): Place | null {
   const text = normalize(sentence);
   if (!text) return null;
   let best: Place | null = null;
@@ -36,7 +39,7 @@ export function findPlace(sentence: string, building: Building, alias?: (room: R
   for (const floor of building.floors) {
     // outdoor areas acting as rooms ("Garten", "Terrasse") too; a room answers to its Home Assistant area's name as well
     for (const room of zonesOf(floor)) {
-      for (const name of [room.name, alias?.(room)]) {
+      for (const name of [room.name, ...([] as (string | null | undefined)[]).concat(alias?.(room) ?? []), ...(room.aliases ?? [])]) {
         const n = name ? normalize(name) : "";
         if (n.length > len && says(text, n)) {
           best = { kind: "room", floorId: floor.id, roomId: room.id, name: room.name };
@@ -67,12 +70,13 @@ const FILLER = new Set("das den dem die der ins in im zum zur ins nach bitte mal
  * place's name ("Wohnzimmer", "das Obergeschoss bitte"). Null otherwise – the sentence is for Assist then ("Licht im
  * Wohnzimmer an" names the room but switches a light).
  */
-export function showCommand(sentence: string, building: Building, alias?: (room: Room) => string | null | undefined): Place | null {
+export function showCommand(sentence: string, building: Building, alias?: RoomAlias): Place | null {
   const place = findPlace(sentence, building, alias);
   if (!place) return null;
   const text = normalize(sentence);
   if (SHOW.test(text)) return place;
-  const names = place.kind === "house" ? [] : [place.name, ...(place.kind === "room" ? [alias?.(zonesOf(building.floors.find((f) => f.id === place.floorId)!).find((r) => r.id === place.roomId)!)] : [])];
+  const theRoom = place.kind === "room" ? zonesOf(building.floors.find((f) => f.id === place.floorId)!).find((r) => r.id === place.roomId) : undefined;
+  const names = place.kind === "house" ? [] : [place.name, ...(theRoom ? [...([] as (string | null | undefined)[]).concat(alias?.(theRoom) ?? []), ...(theRoom.aliases ?? [])] : [])];
   let rest = ` ${text} `;
   for (const n of names) if (n) rest = rest.replace(` ${normalize(n)} `, " ");
   if (place.kind === "house") rest = rest.replace(HOUSE, " ");

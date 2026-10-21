@@ -284,12 +284,42 @@ export function binDue(f: Pick<Furniture, "bin_kind" | "bin_source" | "bin_match
 }
 
 /** Days until the pickup a sensor tells: a number, a date or a timestamp, or Waste Collection Schedule's `daysTo`. */
+/**
+ * A date written inside a sensor's text, as Waste Collection Schedule's own formats show it: "on Mon, 26.10.2026",
+ * "Biotonne 26.10.", "2026-10-26 (Mo)", "26/10/2026" (day first unless that cannot be). A date without a year that
+ * has passed this year is next year's. Null when the text holds none – its numbers are no date then.
+ */
+export function dateInText(text: string, now = new Date()): Date | null {
+  const iso = /(\d{4})-(\d{1,2})-(\d{1,2})/.exec(text);
+  const dmy = /(?:^|[^\d])(\d{1,2})([./])(\d{1,2})\2(\d{4}|\d{2})?(?![\d])/.exec(text);
+  let y: number;
+  let m: number;
+  let d: number;
+  if (iso) [y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
+  else if (dmy) {
+    let a = Number(dmy[1]);
+    let b = Number(dmy[3]);
+    // a slash with the month first ("10/26/2026") only when the day cannot come first
+    if (dmy[2] === "/" && b > 12 && a <= 12) [a, b] = [b, a];
+    d = a;
+    m = b;
+    const yy = dmy[4];
+    y = yy ? (yy.length === 2 ? 2000 + Number(yy) : Number(yy)) : now.getFullYear();
+    if (!yy && new Date(y, m - 1, d) < startOfDay(now)) y += 1;
+  } else return null;
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const day = new Date(y, m - 1, d);
+  return day.getMonth() === m - 1 ? day : null;
+}
+
 export function sensorDays(st: HassEntity, now = new Date()): number | null {
   const a = st.attributes as Record<string, unknown>;
   if (typeof a.daysTo === "number") return a.daysTo;
   const s = String(st.state).trim();
   if (/^-?\d+(\.\d+)?$/.test(s)) return Math.round(Number(s));
-  const date = dayOf(s);
+  // a timestamp is read as a moment (its local day); any other text for a date written in it – the browser's own
+  // reading of free text would make "Weihnachtsbaum 05.01." the year 2001
+  const date = /^\d{4}-\d{2}-\d{2}T/.test(s) ? dayOf(s) : dateInText(s, now);
   if (date) return daysBetween(now, date);
   // "in 2 Tagen", "in 3 days", "morgen"/"tomorrow", "heute"/"today"
   const low = s.toLowerCase();

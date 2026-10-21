@@ -55,6 +55,8 @@ ROOM_SCHEMA = vol.Schema(
         ),
         vol.Required("id"): _ID,
         vol.Required("name"): _NAME,
+        # further names the voice answers to
+        vol.Optional("aliases"): vol.All([vol.All(str, vol.Length(min=1, max=60))], vol.Length(max=12)),
         vol.Required("area_id"): vol.Any(None, vol.All(str, vol.Length(max=255))),
         vol.Required("points"): vol.All([_POINT], vol.Length(min=3, max=MAX_POINTS)),
         vol.Required("floor_material"): vol.All(str, vol.Length(max=32)),
@@ -86,6 +88,16 @@ ROOM_SCHEMA = vol.Schema(
                     None,
                     vol.All(vol.Coerce(float), vol.Range(min=0, max=20)),
                     vol.All([vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0, max=20)))], vol.Length(max=32)),
+                )
+            ],
+            vol.Length(max=MAX_POINTS),
+        ),
+        # sloping walls: the height at an edge's start and end corner (None = its plain height)
+        vol.Optional("wall_slopes"): vol.All(
+            [
+                vol.Any(
+                    None,
+                    vol.All([vol.All(vol.Coerce(float), vol.Range(min=0.05, max=20))], vol.Length(min=2, max=2)),
                 )
             ],
             vol.Length(max=MAX_POINTS),
@@ -213,6 +225,7 @@ FURNITURE_SCHEMA = vol.Schema(
         vol.Required("variant"): vol.Any(None, vol.All(str, vol.Length(max=32))),
         # its own name (e.g. "Wechselrichter Nord"); None = the type's name; show_name puts it under the marker
         vol.Optional("name", default=None): vol.Any(None, vol.All(str, vol.Length(max=60))),
+        vol.Optional("aliases"): vol.All([vol.All(str, vol.Length(min=1, max=60))], vol.Length(max=12)),
         vol.Optional("show_name", default=False): bool,
         # lamps / lights: how strongly they glow in 3D (None = as reported)
         vol.Optional("glow_scale", default=None): vol.Any(
@@ -257,6 +270,10 @@ FURNITURE_SCHEMA = vol.Schema(
         vol.Optional("state_split", default=None): vol.Any(None, vol.In(["left_right", "top_bottom"])),
         # lamps: a second entity with the colour and brightness (a relay switches, the bulb knows its colour)
         vol.Optional("color_entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # any electric item: a sensor whose value stands at its symbol (a boiler's water temperature)
+        vol.Optional("extra", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # ceiling fan with light: its fan entity (the blades turn with its speed)
+        vol.Optional("fan"): vol.Any(None, vol.All(str, vol.Length(max=255))),
         # mirrored left-right
         vol.Optional("mirror", default=False): bool,
         # awning: the fabric's fall (degrees), the valance, a position sensor, its run time and the other direction
@@ -282,6 +299,26 @@ FURNITURE_SCHEMA = vol.Schema(
         # LED strip: tilt about its length (degrees) and standing upright
         vol.Optional("tilt", default=0.0): vol.All(vol.Coerce(float), vol.Range(min=-90, max=90)),
         vol.Optional("upright", default=False): bool,
+        # access point: its clients sensor; water heater: its water temperature
+        vol.Optional("clients"): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        vol.Optional("water_temp"): vol.Any(None, vol.All(str, vol.Length(max=255))),
+        # wall switch and socket: one entry per gang (its entity, a socket's power sensor)
+        vol.Optional("gangs"): vol.Any(
+            None,
+            vol.All(
+                [
+                    vol.Schema(
+                        {
+                            vol.Optional("entity", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+                            vol.Optional("power", default=None): vol.Any(None, vol.All(str, vol.Length(max=255))),
+                        }
+                    )
+                ],
+                vol.Length(max=4),
+            ),
+        ),
+        # LED strip: rising along its length (degrees), e.g. up the stairs
+        vol.Optional("rise"): vol.All(vol.Coerce(float), vol.Range(min=-80, max=80)),
         vol.Optional("pictures", default=[]): vol.All([_SCREEN_PICTURE_SCHEMA], vol.Length(max=20)),
         # screens: the screen around a rule picture is dark (default) or white
         vol.Optional("screen_bg", default="black"): vol.In(["black", "white"]),
@@ -328,6 +365,7 @@ PLACEMENT_SCHEMA = vol.Schema(
         vol.Optional("icon", default=None): vol.Any(None, vol.All(str, vol.Length(max=64))),
         # an own name in the plan, without renaming the entity; show_name puts it under the marker
         vol.Optional("name", default=None): vol.Any(None, vol.All(str, vol.Length(max=60))),
+        vol.Optional("aliases"): vol.All([vol.All(str, vol.Length(min=1, max=60))], vol.Length(max=12)),
         vol.Optional("show_name", default=False): bool,
         # lamps / lights: how strongly they glow in 3D (None = as reported)
         vol.Optional("glow_scale", default=None): vol.Any(
@@ -419,7 +457,7 @@ POOL_SCHEMA = vol.Schema(
     {
         **{
             vol.Optional(role): _POOL_ENTITY
-            for role in ("temperature", "heater", "pump", "light", "ph", "chlorine", "cover")
+            for role in ("temperature", "heater", "pump", "light", "ph", "chlorine", "salt", "cover")
         },
         vol.Optional("ports"): vol.All([POOL_PORT_SCHEMA], vol.Length(max=40)),
         vol.Optional("pipes"): vol.All([POOL_PIPE_SCHEMA], vol.Length(max=80)),
@@ -662,6 +700,7 @@ FLOOR_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+
 SETTINGS_SCHEMA = vol.Schema(
     {
         vol.Required("wall_exterior"): vol.All(vol.Coerce(float), vol.Range(min=0.02, max=1)),
@@ -735,6 +774,22 @@ SETTINGS_SCHEMA = vol.Schema(
                 extra=vol.ALLOW_EXTRA,
             ),
         ),
+        # the background behind the 3D house (None = the look's own sky): a colour, a gradient or a picture
+        vol.Optional("backdrop", default=None): vol.Any(
+            None,
+            vol.Schema(
+                {
+                    vol.Optional("kind", default=None): vol.Any(None, vol.In(["color", "gradient", "image"])),
+                    vol.Optional("color", default=None): vol.Any(None, vol.All(str, vol.Length(max=16))),
+                    vol.Optional("color2", default=None): vol.Any(None, vol.All(str, vol.Length(max=16))),
+                    vol.Optional("image", default=None): vol.Any(None, vol.All(str, vol.Length(max=2048))),
+                    vol.Optional("dim", default=None): vol.Any(
+                        None, vol.All(vol.Coerce(float), vol.Range(min=0, max=0.9))
+                    ),
+                },
+                extra=vol.ALLOW_EXTRA,
+            ),
+        ),
         # Kamera-Cockpit: the live director - events a wall screen shows by itself (all off unless switched on)
         vol.Optional("director", default=None): vol.Any(
             None,
@@ -746,6 +801,21 @@ SETTINGS_SCHEMA = vol.Schema(
                     vol.Optional("motion", default="off"): vol.In(["off", "person", "all"]),
                     vol.Optional("appliances", default=False): bool,
                     vol.Optional("alerts", default=False): bool,
+                    vol.Optional("live", default=False): bool,
+                    vol.Optional("triggers", default=None): vol.Any(
+                        None,
+                        vol.All(
+                            [
+                                vol.Schema(
+                                    {
+                                        vol.Required("entity"): vol.All(str, vol.Length(max=255)),
+                                        vol.Optional("camera", default=None): _ENTITY_REF,
+                                    }
+                                )
+                            ],
+                            vol.Length(max=20),
+                        ),
+                    ),
                     vol.Optional("hold", default=None): vol.Any(
                         None, vol.All(vol.Coerce(float), vol.Range(min=10, max=600))
                     ),

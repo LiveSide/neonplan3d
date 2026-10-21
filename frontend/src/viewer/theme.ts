@@ -48,10 +48,10 @@ vec3 fp3dThemed(vec3 c, bool line) {
     if (line) return vec3(0.8, 0.9, 1.0) * min(1.0, mx * 1.15);
     return mix(vec3(0.04, 0.13, 0.3), vec3(0.2, 0.42, 0.75), clamp(l * 5.0, 0.0, 1.0));
   }
-  // day: light surfaces with a hint of their hue, dark blue lines
-  if (line) return vec3(0.08, 0.17, 0.38) * clamp(mx * 1.4, 0.4, 1.0);
-  vec3 g = vec3(clamp(0.66 + l * 2.6, 0.0, 0.96));
-  return mix(g, g * (c / max(mx, 0.001)), 0.1);
+  // day: light surfaces that keep their shading and a little more of their hue (#645: too bright, too flat), dark blue lines
+  if (line) return vec3(0.07, 0.15, 0.34) * clamp(mx * 1.4, 0.45, 1.0);
+  vec3 g = vec3(clamp(0.5 + l * 2.4, 0.0, 0.94));
+  return mix(g, g * (c / max(mx, 0.001)), 0.2);
 }
 `;
 

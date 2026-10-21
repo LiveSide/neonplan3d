@@ -47,6 +47,24 @@ export function setVoiceHere(on: boolean): void {
   }
 }
 
+/** This device's screen name for Assist and the service `neonplan3d.ask` ("Küche"); empty: reacts to every sentence. */
+export function screenName(): string {
+  try {
+    return localStorage.getItem("neonplan3d.screen") ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function setScreenName(name: string): void {
+  try {
+    if (name.trim()) localStorage.setItem("neonplan3d.screen", name.trim());
+    else localStorage.removeItem("neonplan3d.screen");
+  } catch {
+    // private mode: nothing remembered
+  }
+}
+
 /** The Assist pipeline chosen for this device (null: Home Assistant's preferred one). */
 export function voicePipeline(): string | null {
   try {

@@ -7,7 +7,7 @@ import type { BuildingSettings } from "./model.ts";
 import type { HassEntity, HomeAssistant } from "./types.ts";
 
 export type DirectorSettings = NonNullable<BuildingSettings["director"]>;
-export type ShotKind = "alert" | "doorbell" | "motion" | "appliance";
+export type ShotKind = "alert" | "doorbell" | "trigger" | "motion" | "appliance";
 
 /** What the view is to show. */
 export interface Shot {
@@ -26,9 +26,9 @@ export const HOLD_MIN = 10;
 export const HOLD_MAX = 600;
 
 /** Which shot wins when two come at once (higher first). */
-const PRIORITY: Record<ShotKind, number> = { alert: 3, doorbell: 2, motion: 1, appliance: 0 };
+const PRIORITY: Record<ShotKind, number> = { alert: 3, doorbell: 2, trigger: 1.5, motion: 1, appliance: 0 };
 /** The same source again within this time is not shown again (ms). */
-const COOLDOWN: Record<ShotKind, number> = { alert: 0, doorbell: 20_000, motion: 120_000, appliance: 60_000 };
+const COOLDOWN: Record<ShotKind, number> = { alert: 0, doorbell: 20_000, trigger: 30_000, motion: 120_000, appliance: 60_000 };
 /** A touch this recent means someone uses the screen: only warnings and the doorbell take the view from them (ms). */
 const BUSY_MS = 20_000;
 
@@ -59,7 +59,7 @@ export function setDirectorHere(on: boolean): void {
 
 /** Whether any event is switched on in the house settings. */
 export function directorAny(s: DirectorSettings | null | undefined): boolean {
-  return !!s && !!(s.doorbell || (s.motion && s.motion !== "off") || s.appliances || s.alerts);
+  return !!s && !!(s.doorbell || (s.motion && s.motion !== "off") || s.appliances || s.alerts || (s.triggers ?? []).some((t) => t.entity));
 }
 
 const BELL_WORDS = /(doorbell|klingel|visitor|besucher|\bding\b|deurbel|sonnette|campanello)/;
@@ -92,6 +92,20 @@ export function doorbellRang(prev: HassEntity | undefined, cur: HassEntity | und
     return Number.isFinite(t) && now - t < 30_000;
   }
   return prev.state === "off" && cur.state === "on";
+}
+
+const ACTIVE = new Set(["on", "open", "opening", "unlocked", "unlocking", "detected", "home", "playing", "triggered"]);
+
+/**
+ * An own trigger (D615) went off: an event entity takes a new recent time stamp (a second doorbell, a button), any
+ * other entity becomes active – on, open or opening (a garage door, a gate), unlocked.
+ */
+export function triggerFired(prev: HassEntity | undefined, cur: HassEntity | undefined, now = Date.now()): boolean {
+  if (!prev || !cur || DEAD.has(cur.state) || prev.state === cur.state) return false;
+  if (cur.entity_id.startsWith("event.")) return doorbellRang(prev, cur, now);
+  // coming back after a restart is no opening
+  if (DEAD.has(prev.state)) return false;
+  return ACTIVE.has(cur.state) && !ACTIVE.has(prev.state);
 }
 
 /** The camera that shows the doorbell's door: the chosen one, one of the doorbell's own device, else one in its area. */

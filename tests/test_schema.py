@@ -168,3 +168,80 @@ def test_live_director_is_off_unless_switched_on() -> None:
         SETTINGS_SCHEMA({**base, "director": {"motion": "cats"}})
     with pytest.raises(vol.Invalid):
         SETTINGS_SCHEMA({**base, "director": {"hold": 2}})
+
+
+def test_sloping_walls_keep_two_heights_per_edge() -> None:
+    """A sloping wall (D569): two heights on an edge, or None for a plain one."""
+    room = {**ROOM, "wall_slopes": [[1.0, 2.6], None, None]}
+    assert ROOM_SCHEMA(room)["wall_slopes"] == [[1.0, 2.6], None, None]
+    with pytest.raises(vol.Invalid):
+        ROOM_SCHEMA({**ROOM, "wall_slopes": [[1.0]]})
+
+
+def test_live_director_triggers_and_live_picture() -> None:
+    """Own triggers with a camera each (D615) and the live picture switch (D589)."""
+    base = {"wall_exterior": 0.3, "wall_interior": 0.12, "grid": 0.05}
+    d = SETTINGS_SCHEMA(
+        {
+            **base,
+            "director": {
+                "triggers": [{"entity": "cover.garage", "camera": "camera.hof"}, {"entity": "event.klingel_2"}],
+                "live": True,
+            },
+        }
+    )["director"]
+    assert d["triggers"] == [
+        {"entity": "cover.garage", "camera": "camera.hof"},
+        {"entity": "event.klingel_2", "camera": None},
+    ]
+    assert d["live"] is True
+
+
+def test_access_point_and_water_heater_keep_their_sensors() -> None:
+    """An access point keeps its clients sensor, a water heater its temperature sensor (D582)."""
+    ap = {"id": "a1", "type": "wifi_ap", "x": 2, "z": 2, "rotation": 0, "w": 0.2, "d": 0.2, "h": 0.04, "variant": None}
+    assert FURNITURE_SCHEMA({**ap, "clients": "sensor.ap_clients"})["clients"] == "sensor.ap_clients"
+    heater = {**ap, "id": "h1", "type": "water_heater", "variant": "wall", "water_temp": "sensor.boiler_temp"}
+    assert FURNITURE_SCHEMA(heater)["water_temp"] == "sensor.boiler_temp"
+
+
+def test_ceiling_fan_keeps_its_fan() -> None:
+    """A ceiling fan with light keeps its fan entity next to its light (D606)."""
+    fan = {
+        "id": "f1",
+        "type": "lamp_fan",
+        "x": 2,
+        "z": 2,
+        "rotation": 0,
+        "w": 1.3,
+        "d": 1.3,
+        "h": 0.45,
+        "variant": None,
+    }
+    out = FURNITURE_SCHEMA({**fan, "entity": "light.decke", "fan": "fan.decke"})
+    assert out["fan"] == "fan.decke"
+    assert "fan" not in FURNITURE_SCHEMA(fan)
+
+
+def test_wall_socket_keeps_its_gangs() -> None:
+    """A socket keeps up to four gangs, the same entity on two of them (#593); a fifth is refused."""
+    base = {
+        "id": "s1",
+        "type": "wall_socket",
+        "x": 1,
+        "z": 0.05,
+        "rotation": 0,
+        "w": 0.156,
+        "d": 0.014,
+        "h": 0.085,
+        "variant": "outdoor",
+    }
+    gangs = [{"entity": "switch.relais", "power": "sensor.relais_power"}, {"entity": "switch.relais"}]
+    out = FURNITURE_SCHEMA({**base, "gangs": gangs})
+    assert out["gangs"] == [
+        {"entity": "switch.relais", "power": "sensor.relais_power"},
+        {"entity": "switch.relais", "power": None},
+    ]
+    assert FURNITURE_SCHEMA({**base, "gangs": None})["gangs"] is None
+    with pytest.raises(vol.Invalid):
+        FURNITURE_SCHEMA({**base, "gangs": [{"entity": None}] * 5})

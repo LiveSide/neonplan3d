@@ -13,7 +13,7 @@
 import { Color, type BufferGeometry } from "three";
 import type { Floor, Opening, Room, SolarField, Vec2 } from "../model.ts";
 import { furnitureFootprint, isLamp, pointInPolygon, polygonArea, STAIR_TYPES } from "../model.ts";
-import { generateWalls, locateOpening, openingHost, type Wall } from "../geometry/walls.ts";
+import { generateWalls, locateOpening, openingHost, slopeTop, type Wall } from "../geometry/walls.ts";
 import { clipConvex, isConvex } from "../geometry/area.ts";
 import { holeInRoom, insetHole, mergeHoles } from "../geometry/holes.ts";
 import { pushFurniture } from "./furniture.ts";
@@ -122,19 +122,20 @@ export function buildFloorGeometry(
   roofUnder?: (x: number, z: number) => number | null,
 ): FloorGeometry {
   const { walls, open: openRooms } = generateWalls(floor.rooms, { exterior: wallExterior, interior: wallInterior }, floor.walls ?? []);
-  // the top of a wall at a point: its own height, or the roof above when that is lower
-  const topAt = (x: number, z: number, H: number): number => {
+  // the top of a wall at a point: its own height (a sloping wall's at that point), or the roof above when lower
+  const topAt = (x: number, z: number, H: number, wall?: Wall): number => {
+    const own = wall?.slope ? Math.min(H, slopeTop(wall.slope, x, z)) : H;
     const r = roofUnder ? roofUnder(x, z) : null;
-    return r === null ? H : Math.max(0.05, Math.min(H, r));
+    return r === null ? own : Math.max(0.05, Math.min(own, r));
   };
   // the lowest wall top along a stretch of a wall (sampled), for openings and the top edge line
-  const lowestTop = (a: Vec2, ax: Vec2, s0: number, s1: number, H: number): number => {
-    if (!roofUnder) return H;
+  const lowestTop = (a: Vec2, ax: Vec2, s0: number, s1: number, H: number, wall?: Wall): number => {
+    if (!roofUnder && !wall?.slope) return H;
     let lo = H;
     const n = Math.max(2, Math.ceil((s1 - s0) / 0.25) + 1);
     for (let i = 0; i < n; i++) {
       const s = s0 + ((s1 - s0) * i) / (n - 1);
-      lo = Math.min(lo, topAt(a[0] + ax[0] * s, a[1] + ax[1] * s, H));
+      lo = Math.min(lo, topAt(a[0] + ax[0] * s, a[1] + ax[1] * s, H, wall));
     }
     return lo;
   };
@@ -237,7 +238,7 @@ export function buildFloorGeometry(
     const roomLeft = wall.free ? ax[0] * (hp[1][0] - hp[0][0]) + ax[1] * (hp[1][1] - hp[0][1]) > 0 : wall.exterior || wall.roomLeft === o.room_id;
     const nLeft: Vec2 = [-ax[1], ax[0]];
     const toRoom: Vec2 = roomLeft ? nLeft : [-nLeft[0], -nLeft[1]];
-    const top = Math.min(lowestTop(wall.a, ax, s0, s0 + width, wallHeight(wall, floor.height)) - 0.02, o.sill + o.height);
+    const top = Math.min(lowestTop(wall.a, ax, s0, s0 + width, wallHeight(wall, floor.height), wall) - 0.02, o.sill + o.height);
     const sill = Math.max(0, Math.min(o.sill, top - 0.1));
     // looking at the wall from the room, "right" is (toRoom.z, -toRoom.x)
     const right: Vec2 = [toRoom[1], -toRoom[0]];
@@ -293,7 +294,8 @@ export function buildFloorGeometry(
     }
     // under a roof the pieces are cut into short steps, so each step's top lies in one roof plane
     const len = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1]);
-    const underRoof = roofUnder && lowestTop(wall.a, ax, 0, len, H) < H - 1e-3;
+    // under a roof or with a sloping top of its own (D569)
+    const underRoof = (roofUnder || wall.slope) && lowestTop(wall.a, ax, 0, len, H, wall) < H - 1e-3;
     const steps = underRoof
       ? pieces.flatMap((piece) => {
           const t0 = Math.max(piece.t0, -0.5);
@@ -311,13 +313,13 @@ export function buildFloorGeometry(
       const on = (p: Vec2, t: number) => Math.abs(tOf(p) - t) < 1e-4;
       const skipSide = (p: Vec2, q: Vec2) => (piece.inner0 && on(p, piece.t0) && on(q, piece.t0)) || (piece.inner1 && on(p, piece.t1) && on(q, piece.t1));
       // the roof over this step: the lowest point of its footprint decides what is left of each range
-      const roofTop = underRoof ? Math.min(...poly.map(([x, z]) => topAt(x, z, H))) : H;
+      const roofTop = underRoof ? Math.min(...poly.map(([x, z]) => topAt(x, z, H, wall))) : H;
       for (const [y0, y1raw] of piece.ranges) {
-        const y1 = Math.min(y1raw, underRoof ? Math.max(...poly.map(([x, z]) => topAt(x, z, H))) : y1raw);
+        const y1 = Math.min(y1raw, underRoof ? Math.max(...poly.map(([x, z]) => topAt(x, z, H, wall))) : y1raw);
         if (y1 - y0 < 1e-4 || roofTop - y0 < 0.01) continue;
         const lintel = y0 > 0.01;
         const sloped = underRoof && y1raw > roofTop;
-        const topOf = (x: number, z: number) => Math.min(y1raw, topAt(x, z, H));
+        const topOf = (x: number, z: number) => Math.min(y1raw, topAt(x, z, H, wall));
         if (y0 < cut - 1e-6) {
           // the top face at the cut height is only seen while the wall is cut
           const topFold = y1 > cut + 1e-6 ? CAP_OFFSET + b : LOWER_OFFSET + b;
@@ -347,7 +349,7 @@ export function buildFloorGeometry(
     // under a roof it follows the slope in short steps
     const H = wallHeight(e.wall, floor.height);
     for (const [p, q] of subtractSpans(e, spansOf(e.wall, (sp) => sp.top >= H - 0.021))) {
-      if (!roofUnder) {
+      if (!roofUnder && !e.wall.slope) {
         lines.seg([p[0], H, p[1]], [q[0], H, q[1]], EDGE_TOP, H <= cut + 1e-6 ? LOWER_OFFSET + b : b);
         continue;
       }
@@ -355,14 +357,14 @@ export function buildFloorGeometry(
       for (let i = 0; i < n; i++) {
         const a: Vec2 = [p[0] + ((q[0] - p[0]) * i) / n, p[1] + ((q[1] - p[1]) * i) / n];
         const c: Vec2 = [p[0] + ((q[0] - p[0]) * (i + 1)) / n, p[1] + ((q[1] - p[1]) * (i + 1)) / n];
-        const ya = topAt(a[0], a[1], H);
-        const yc = topAt(c[0], c[1], H);
+        const ya = topAt(a[0], a[1], H, e.wall);
+        const yc = topAt(c[0], c[1], H, e.wall);
         lines.seg([a[0], ya, a[1]], [c[0], yc, c[1]], EDGE_TOP, Math.max(ya, yc) <= cut + 1e-6 ? LOWER_OFFSET + b : b);
       }
     }
   }
   for (const c of outline.corners) {
-    const H = topAt(c.p[0], c.p[1], wallHeight(c.wall, floor.height));
+    const H = topAt(c.p[0], c.p[1], wallHeight(c.wall, floor.height), c.wall);
     lines.segSplit([c.p[0], 0.004, c.p[1]], [c.p[0], H, c.p[1]], EDGE_SOFT, Math.min(cut, H), wallBucket.get(c.wall)!);
   }
   for (const list of spans.values()) for (const sp of list) pushOpeningLines(lines, sp, cut);
@@ -623,6 +625,8 @@ export function stairHoleParts(floors: readonly Floor[], floor: Floor): Vec2[][]
 
 /** How tall a wall stands: its own height (a low wall, a counter), never above the floor height. */
 export function wallHeight(wall: Wall, floorHeight: number): number {
+  // a sloping wall may rise above the floor height at its high end (a lean-to's tall side, D569)
+  if (wall.slope) return Math.max(wall.slope.h0, wall.slope.h1);
   return Math.min(floorHeight, wall.height ?? floorHeight);
 }
 

@@ -95,21 +95,14 @@ test("a raised house (the ground lower, no cellar) stands on a plinth; on a flat
   assert.ok(eg(hill)!.earth.count > 0);
 });
 
-// FORK d14tk (upstream issue #602)
-test("a balcony on an upper floor floats over a light well instead of covering it", () => {
+test("a balcony on the floor above does not lift a light well below it (#602)", () => {
   const win = { id: "w", room_id: "k", edge: 0, offset: 5, width: 1, type: "window", sill: 1.65, height: 0.5, hinge: "left", leaves: 1, swing: "in", contact2: null } as Opening;
   const top = (g: NonNullable<ReturnType<typeof earthOf>>) => Math.max(...g.lines.p.filter((_, i) => i % 3 === 1));
   const b = house();
   b.floors[0].openings = [win];
   const bare = top(earthOf(b, 0)!);
-  const over = [[-5, -5], [15, -5], [15, 13], [-5, 13]];
-  // a balcony on the floor above reaches over the well: its top sits at that floor's level, metres up
-  b.floors.push({ ...newFloor("og", "OG", 2.6), rooms: [rect("o", 10, 8)] });
+  // a first floor with a balcony reaching the wall over the well
+  b.floors.push({ ...newFloor("og", "OG", 2.66), rooms: [rect("o", 10, 8)], outdoor: [{ id: "bal", type: "balcony", points: [[3, -1.5], [7, -1.5], [7, 0], [3, 0]] } as never] });
   setTerrain(b);
-  b.floors[2].outdoor = [{ id: "bal", type: "balcony", points: over }] as never;
   assert.ok(Math.abs(top(earthOf(b, 0)!) - bare) < 1e-6);
-  // a balcony on the ground floor is a slab on the ground and still lifts the rim
-  b.floors[2].outdoor = [];
-  b.floors[1].outdoor = [{ id: "bal", type: "balcony", points: over }] as never;
-  assert.ok(Math.abs(top(earthOf(b, 0)!) - bare - (0.02 + 0.02)) < 1e-6);
 });

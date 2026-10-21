@@ -117,6 +117,8 @@ Die Werkzeugleiste oben ist in Gruppen geordnet. Ganz links steht immer die Etag
 
 Ein Gruppenknopf zeigt, welches Werkzeug gerade läuft, etwa „Raum: Freie Form“ oder „Außen: Rasen“. **Ein Werkzeug bleibt aktiv**, nachdem du etwas gesetzt hast: Du kannst also mehrere Türen, Fenster, Räume oder Flächen hintereinander setzen. **Esc** oder **Auswählen** beendet es. Unten im Plan steht immer ein kurzer Hinweis zum aktiven Werkzeug.
 
+**Seitenleiste breiter ziehen:** An ihrer linken Kante lässt sich die Seitenleiste mit der Maus oder dem Finger breiter oder schmaler ziehen (280 bis 640 Pixel); der Browser merkt sich die Breite.
+
 **Seitenleiste einklappen:** **Einklappen ›** oben in der Seitenleiste macht sie zu einem schmalen Streifen – der Grundriss bekommt den ganzen Platz, etwa zum Verschieben von Möbeln. **‹** klappt sie wieder auf, ein leuchtendes **⚙** im Streifen öffnet die Einstellungen der Auswahl. Wählst du ein anderes Werkzeug, klappt sie von selbst wieder auf. Der Browser merkt sich die Wahl.
 
 **Maus und Touch:** Mit zwei Fingern ziehst du die Ansicht, mit zwei Fingern zoomst du. Mit der Maus zoomt das Mausrad, die Ansicht ziehst du auf einer leeren Stelle oder überall mit der **rechten oder mittleren Maustaste** (ein Rechtsklick ohne Ziehen öffnet weiter das Menü). **Strg+Z** macht rückgängig, **Strg+Y** oder **Strg+Umschalt+Z** wiederholt, **Entf** löscht das Ausgewählte, **Esc** bricht ab. Die **Pfeiltasten** verschieben das Ausgewählte (Raum, Ecke, Möbel, Gerät, Wand, Außenfläche) um einen Rasterschritt, mit **Umschalt** um 10 cm, mit **Alt** um 1 cm; Türen und Fenster wandern dabei entlang ihrer Wand.
@@ -171,13 +173,29 @@ Wände entstehen automatisch: Jede gemeinsame Kante zweier Räume wird eine Inne
 
 **Wandstärke je Wand:** Im selben Kasten hat jede Wand ein Feld **Dicke (m)**. Voreingestellt ist die Dicke des Hauses (Außen- oder Innenwand, Kapitel 4.4); eine eigene Angabe macht etwa die 36,5-cm-Außenwand neben einer 24er oder die 11,5-cm-Trennwand. Teilen sich zwei Räume die Wand, gilt die dickere Angabe, die Wand bleibt auf der Raumgrenze mittig. ↺ setzt auf die Hausdicke zurück. Fenster und Türen passen sich der Dicke an.
 
+**Schräge Wand:** **◢ Schräg** in einer Zeile der Wandhöhen gibt der Wand eine eigene Höhe an jeder ihrer beiden Ecken; die Oberkante läuft gerade dazwischen – für ein Pultdach, eine Garage am Hang oder Oberlichter auf der hohen Seite. Die hohe Seite darf über die Etagenhöhe hinausreichen. Fenster und Türen bleiben unter der Oberkante, ein Fenster am niedrigen Ende wird also niedriger. Teilst du die Kante mit einem neuen Eckpunkt, treffen sich beide Hälften auf der Höhe dazwischen. Noch einmal **◢ Schräg** macht die Wand wieder gerade.
+
 **Keine Wand:** Bei offenen Grundrissen gehören Flur, Küche und Wohnzimmer baulich zusammen, sind in Home Assistant aber getrennte Bereiche. Dafür hat jede Zeile im Kasten **Wandhöhen** den Knopf **Keine Wand**: Die Wand fällt im Grundriss und in 3D ganz weg, auch wenn der Nachbarraum sie teilt. ↥ holt sie zurück. Das Licht folgt dem: Eine Lampe leuchtet durch die weggelassene Wand in den Nachbarraum, als wäre es ein Raum.
 
 **Geteilte Wände:** Teilt ein Nachbarraum eine Wand in mehrere Stücke (etwa zwei kleine Räume an einer langen Wand), bekommt jedes Stück eine eigene Zeile „Wand 2–3 · Teil 1“, „… Teil 2“ mit seiner Länge, und jedes Stück kann seine eigene Höhe haben oder wegfallen.
 
-### 4.5 Einstellungen
+### 4.5 Das ⚙ Einstellungen-Menü
 
-Unten in der Seitenleiste klappt **Einstellungen** auf:
+Alles, was zum ganzen Plan gehört und nicht zu einer Etage, einem Raum oder einem Möbel, steht in einem Menü: **⚙ Einstellungen ▾** rechts in der Werkzeugleiste (auf schmalen Bildschirmen nur das Zahnrad). Jeder Punkt öffnet ein Fenster über dem Plan, auch während etwas ausgewählt ist; **✕** oder **Esc** schließt es. Die Seitenleiste ohne Auswahl zeigt nur noch die Räume der Etage, das Grundriss-Bild und die Hilfe.
+
+| Menüpunkt | Inhalt |
+|---|---|
+| **🏠 Haus** | Wandstärken, Raster, Längen, Nordrichtung (die Zeilen darunter) |
+| **🌦 Wetter & Warnungen** | Wetter-Entität und -Effekte, Regenwarnung, Warnungsnamen, Stromausfall-Sensor, Sonnenflecken |
+| **🎬 Live-Regie** | siehe [6.1](#61-kamera-cockpit) |
+| **🎙 Sprachsteuerung** | siehe [5.10](#510-sprachsteuerung-neu) |
+| **⭐ Favoriten** | das Zentral-Menü der 3D-Ansicht (unten) |
+| **🖼 Hintergrund** | was hinter dem 3D-Haus liegt (unten) |
+| **⛰ Gelände** | siehe [4.21](#421-keller-und-gelände) |
+| **💾 Sicherung** | Export, Import, Wiederherstellen, siehe Kapitel 9 |
+| **🧩 Module** | die eingespielten Module (Code aus dem Shop, etwa „Das Haus antwortet“) und **Modul einspielen …** für die .fp3dpack-Datei |
+
+Die **Dachform** (kein Dach, Flachdach, Satteldach, First, Neigung, Überstand) steht beim Dach-Werkzeug, siehe [4.19](#419-dach). Die **Startansicht** merkst du dir in der 3D-Ansicht: Haus drehen und zoomen, dann in den Ansicht-Einstellungen (Zahnrad oben rechts) **📌** antippen; **📌✕** setzt sie zurück. 3D-Ansicht, Karte und Kiosk öffnen das Haus dann so, und eine geöffnete Etage wird von derselben Seite gezeigt.
 
 | Einstellung | Bedeutung |
 |---|---|
@@ -185,11 +203,10 @@ Unten in der Seitenleiste klappt **Einstellungen** auf:
 | **Raster (m)** | Schrittweite beim Zeichnen |
 | **Längen** | **Automatisch** folgt dem Einheitensystem von Home Assistant, sonst **Meter** oder **Fuß und Zoll**. Mit Fuß und Zoll zeigt der Editor alle Längen, Maße und Flächen (ft²) so an und versteht Eingaben wie `8' 2"`, `98in`, `8.2ft` oder auch `2.5m`. Gespeichert wird immer in Metern, du kannst also jederzeit umschalten |
 | **Nordrichtung** | Grad im Uhrzeigersinn von oben. Wird für das Sonnenlicht gebraucht |
-| **Dach** | Kein Dach, Flachdach oder Satteldach, mit Dachneigung und Dachüberstand. Beim Satteldach legt **First** fest, ob der First entlang der langen oder der kurzen Seite läuft (z. B. Reihenhaus). **Dachflächen (frei)** baut das Dach aus mehreren Teilen, siehe [4.19](#419-dach) |
 | **Wetter-Entität** | Welche Wetter-Entität das Wetter draußen liefert, siehe [6.2](#62-wetter-draußen) |
 | **Wetter-Effekte in 3D** | Welche Effekte gezeigt werden |
-| **Startansicht** | Drehe, zoome und verschiebe das Haus in der 3D-Ansicht rechts so, wie es sich öffnen soll (zum Beispiel von der Gartenseite), und drücke **Aktuelle 3D-Ansicht als Start merken**. 3D-Ansicht, Karte und Kiosk öffnen das Haus dann so – mit Blickwinkel, Zoom und Bildausschnitt –, und auch eine geöffnete Etage wird von derselben Seite gezeigt; **Standard** setzt zurück |
 | **Favoriten** | Szenen, Skripte, Automationen, Tasten und Schalter für das Zentral-Menü (Stern) der 3D-Ansicht: Party, Anwesenheitssimulation, Verschattung, Bewässerung. Auswählen mit der Suche, Reihenfolge mit ↑ ↓, ✕ entfernt. Darunter **Eigene Knöpfe** mit Beschriftung, Symbol und Aktion: **Seite öffnen** (Pfad wie `/lovelace/rollos`), **Details einer Entität**, **Dienst aufrufen** (`domain.service` mit Daten als JSON) oder **fire-dom-event** – damit öffnet ein Knopf ein browser_mod-Popup mit deiner eigenen Karte, z. B. `{"browser_mod": {"service": "browser_mod.popup", "data": {"title": "Rollos", "content": {"type": "custom:meine-rollo-karte"}}}}` |
+| **🖼 Hintergrund** | Was hinter dem 3D-Haus liegt: der Himmel des Looks (Standard), **eine Farbe**, ein **Farbverlauf** oder ein **Bild**. Das Bild legst du in Home Assistant unter `config/www` ab und trägst `/local/dateiname.jpg` ein; **Abdunkeln** legt einen dunklen Schleier darüber, damit die Neonlinien lesbar bleiben. Gilt für Panel und Karten und kostet keine Leistung |
 
 ### 4.6 Grundriss-Bild als Vorlage
 
@@ -210,6 +227,7 @@ Jede Öffnung hat:
 - **Flügel:** einflügelig oder zweiflügelig, mit eigenem Kontakt für den zweiten Flügel.
 - **Markieren in 3D:** *Wenn offen* (Standard) lässt offene Fenster und Türen warm leuchten. *Wenn geschlossen* dreht das um, etwa für die WC- oder die Kinderzimmertür: Sie leuchtet, solange sie zu ist. Das braucht einen Kontakt; ohne Sensor wird nichts markiert.
 - **Ohne Sensor geschlossen zeigen:** Eine Tür ohne Kontakt steht in 3D halb offen, damit man sie als Tür erkennt. Der Haken zeichnet sie geschlossen, etwa für eine Haustür oder ein Carport ohne Sensor.
+- **Smart Lock:** Das Schloss der Tür (Nuki, Aqara, `lock.*`). In 3D steht ein Pin an der Tür: 🔒 zu, rot leuchtend, solange sie offen ist; ein Tipp schließt auf oder ab. Die Sprache fragt es ab („Ist die Haustür abgeschlossen?“).
 - **Kontakt umkehren:** Für Sensoren, die offen und geschlossen andersherum melden. NeonPlan zeigt dann offen, wenn der Sensor geschlossen meldet, und umgekehrt (Standard: aus).
 
 Türen und Fenster lassen sich im Plan auch an einem breiten Streifen um die Öffnung antippen; ein ausgewählter Raum listet seine Türen und Fenster im Formular.
@@ -235,7 +253,16 @@ Rollläden und Kontakte ordnet NeonPlan 3D über den Bereich automatisch zu. Du 
 
 ![Die Möbelbibliothek](images/editor-library.jpg)
 
-Das Werkzeug **Möbel** öffnet rechts die Bibliothek mit über 50 eingebauten Modellen in den Abschnitten Leuchten, Wohnen, Essen, Küche, Schlafen, Bad & Hauswirtschaft und Arbeiten & Sonstiges. Darunter folgen deine installierten Möbel-Packs. Die **Arbeitsplatte** (Küche sowie Arbeiten & Sonstiges) ist eine freie Platte ohne Unterbau, für Lücken in der Küche oder einen selbst gebauten Schreibtisch; ihre **Höhe** ist die Oberkante, voreingestellt 91 cm. Unter Wohnen stehen neben dem Sofa ein **Ecksofa (L-Form)** und eine **Wohnlandschaft (U-Form)**; mit **Spiegeln** sitzt der Schenkel des Ecksofas auf der anderen Seite. Das Suchfeld oben filtert alle Abschnitte und bleibt beim Scrollen stehen; es findet deutsche und englische Namen und den Pack-Namen, mehrere Wörter in beliebiger Reihenfolge („sofa ecke“), Escape leert es. Die Abschnitte klappen auf und zu. Fährst du mit der Maus über einen Eintrag, zeigt eine kleine 3D-Vorschau das Möbel.
+Das Werkzeug **Möbel** öffnet rechts die Bibliothek: die 80 eingebauten Modelle und alles aus deinen installierten Möbel-Packs, zusammen sortiert nach dem, **was** es ist – Sofas, Sitzmöbel, Tische, Schränke & Regale, Betten, Küche, Geräte, Bad, Leuchten, TV & Audio, Büro, Technik & Smart Home, Heizen & Klima, Energie, Haushalt, Deko, Pflanzen, Garten & Außen, Kinder, Fitness, Haustiere, Fahrzeuge, Treppen & Geländer, Architektur. Jede Karte zeigt ein **Bild**, das Maß (Breite × Tiefe) und woher das Möbel kommt („Basis“ oder der Pack-Name). Die Bilder zeichnet NeonPlan beim ersten Aufklappen und merkt sie sich im Browser; auf sehr schwachen Geräten bleiben die Karten ohne Bild, die Vorschau beim Darüberfahren gibt es trotzdem.
+
+- **Raum-Chips** oben: Beim Öffnen eines Raums ist sein Raumtyp vorgewählt (ein „Wohnzimmer“ zeigt Wohnen, eine „Küche“ Küche) – die Bibliothek zeigt dann nur, was in diesen Raum passt, plus alles, was überall passt (Leuchten, Technik). **Alle Räume** hebt den Filter auf, jeder andere Chip wechselt ihn.
+- **Filter-Chips:** ⚡ **Verknüpfbar** (nimmt eine Entität), 💡 **Leuchtet** (verknüpft ein Licht), 🌳 **Außen**.
+- **Familien:** Gibt es ein Möbel in mehreren Größen (Esstisch 120 / 160 / 200, Bett 90 bis 200, Unterschrank 30 bis 120), steht es als **eine Karte** mit Chips für die Größen; der Chip legt genau diese Größe ab. So bleibt die Liste auch mit vielen Packs überschaubar. Gibt es ein Möbel nur für eine Seite („Ecksofa links“, „Sofa mit Récamiere links“), bekommt es von selbst einen Chip für die andere Seite – der legt es gespiegelt ab.
+- **★ Favoriten** und **🕘 Zuletzt benutzt** stehen ganz oben, sobald es welche gibt – der Stern an jeder Karte merkt sie, beides bleibt im Browser.
+- Das **Suchfeld** findet deutsche und englische Namen, den Pack-Namen und Alltagswörter („lampe“ findet alle Leuchten, „schrank“ alle Schränke), mehrere Wörter in beliebiger Reihenfolge („sofa ecke“); Escape leert es. Beim Suchen sind alle Abschnitte offen.
+- Lange Abschnitte zeigen zuerst 24 Karten und darunter **„… weitere zeigen“**.
+
+Die **Arbeitsplatte** (Küche) ist eine freie Platte ohne Unterbau, für Lücken in der Küche oder einen selbst gebauten Schreibtisch; ihre **Höhe** ist die Oberkante, voreingestellt 91 cm. Unter Sofas stehen neben dem Sofa ein **Ecksofa (L-Form)** und eine **Wohnlandschaft (U-Form)**; mit **Spiegeln** sitzt der Schenkel des Ecksofas auf der anderen Seite. Auf Geräten, die die Karten ohne Bild zeigen, erscheint beim Darüberfahren die größere 3D-Vorschau wie bisher.
 
 **Symbole an den Einträgen:**
 
@@ -246,7 +273,7 @@ Das Werkzeug **Möbel** öffnet rechts die Bibliothek mit über 50 eingebauten M
 
 - Einen Raum antippen, dann einen Eintrag wählen. Das Möbel erscheint im Raum.
 - **Ziehen** verschiebt es. In der Nähe einer Wand dreht es sich mit dem Rücken zur Wand und rastet bündig ein. **Alt** schiebt frei.
-- Der **Griff vor dem Möbel** dreht es in 15°-Schritten, die **Ecken** ändern die Größe.
+- Der **Griff vor dem Möbel** dreht es in 15°-Schritten, die **Ecken** ändern die Größe. Pack-Möbel ab den Packs von Oktober 2026 behalten dabei, was fest ist: Beine, Armlehnen, Platten und Griffe bleiben so dick wie sie sind, Sitzfläche und Korpus wachsen – ein auf 3 m gezogenes Sofa hat weiter 20 cm breite Armlehnen, ein höheres eine höhere Lehne.
 - Rechts stellst du Breite, Tiefe, Höhe, Drehung und **Höhe über Boden** ein. **Spiegeln** vertauscht links und rechts – das L-Sofa andersherum, der Schrank mit der Tür auf der anderen Seite; der Punkt steht auch im Rechtsklick-Menü und in der Möbelleiste der 3D-Ansicht. Mit der Höhe über Boden hängst du einen Netzwerkschrank oder ein Regal an die Wand oder stellst einen Trockner auf die Waschmaschine. Sie zählt immer vom Boden: Ein Oberschrank steht von sich aus auf 1,45 m, ein Wand-Fernseher mittig auf 1,3 m; du kannst beide höher oder tiefer setzen. **Höhe automatisch** setzt sie zurück.
 - **Zustand von:** Jedes Möbel kann eine Entität zeigen, die an, belegt oder zu Hause meldet – dann leuchtet seine Oberseite: das Bett mit Belegungsmatte, der Sessel, die Sauna. Eine zweite Entität beleuchtet die andere Hälfte (links/rechts, beim Hochbett unten/oben). Lampen, Energiegeräte und Bildschirme haben ihre eigenen Felder dafür.
 - **Wandansicht:** **Wandansicht** oben in der Werkzeugleiste und dann in einen Raum klicken (nah an einer Wand öffnet sich genau diese Wand) – oder **▦ Wände dieses Raums von vorne ansehen** im Raumformular, **▦ Wandansicht** im Möbelformular und im Rechtsklick-Menü, **▦** bei jeder Wand unter *Wandhöhen* – zeigt die Wand von vorne – mit Türen und Fenstern und allem, was an ihr steht oder hängt, als echte Ansicht der Möbel von vorne: Schränke, Regale, Oberschränke, Fernseher, Wandleuchten. Ein Möbel ziehst du dort entlang der Wand und, wenn es hängt, in der Höhe; dabei zeigen Maßlinien den Abstand zu den Wandenden und zum Boden, und Kanten rasten an Wandenden, Türen, Fenstern und anderen Möbeln ein (**Alt** zieht frei). Pfeiltasten schieben um 1 cm, mit **Umschalt** um 10 cm; unten stehen **Abstand von links** und **Höhe über Boden** zum Eintippen. Die Pfeile **‹** und **›** links und rechts (ohne gewähltes Möbel auch **←** und **→**) drehen dich zur Wand, die links bzw. rechts anschließt – so gehst du einmal rundherum durch den Raum. Ein Doppelklick öffnet das Möbel im Grundriss. Oben rechts wechselst du zwischen **3D im Raum** und **Wand von vorne**: In 3D stehst du in der Raummitte auf Augenhöhe und schaust auf die Wand – mit allem im Raum, auch dem Tisch vor der Eckbank. Ein Möbel antippen wählt es aus, Ziehen verschiebt es auf dem Boden, der runde Griff **↕** über dem gewählten Möbel hebt oder senkt es (mit Höhenanzeige), Mausrad oder zwei Finger gehen näher heran oder weiter weg, die mittlere oder rechte Maustaste (am Tablet zwei Finger) schaut sich um – die linke Maustaste bleibt so den Möbeln vorbehalten; unten stehen **Abstand von links**, **Abstand zur Wand** und **Höhe über Boden** zum Eintippen, dazu **↺ 45°** / **↻ 45°** und die **Drehung** in Grad – an der Wand gedreht rückt das Möbel von selbst in den Raum. Ein fixiertes Möbel zeigt unten **🔒 Lösen**: erst lösen, dann lässt es sich ziehen. **Wand von vorne** ist die flache Ansicht zum zentimetergenauen Ausrichten an der Wand. Dort zoomst du mit dem Mausrad (dorthin, wo die Maus steht), am Tablet mit zwei Fingern oder mit **＋** / **−** unten rechts; **⤢** zeigt wieder die ganze Wand, vergrößert schieben die Pfeile daneben den Ausschnitt. Mit **Energie Pro** setzt eine Leiste links Stromzähler, Wechselrichter, Stromspeicher und Wallbox direkt an die gezeigte Wand.
@@ -287,7 +314,7 @@ Sensoren erscheinen, wenn sie etwas für den Raum messen: Temperatur, Luftfeucht
 
 - **Platzieren** setzt ein Gerät in den Raum. **Alle … platzieren** unter der Liste setzt nach einer Rückfrage alle Hauptgeräte auf einmal; **Rückgängig** (Strg+Z) nimmt sie in einem Schritt zurück.
 - Lichter werden dabei als Leuchten aus der Bibliothek gesetzt, damit sie in 3D leuchten.
-- **☆** nimmt ein Gerät ins Raumfenster der 3D-Ansicht auf, ohne es in den Plan zu setzen. **👁** blendet ein Gerät des Bereichs im Raumfenster aus (durchgestrichen in der Liste, 🙈 holt es zurück) – für Entitäten, die dort nur stören. **Aa** blendet nur den Zustand eines Geräts im Raumfenster aus (∅ zeigt ihn wieder), etwa bei einem Rollladen ohne Rückmeldung; ein reines „unbekannt“ lässt das Raumfenster bei Schaltern, Rollläden und Lampen ohnehin weg.
+- **☆** nimmt ein Gerät ins Raumfenster der 3D-Ansicht auf, ohne es in den Plan zu setzen. **👁** blendet ein Gerät des Bereichs im Raumfenster aus (durchgestrichen in der Liste, 🙈 holt es zurück) – für Entitäten, die dort nur stören. **Aa** blendet nur den Zustand eines Geräts im Raumfenster aus (∅ zeigt ihn wieder), etwa bei einem Rollladen ohne Rückmeldung. Beides geht auch für die weiteren Entitäten eines Geräts unter „mehr“, jede für sich; ein reines „unbekannt“ lässt das Raumfenster bei Schaltern, Rollläden und Lampen ohnehin weg.
 - Ein platziertes Gerät ziehst du im Plan an seinen Platz.
 
 ![Ein Gerät ausgewählt](images/editor-device.jpg)
@@ -304,12 +331,13 @@ Ein ausgewähltes Gerät hat:
 
 ### 4.11 Leuchten
 
-Leuchten sind Möbel mit einem verknüpften Licht. Es gibt Deckenleuchte, Einbauspot, Aufbau-Spot, LED-Panel, Pendelleuchte, Stehlampe, Deckenfluter, Tischlampe, Wandleuchte, LED-Streifen, Wegleuchte und Garten-Spot.
+Leuchten sind Möbel mit einem verknüpften Licht. Es gibt Deckenleuchte, Einbauspot, Aufbau-Spot, LED-Panel, Pendelleuchte, Deckenventilator mit Licht, Stehlampe, Deckenfluter, Tischlampe, Wandleuchte, LED-Streifen, Wegleuchte und Garten-Spot.
 
 - Das 3D-Modell leuchtet in Farbe und Helligkeit des Lichts. Boden und Wände des Raums werden mit beleuchtet, zwei farbige Deckenleuchten mischen sich dazwischen. In den Nachbarraum fällt das Licht nur durch Türen. Eine Lampe über einer Treppe oder Deckenöffnung (bis 1,5 m daneben) leuchtet auch durch die Öffnung in die Etage darunter.
 - Farbeffekte wie ein Farbwechsel werden in 3D animiert.
-- Tischlampen stehen auf dem Möbel darunter, Wandleuchten und LED-Streifen rasten an der Wand ein, bei Pendelleuchten ist die Höhe die Abhängung unter der Decke.
-- **Höhe über Boden:** Wandleuchten hängen von sich aus auf 1,75 m, LED-Streifen direkt unter der Decke. Im Formular stellst du für beide eine eigene **Höhe über Boden** ein, etwa für einen Streifen unter den Hängeschränken oder hinter dem TV-Board. **Höhe automatisch** setzt sie zurück. Auch Einbauspots und Aufbau-Spots haben das Feld: Von sich aus sitzen sie unter der Decke, mit einer eigenen Höhe etwa unter den Hängeschränken – Modell und Lichtkegel strahlen dann von dort nach unten auf die Arbeitsplatte. Unter einer Dachschräge hängen Deckenleuchten, Spots und Pendelleuchten an der Dachunterseite statt in der Luft. Ein Streifen unter 1 m Höhe (Sockelleiste, hinter dem Schrank) strahlt nach oben an die Wand, höher montierte strahlen nach unten. Ein Streifen unterhalb der Schnitthöhe bleibt auch bei geschnittenen Wänden sichtbar. **Neigung um die Länge** legt den Streifen an eine Dachschräge oder kippt ihn zur Seite (90° = die Leuchtfläche zeigt seitlich), **Senkrecht** stellt ihn hochkant: Dann läuft er von der Höhe über Boden nach oben, am Türrahmen oder als Lichtsäule, und leuchtet rundum.
+- Tischlampen stehen auf dem Möbel darunter (unter einer hoch liegenden Arbeitsplatte ab 1,2 m – etwa einer Treppenstufe aus Arbeitsplatten – bleibt, was darunter passt, auf dem Boden), Wandleuchten und LED-Streifen rasten an der Wand ein, bei Pendelleuchten ist die Höhe die Abhängung unter der Decke.
+- **Deckenventilator mit Licht:** Das Licht schaltet die Leuchte unter dem Motor. Unter **Ventilator (fan-Entität)** wählst du den Ventilator: Seine Flügel drehen sich in 3D mit seiner Stufe (bei 100 % etwa einmal pro Sekunde, aus = still). Er bekommt ein eigenes Symbol neben der Leuchte mit seiner Stufe; Tippen schaltet ihn, lange drücken öffnet das Menü mit der Stufe. Die Breite ist die Spannweite der Flügel, die Höhe die Abhängung unter der Decke. Auf alten Tablets drehen die Flügel mit wenigen Bildern pro Sekunde, und nur solange der Ventilator läuft.
+- **Höhe über Boden:** Wandleuchten hängen von sich aus auf 1,75 m, LED-Streifen direkt unter der Decke. Im Formular stellst du für beide eine eigene **Höhe über Boden** ein, etwa für einen Streifen unter den Hängeschränken oder hinter dem TV-Board. **Höhe automatisch** setzt sie zurück. Auch Einbauspots, Aufbau-Spots, Deckenleuchten und LED-Panels haben das Feld: Von sich aus sitzen sie unter der Decke, mit einer eigenen Höhe etwa unter den Hängeschränken oder unter einer Treppe – Modell und Lichtkegel strahlen dann von dort nach unten auf die Arbeitsplatte. Unter einer Dachschräge hängen Deckenleuchten, Spots und Pendelleuchten an der Dachunterseite statt in der Luft. Ein Streifen unter 1 m Höhe (Sockelleiste, hinter dem Schrank) strahlt nach oben an die Wand, höher montierte strahlen nach unten. Ein Streifen unterhalb der Schnitthöhe bleibt auch bei geschnittenen Wänden sichtbar. **Neigung um die Länge** legt den Streifen an eine Dachschräge oder kippt ihn zur Seite (90° = die Leuchtfläche zeigt seitlich), **Anstieg (°)** lässt ihn entlang seiner Länge ansteigen, etwa die Treppe hinauf oder am Handlauf (rund 35–40°); die Höhe über Boden ist dann seine Mitte. **Senkrecht** stellt ihn hochkant: Dann läuft er von der Höhe über Boden nach oben, am Türrahmen oder als Lichtsäule, und leuchtet rundum.
 - **Farbe und Helligkeit von:** Schaltet ein Relais (Shelly, Schaltaktor) die Lampe, während die Leuchte selbst Farbe und Helligkeit kennt, kommt An/Aus vom Schalter und die Farbe von dieser zweiten Entität.
 - **Nur in einer Farbe leuchten:** Die Lampe leuchtet nur, solange das Licht ungefähr die gewählte Farbe zeigt. So kann ein Farblicht als Signal dienen – gelb für „Wasser“ am Waschbecken –, ohne dass seine anderen Farben (rot, grün, blau für andere Meldungen) dort erscheinen.
 - **Leuchtstärke in 3D (%):** Wie kräftig die Leuchte in 3D leuchtet. Unter 100 % dämpft helle LED-Streifen, damit der Raum nicht überstrahlt, über 100 % lässt eine schwache Lampe stärker leuchten. Gilt auch für Lichter, die als Gerät platziert sind; in Home Assistant schaltet es nichts.
@@ -324,8 +352,10 @@ Leuchten sind Möbel mit einem verknüpften Licht. Es gibt Deckenleuchte, Einbau
 
 Fernseher, Medienwand, Wohnwand mit TV (die Wohnwand ohne TV ist eine Leuchte: Vitrinen und LED-Leisten leuchten mit der verknüpften Lampe), Schreibtisch mit Monitor, Waschmaschine, Trockner, Spülmaschine, Heizkörper, Saugroboter und viele Pack-Möbel lassen sich mit Entitäten verknüpfen:
 
-- **Gerät** oder **Fernseher (Media-Player oder Steckdose)**: Als Gerät geht auch ein **Status-Sensor**, etwa der Druckstatus eines 3D-Druckers (Bambu Lab u. a.). Das Möbel gilt dann als aktiv, solange der Status „running“, „printing“, „prepare“ oder ähnlich meldet.  Ein Fernseher leuchtet, solange er läuft. Ein älterer Fernseher an einer smarten Steckdose nimmt einfach deren Schalter; der Bildschirm leuchtet, solange die Steckdose an ist, und ein Tipp schaltet sie. Waschmaschine, Trockner und Spülmaschine leuchten, solange sie arbeiten. Ein Heizkörper mit Thermostat glüht beim Heizen. Das **Klimagerät (Wand)** hängt oben an der Wand und leuchtet am Luftauslass in der Farbe seines Modus: rot Heizen, blau Kühlen, grün Automatik, gelb Entfeuchten, weiß nur Lüften – hell, solange es arbeitet, gedämpft im Standby. Ein **Herd** glüht auf den Kochfeldern, solange er kocht; ein Betriebszustand-Sensor (z. B. Home Connect: „run“, „ready“, „inactive“) lässt ihn bei „ready“ schwach glühen und bei „inactive“ aus.
+- **Heizkörper – Heizt (Sensor):** Sagt der Thermostat nicht, ob er gerade heizt (Tuya-Ventile melden stattdessen einen Sensor „Work state“), wähle diesen Sensor im Feld **Heizt (Sensor)**: „opened“, „heating“, „on“ oder eine Öffnung über 0 % lässt den Heizkörper glühen.
+- **Gerät** oder **Fernseher (Media-Player oder Steckdose)**: Als Gerät geht auch ein **Status-Sensor**, etwa der Druckstatus eines 3D-Druckers (Bambu Lab u. a.). Das Möbel gilt dann als aktiv, solange der Status „running“, „printing“, „prepare“ oder ähnlich meldet.  Ein Fernseher leuchtet, solange er läuft. Ein älterer Fernseher an einer smarten Steckdose nimmt einfach deren Schalter; der Bildschirm leuchtet, solange die Steckdose an ist, und ein Tipp schaltet sie. Waschmaschine, Trockner und Spülmaschine leuchten, solange sie arbeiten – Waschmaschine und Trockner mit einem Lichtring um die runde Tür. Ein Heizkörper mit Thermostat glüht beim Heizen. Das **Klimagerät (Wand)** hängt oben an der Wand und leuchtet am Luftauslass in der Farbe seines Modus: rot Heizen, blau Kühlen, grün Automatik, gelb Entfeuchten, weiß nur Lüften – hell, solange es arbeitet, gedämpft im Standby. Ein **Herd** glüht auf den Kochfeldern, solange er kocht; ein Betriebszustand-Sensor (z. B. Home Connect: „run“, „ready“, „inactive“) lässt ihn bei „ready“ schwach glühen und bei „inactive“ aus.
 - **Leistungssensor (W)**: Das Möbel zeigt seine Watt. **Läuft ab (Watt)** legt fest, ab wie viel Watt es als laufend gilt und leuchtet (leer: 10 W) – praktisch für Geräte hinter einer Steckdose, die im Standby ein paar Watt ziehen, etwa 100 W.
+- **Zusatzwert am Symbol:** ein Sensor, dessen Wert am Symbol des Möbels steht – die Wassertemperatur einer Gastherme, die Luftfeuchte eines Lüftungsgeräts. Mit dem Zusatzwert zeigt sich das Symbol von selbst.
 - **Vor dem Schalten nachfragen** und **Symbol in 3D** wie bei Geräten.
 - **Bilder nach Zustand** bei Bildschirmen: eine Pro-Erweiterung, siehe [6.3](#63-bildschirme-live).
 
@@ -395,7 +425,7 @@ Mit **Draußen → Außen** ziehst du Rasen, Terrasse, Weg, Einfahrt, Beet, Heck
 
 ![Ein Bauernhaus mit Wohnhaus, Scheune und Anbau, jedes mit eigenem Dach](images/view-roof-sections.jpg)
 
-Ein einfaches Haus bekommt unter **Einstellungen → Dach** ein Flach- oder Satteldach über das ganze oberste Geschoss. Für alles andere – ein Haus in L- oder T-Form, ein Wohnhaus mit Scheune, ein Anbau mit Pultdach, ein Dach, das auf einer Seite tief herunterzieht – baust du das Dach aus **Dachflächen**.
+Ein einfaches Haus bekommt unter **Bauen → Dach** bei **Dachform** ein Flach- oder Satteldach über das ganze oberste Geschoss, mit First (entlang der langen oder der kurzen Seite, z. B. Reihenhaus), Neigung und Überstand. Für alles andere – ein Haus in L- oder T-Form, ein Wohnhaus mit Scheune, ein Anbau mit Pultdach, ein Dach, das auf einer Seite tief herunterzieht – baust du das Dach aus **Dachflächen**.
 
 - Wähle unter **Dach** die Option **Dachflächen (frei)** oder das Werkzeug **Dach**. Beim ersten Mal schlägt NeonPlan 3D die Dachflächen aus deinen Räumen vor: je Etage die Teile, über denen keine höhere Etage liegt, jeweils mit Satteldach. Danach passt du sie an.
 - Im Werkzeug **Dach** ziehst du eine neue Dachfläche im Plan auf. Antippen wählt eine aus, ziehen verschiebt sie, die Ecken ändern die Größe. Oben wählst du die Etage, deren Räume im Plan liegen. Daneben öffnet sich die 3D-Ansicht mit dem ganzen Haus, so siehst du jede Änderung sofort.
@@ -421,7 +451,7 @@ Ein einfaches Haus bekommt unter **Einstellungen → Dach** ein Flach- oder Satt
 
 Unter den Dachflächen legt **+ Dachfenster** ein Fenster in eine Dachfläche (Standard 78 × 118 cm). Es lässt sich im Grundriss verschieben, auch auf eine andere Dachfläche, und hat wie ein normales Fenster **Rollladen**, **Kontakt** und **Kippkontakt**: Offen klappt der Flügel oben angeschlagen nach außen, gekippt ein Stück, und der Rollladen fährt von oben über die Scheibe.
 
-Zu jedem Dachfenster gehören ein **Name** (optional), **Rollladen**, **Kontakt** und **Kippkontakt** – und ein **Fenstermotor**: Velux, Roto oder Fakro melden die Fensterstellung als Cover, der Flügel öffnet in 3D so weit, wie der Motor steht. Offen oder gekippt leuchtet der Rahmen warm wie bei einem Wandfenster. Liegt das Fenster in einer Dachfläche, schneidet es ein Loch in die Schräge, so sieht man aus dem Dachgeschoss hinaus. Blendet das Dach beim Heranzoomen an eine Etage oder einen Raum aus, blenden die Dachfenster mit aus. Mit **Ohne Dach über dem Raum zeigen** bleibt ein Fenster dann an seiner Stelle über dem Raum stehen – offen, gekippt, mit dem Rollladen. Reicht die Schräge über einen Raum der Etage darunter, gehört das Fenster zu dieser Etage und zeigt sich mit ihr. Jedes Dachfenster gehört zu dem Raum darunter: Tippst du den Raum an, stehen Rollladen, Kontakt und Fenstermotor in seiner Raumkarte, und scheint die Sonne auf die Dachfläche, fällt ihr Licht durch das Fenster auf den Boden des Raums (mit dem Rollladen weniger).
+Zu jedem Dachfenster gehören ein **Name** (optional), **Rollladen**, **Kontakt** und **Kippkontakt** – und ein **Fenstermotor**: Velux, Roto oder Fakro melden die Fensterstellung als Cover, der Flügel öffnet in 3D so weit, wie der Motor steht. Offen oder gekippt leuchtet der Rahmen warm wie bei einem Wandfenster. Liegt das Fenster in einer Dachfläche, schneidet es ein Loch in die Schräge, so sieht man aus dem Dachgeschoss hinaus. Blendet das Dach beim Heranzoomen an eine Etage oder einen Raum aus, blenden die Dachfenster mit aus. Mit **Ohne Dach über dem Raum zeigen** bleibt ein Fenster dann an seiner Stelle über dem Raum stehen – offen, gekippt, mit dem Rollladen. Die Scheibe ist durchsichtig wie bei einem Wandfenster, der Rollladen hat Lamellen; so sieht man auch aus der Ferne, ob er zu ist. Reicht die Schräge über einen Raum der Etage darunter, gehört das Fenster zu dieser Etage und zeigt sich mit ihr. Jedes Dachfenster gehört zu dem Raum darunter: Tippst du den Raum an, stehen Rollladen, Kontakt und Fenstermotor in seiner Raumkarte, und scheint die Sonne auf die Dachfläche, fällt ihr Licht durch das Fenster auf den Boden des Raums (mit dem Rollladen weniger).
 
 ### 4.20 Energie: Solarfelder
 
@@ -457,7 +487,7 @@ Ganz unten kündigt eine Karte die kommende Pro-Erweiterung **Energie Pro** an. 
 
 ### 4.21 Keller und Gelände
 
-Ein **Keller** ist eine Etage mit negativer **Höhe über Boden**, etwa −2,6 m. Ohne Auswahl zeigt die Seitenleiste unten den Abschnitt **Gelände**:
+Ein **Keller** ist eine Etage mit negativer **Höhe über Boden**, etwa −2,6 m. Unter **⚙ Einstellungen → Gelände** stellst du ein:
 
 - **Geländehöhe** (in Metern, Erdgeschoss = 0) sagt, wo der Boden um das Haus liegt. Rasen, Wege und Terrassen liegen darauf. Für ein **Souterrain** oder Hochparterre senkst du sie so weit, wie der Keller herausschauen soll, etwa auf −1,2 m. Steht das Haus dadurch höher als das Gelände, bekommt es in 3D einen **Sockel** bis zum Boden – nichts schwebt.
 - **Keller in der Erde zeigen:** Etagen unter dem Gelände stecken in 3D im Erdreich. Öffnest du den Keller, siehst du ihn wie in einer Baugrube, mit den Erdwänden ringsum. Ohne Haken stehen sie frei wie bisher.
@@ -481,6 +511,22 @@ Unter **Möbel → Haushalt** stehen **Mülltonne** und **Briefkasten**.
 - **Mülltonne – Bauform:** Rolltonne 120 l oder 240 l, Container 1100 l, Mehrkammer-Tonne, Sack, Eimer / Caddy oder Unterflur-Container (von dem nur die Einwurfsäule aus dem Boden ragt). Mit der Bauform setzt NeonPlan die üblichen Maße.
 - **Abfallart:** Restmüll, Bio, Papier, Verpackung, Glas, Garten, Recycling oder Sonstiges. Sie gibt der Tonne die Farben, die in deinem Land üblich sind (nach dem Land in Home Assistant: in Deutschland etwa Papier blau, Bio braun, Gelbe Tonne gelb; in Australien zeigt der Deckel die Sorte). **Farbe** und **Deckel** kannst du danach frei wählen.
 - **Briefkasten – Bauform:** Wandbriefkasten (hängt auf 1 m), Briefkasten auf Pfosten mit Fähnchen, Standbriefkasten mit Zeitungsfach, Paketbox oder Briefkastenanlage.
+
+### 4.24 Haustechnik: Lichtschalter, Steckdosen, WLAN und Warmwasser
+
+Unter **Möbel → Haustechnik** (in der Wandansicht unter 🔌 **Schalter**) stehen **Lichtschalter** und **Steckdose**. Sie hängen an der Wand: der Schalter auf 1,05 m, die Steckdose auf 0,3 m (die Außensteckdose auf 0,5 m); mit **Höhe über Boden** setzt du eine eigene Höhe.
+
+- **Tasten / Dosen im Rahmen:** 1 bis 4 in einem Rahmen; der Rahmen wird dabei passend breiter.
+- **Jede Taste, jede Dose bekommt ihre eigene Entität:** ein Licht, ein Schalter (das Relais, der Zwischenstecker) oder ein Lüfter. Sie leuchtet in 3D, solange die Entität an ist – ein Licht in seiner Farbe, eine Steckdose grün.
+- **Dieselbe Entität an mehreren Dosen:** Schaltet ein Relais zwei Steckdosen (innen und außen, oder eine Doppeldose), wählst du bei beiden dieselbe Entität. Das geht über beliebig viele Rahmen.
+- **Leistung (nur Steckdosen):** pro Dose optional ein Leistungssensor. Die Dose leuchtet heller, je mehr sie zieht, und zählt als Verbraucher mit.
+- **Bauform (Steckdose):** innen oder **Außensteckdose mit Klappe**.
+- **Antippen:** Mit nur einer Entität schaltet ein Tippen sie direkt. Bei mehreren öffnet sich ein kleines Menü mit einer Schaltfläche pro Taste. **Vor dem Schalten fragen** gilt für alle Tasten.
+- Das Symbol über dem Rahmen zeigt bei mehreren Tasten, wie viele an sind (z. B. „1/2“), bei Steckdosen auch die Leistung.
+
+**WLAN-Access-Point:** eine flache Scheibe unter der Decke oder eine Platte an der Wand (**Montage**). Als **Status** nimmst du, was sagt, ob er da ist – einen Verbindungs-Sensor, den Zustand, einen device_tracker; auch Diagnose-Entitäten (etwa von UniFi) stehen zur Wahl. Sein Ring leuchtet blau, solange er da ist, und rot, wenn er fehlt; dann zeigt sich auch sein Symbol mit „Offline“. Mit dem Sensor **verbundene Geräte** steht deren Zahl am Symbol.
+
+**Warmwasserspeicher:** ein Standspeicher oder ein flacher Speicher an der Wand (auf 1,1 m). Verknüpft wird die water_heater-Entität, ein Thermostat oder der Schalter des Heizstabs, dazu optional ein Sensor mit der **Wassertemperatur** und ein Leistungssensor. Er glüht warm, solange er heizt (Thermostat „heizt“, Schalter an oder Leistung über der Schwelle), schwach, solange er bereit ist, und zeigt die Wassertemperatur.
 
 ---
 
@@ -519,7 +565,7 @@ Die Schalter für Wände, Etagen, Dach, Heatmap und die Pro-Anzeigen stecken unt
 | **Spur** | Bewegungsspur, Pro, siehe [6.1](#61-kamera-cockpit) |
 | **Wetter** | Wetter draußen, Pro, siehe [6.2](#62-wetter-draußen) |
 | **⏪ Zeitreise** | Die letzten 24 Stunden im Haus abspielen, nur ansehen, Pro, siehe [6.7](#67-zeitreise) |
-| **≡ / ↔** (rechts in der Etagen- und Raumleiste) | Die Leiste oben auf mehrere Zeilen umbrechen, wenn viele Räume nicht in eine Zeile passen, oder zurück in eine Zeile; in einer Zeile scrollt sie seitlich, am PC auch mit dem Mausrad. In der Hausansicht steht vor den Räumen jeder Etage ihr Name |
+| **≡ / ↔** (rechts in der Etagen- und Raumleiste) | Die Leiste oben auf mehrere Zeilen umbrechen, wenn viele Räume nicht in eine Zeile passen, oder zurück in eine Zeile; in einer Zeile scrollt sie seitlich, am PC auch mit dem Mausrad. In der Hausansicht steht vor den Räumen jeder Etage ihr Name. Die Reihenfolge der Räume änderst du im Editor: ohne Auswahl in der Raumliste der Etage mit **↑** und **↓** |
 | **⚙** (oben neben der Version) | Klappt die Ansichtsoptionen Qualität, Look, Symbole und FPS auf und wieder zu; so bleibt die Kopfzeile schlank |
 | **Auge** (unten links, neben der Lupe) | Blendet alles aus, was nicht die 3D-Ansicht ist: Kopfzeile, Etagen- und Raumleiste, Energiewerte, Etagenbilder, Schalter. Übrig bleibt die Bühne – auf dem Handy die halbe Bildschirmhöhe mehr. Ein Tipp aufs Auge holt alles zurück; ein Raum lässt sich weiter antippen. Das Gerät merkt sich die Wahl |
 
@@ -530,10 +576,13 @@ Oben rechts stehen:
 | Schalter | Wirkung |
 |---|---|
 | **Auto** / **Tablet** / **Hoch** | Qualitätsstufe. Tablet lässt Muster, Schatten und Halos weg und wird auf Fire-Tablets automatisch gewählt. Hoch zeigt zusätzlich Lichtkegel unter Spots |
-| **Neon** / **Blueprint** / **Tag** | Der Look. Das Farbfeld daneben setzt eine **eigene Akzentfarbe**: Im Neon-Look nehmen Linien und Leuchtkanten sie an, die Knöpfe und Pins in jedem Look; ↺ bringt das Cyan zurück |
-| **Keine** / **Wichtige** / **Alle** | Welche Gerätesymbole erscheinen. Wichtige zeigt nur Geräte ohne eigenes 3D-Modell und Werte wie Watt oder die laufende App |
+| **Uhr** | Datum und Uhrzeit in einer Ecke der Ansicht (↖ ↗ ↙ ↘) oder aus – pro Gerät; in der Karte `clock: tr` |
+| **Neon** / **Blueprint** / **Tag** / **Auto** | Der Look; **Auto** zeigt Tag, solange die Sonne über dem Horizont steht (`sun.sun`), und Neon nach Sonnenuntergang – fürs Wandtablet. In der Karte `theme: auto`. Das Farbfeld daneben setzt eine **eigene Akzentfarbe**: Im Neon-Look nehmen Linien und Leuchtkanten sie an, die Knöpfe und Pins in jedem Look; ↺ bringt das Cyan zurück |
+| **Keine** / **Im Raum** / **Wichtige** / **Alle** | Welche Gerätesymbole erscheinen. Wichtige zeigt nur Geräte ohne eigenes 3D-Modell und Werte wie Watt oder die laufende App. **Im Raum** zeigt in der Haus- und Etagenansicht keine Symbole und in einem geöffneten Raum nur dessen eigene – praktisch bei vielen Steckdosen und Sensoren |
+| **Klein** / **Normal** / **Groß** | Wie groß die Gerätesymbole sind; das Gerät merkt sich die Wahl (Karte: `marker_size`) |
 | **◧ / ◨** | Etagenbilder, Stern, Suche und Auge links oder rechts – praktisch, wenn die Ansicht am linken Rand des Dashboards sitzt |
 | **⌖ Ansicht halten** | Beim Wechsel von Etage zu Etage bleibt die Kamera, wo sie ist; nur die Höhe wandert mit |
+| **🔒 3D-Sperre** | Der Blickwinkel bleibt fest: Ziehen verschiebt die Ansicht, Zoomen geht weiter, Flüge zu Räumen behalten den Winkel – auf einem Wandtablet dreht niemand das Haus aus Versehen. Gilt pro Gerät; in der Karte `angle_lock: true` |
 | **FPS** | Bildrate, langsamstes Bild und Grund für jedes gezeichnete Bild. Im Ruhezustand steht dort 0 B/s |
 
 Ganz rechts in der Kopfzeile steht die installierte Version (z. B. v1.11.0); der Mauszeiger darauf zeigt, welche Version die Integration in Home Assistant meldet.
@@ -635,16 +684,46 @@ Sprich mit deinem Haus. Unten links in der 3D-Ansicht erscheint ein **Mikrofon-K
 | „Zeig das Obergeschoss“, „Keller“ | Die Etage öffnet sich. |
 | „Zeig das ganze Haus“ | Zurück zur Hausansicht. |
 | „Zeig den Garten“, „Terrasse“ | Eine Außenfläche mit Namen und Bereich öffnet sich wie ein Raum. |
-| „Zeig die Waschmaschine“, „Wo ist die Stehlampe?“ | Die Ansicht fliegt zum Gerät, und es blinkt kurz auf. |
+| „Zeig die Waschmaschine“, „Wo ist die Stehlampe?“, „Zeig den Fernseher“, „Wo ist der Trockner?“ | Die Ansicht fliegt zum Gerät oder Möbel, und es blinkt kurz auf. Möbel hören auf ihre Art („Trockner“, „Poolpumpe“), ihren eigenen Namen und Alltagswörter („TV“, „Glotze“, „Heizung“, „Auto“) – auch ohne verknüpfte Entität. Steht der Sensor als „Waschmaschine Leistung“ im Plan, reicht „Waschmaschine“. Gibt es ein Möbel mehrfach, nennst du den Raum dazu („die Heizung im Wohnzimmer“). |
 | „Zeig die Kamera Haustür“, „Zeig die Kamera im Garten“ | Die Ansicht schaut durch die Kamera (mit dem Kamera-Cockpit). |
 | „Zeig die Kameras“ | Die Kamera-Wand öffnet sich (mit dem Kamera-Cockpit). |
-| „Licht im Flur an“, „Wie warm ist es draußen?“ | Alles andere geht an **Assist** von Home Assistant. Die Antwort erscheint als Sprechblase. |
+| „Was ist offen?“, „Wo ist es kalt?“, „Läuft die Waschmaschine?“, „Was zieht Strom?“, „Wer ist zu Hause?“, „Wie ist das Wetter?“, „Ist alles in Ordnung?“, „Was steht heute an?“, „Guten Morgen“, „Gute Nacht“ … | Mit dem Modul **Das Haus antwortet** (kostenlos im Shop, siehe unten): Die Antwort erscheint als Sprechblase, wird über die Sprachausgabe von Assist vorgelesen, und das Haus zeigt sie – offene Fenster blinken, der kälteste Raum öffnet sich, die Ansicht fliegt zur Waschmaschine. Die ganze Liste steht unten. |
+| „Licht im Flur an“, „Mach die Rollläden runter“ | Befehle gehen an **Assist** von Home Assistant. Die Antwort erscheint als Sprechblase. |
 
-NeonPlan erkennt die Namen aus **deinem Plan**: Räume, Außenflächen, Etagen und Geräte. Ein Raum hört auch auf den Namen seines Home-Assistant-Bereichs. Bei Geräten braucht es ein „zeig“ oder „wo ist“. So bleibt „Licht im Wohnzimmer an“ ein Befehl für Assist und schaltet das Licht, statt nur hinzufliegen.
+Zusammengesetzte Wörter versteht es auch: „Auffahrtkamera“ trifft die Kamera „Auffahrt“, „Flurlicht“ das Licht im Flur. Unter **⚙ Einstellungen → Sprachsteuerung** steht die Liste **Das versteht NeonPlan**, mit den Sätzen der eingespielten Module.
+
+NeonPlan erkennt die Namen aus **deinem Plan**: Räume, Außenflächen, Etagen, Geräte und Möbel. Ein Raum hört auch auf den Namen seines Home-Assistant-Bereichs. Bei Geräten braucht es ein „zeig“ oder „wo ist“. So bleibt „Licht im Wohnzimmer an“ ein Befehl für Assist und schaltet das Licht, statt nur hinzufliegen.
+
+**Weitere Namen.** Heißt dein Fernseher in Home Assistant „Smart TV Pro“, du sagst aber „Wohnzimmerfernseher“ oder „Glotze“: Jeder Raum, jedes Möbel und jedes platzierte Gerät hat im Editor unter dem Namen das Feld **Weitere Namen für die Sprache** (mit Komma getrennt, bis zu zwölf). Die Namen gelten für die Sprachsteuerung und die Suche.
+
+**Das Haus antwortet – die Fragen.** Das Modul (siehe unten) beantwortet Fragen aus deinem Plan und deinen Sensoren, ohne KI, alles lokal:
+
+| Thema | Du fragst zum Beispiel |
+|---|---|
+| Offen | „Was ist offen?“, „Welche Fenster sind offen?“, „Ist im Bad ein Fenster offen?“, „Ist die Garage zu?“, „Wie lange ist das Fenster schon offen?“ – die Ansicht fliegt zu jedem offenen Fenster, von innen, und sagt dort, was es ist |
+| Temperatur | „Wo ist es kalt?“, „Wo ist es am wärmsten?“, „Wie warm ist es im Wohnzimmer?“, „Wie warm ist es draußen?“ |
+| Luft | „Wie feucht ist es im Bad?“, „Wie ist die Luft im Schlafzimmer?“ (CO₂), „Soll ich lüften?“ |
+| Heizung | „Auf was steht die Heizung im Wohnzimmer?“, „Heizt die Heizung?“ (Thermostate des Raums) |
+| Geräte | „Läuft die Waschmaschine noch?“, „Ist der Fernseher an?“, „Was läuft gerade alles?“, mit Haushalt Pro: „Wie lange läuft die Waschmaschine noch?“, „Wann ist die Wäsche fertig?“ |
+| Medien | „Was läuft im Fernseher?“, „Welche Musik läuft?“ |
+| Energie | „Was zieht gerade Strom?“, „Was macht die Solaranlage?“, „Wie voll ist der Akku?“ |
+| Licht, Rollläden, Schlösser | „Welche Lichter sind an?“, „Ist im Flur noch Licht an?“, „Sind die Rollläden unten?“, „Ist die Haustür abgeschlossen?“ |
+| Personen | „Wer ist zu Hause?“, „Wo ist Anna?“, „Ist jemand im Wohnzimmer?“, „Wo ist Bewegung?“ |
+| Warnungen | „Ist alles in Ordnung?“, „Gibt es Warnungen?“ (Rauch, Wasser, Fenster bei Regen, Stromausfall …) |
+| Haushalt (Haushalt Pro) | „Was steht heute an?“, „Wann kommt die Mülltonne?“, „Ist Post da?“, „Müssen die Pflanzen gegossen werden?“ |
+| Auto (Auto Pro) | „Wie voll ist das Auto?“, „Lädt das Auto?“, „Wie weit komme ich noch?“, „Ist das Auto abgeschlossen?“, „Wo steht das Auto?“ |
+| Wetter, Zeit | „Wie ist das Wetter?“, „Regnet es?“, „Wie spät ist es?“, „Welcher Tag ist heute?“, „Wann geht die Sonne unter?“ |
+| Das Haus | „Wie viele Räume hat das Haus?“, „Wie groß ist das Wohnzimmer?“, „Wie viele Fenster hat das Haus?“ |
+| Der Tag | „Guten Morgen“ – der Morgenbericht: Wetter, Warnungen, was offen ist, was heute ansteht, wer da ist, das Auto. „Gute Nacht“ – der Nacht-Check: offene Fenster und Türen, nicht abgeschlossene Schlösser, Lichter, laufende Geräte, mit Rundflug |
+| Und sonst | „Wer bist du?“, „Wie geht's dir?“, „Erzähl einen Witz“, „Danke“, „Hallo“, „Was kannst du?“ |
+
+Befehle („Mach das Licht an“, „Stell die Heizung auf 22 Grad“) gehen weiter an Assist. Die Antworten kommen in der Sprache deines Nutzers (Deutsch oder Englisch).
+
+**Module.** Manche Fähigkeiten kommen als **Modul** aus dem Shop: ein signiertes Pack, das Code mitbringt, den NeonPlan nachlädt – geprüft und an deine Installation gebunden wie ein Möbel-Pack. Das erste Modul ist **Das Haus antwortet** (kostenlos mit Kundenkonto). Du spielst die .fp3dpack-Datei unter **⚙ Einstellungen → 🧩 Module → Modul einspielen …** ein (oder auf der Seite Erweiterungen im Abschnitt **Module**); danach steht es dort als „Modul von Mastershort“, und seine Sätze erscheinen unter 🎙 Sprachsteuerung. Für das Vorlesen braucht die Assist-Pipeline eine Sprachausgabe (Einstellungen → Sprachassistenten → Text-zu-Sprache); ohne sie bleibt es bei der Sprechblase.
 
 **Einschalten.** Standardmäßig ist die Sprachsteuerung aus. Du schaltest sie dort ein, wo du sprechen willst:
 
-- **NeonPlan-Seite (Panel):** Editor → **🎙️ Sprachsteuerung** → **Auf diesem Gerät einschalten**. Das gilt nur für diesen Browser, also zum Beispiel das Wandtablet, aber nicht das Handy.
+- **NeonPlan-Seite (Panel):** Editor → **⚙ Einstellungen → 🎙 Sprachsteuerung** → **Auf diesem Gerät einschalten**. Das gilt nur für diesen Browser, also zum Beispiel das Wandtablet, aber nicht das Handy.
 - **Dashboard-Karte:** Dashboard bearbeiten → NeonPlan-Karte → **Funktionen** → **Sprachsteuerung (Mikrofon-Knopf)**, oder im YAML `voice: true`. Die Karten-Einstellung gilt auf allen Geräten, die dieses Dashboard zeigen. Du kannst sie bequem am PC setzen, auch wenn sie für das Tablet gedacht ist.
 
 **Was du dafür brauchst:**
@@ -654,6 +733,20 @@ NeonPlan erkennt die Namen aus **deinem Plan**: Räume, Außenflächen, Etagen u
 3. **Die Mikrofon-Freigabe:**
    - im Browser beim ersten Antippen „Zulassen“;
    - in **Fully Kiosk**: Einstellungen → Web Content Settings → Mikrofonzugriff einschalten (Plus-Lizenz), dazu in Android die Mikrofon-Berechtigung für Fully.
+
+**Über Assist fragen – ohne Mikrofon am Tablet.** Alles, was NeonPlan versteht, kannst du auch Assist sagen: einem Voice-Satelliten (Home Assistant Voice, ESPHome), dem Assist-Dialog oder der App. Dafür braucht Assist eine Satzdatei: NeonPlan legt `custom_sentences/de/neonplan3d.yaml` und `…/en/…` in deinem Konfigurationsordner **erst an, wenn du unter Sätze für Assist eine Auswahl triffst** (seit 1.24 – vorher geschah das beim Start). Sagst du Assist „Zeig das Wohnzimmer“ oder „Was ist offen?“, geht der Satz an **jede offene NeonPlan-Ansicht** – das Wandtablet zeigt den Raum oder die offenen Fenster, und Assist spricht die Antwort dort, wo du gefragt hast. Das Tablet selbst bleibt dabei still. Welche Sätze dort stehen, wählst du unter **⚙ Einstellungen → 🎙 Sprachsteuerung → Sätze für Assist**: **Nur eindeutige** („zeig …“, „geh …“, „frag das Haus …“, „NeonPlan, …“, „Guten Morgen“, „Gute Nacht“ – nichts davon sagt man Home Assistant selbst), **Alle Fragen** (dazu „welche Fenster sind offen“, „wo ist …“, „läuft die Waschmaschine“ – Vorsicht, einige davon beantwortet Home Assistant sonst selbst) oder **Keine** (Standard: keine Datei; eine vorhandene Datei von NeonPlan wird entfernt). Hast du die Datei selbst geändert, überschreibt oder löscht NeonPlan sie nie – der Dialog sagt dir dann, welche Sprache er in Ruhe gelassen hat. Entfernst du die Integration, verschwinden NeonPlans Satzdateien mit ihr. Mit „Frag das Haus, welche Fenster offen sind“ erreichst du NeonPlan in jedem Modus. Eigene Sätze legst du in einer weiteren Datei unter `custom_sentences` für den Intent `NeonPlanAsk` an.
+
+**Der Dienst `neonplan3d.ask`.** Für Automationen und Skripte: Felder **Satz** (`text`), **Bildschirm** (`screen`, optional) und **Sprechen** (`speak`, Standard aus). Der Dienst liefert die Antwort zurück (`answer`, `answered`, `screen_open`), zum Beispiel für eine Benachrichtigung. Mit `speak: true` spricht die Ansicht die Antwort selbst über die Sprachausgabe ihrer Assist-Pipeline. Beispiel – jeden Abend um 22 Uhr der Nacht-Check am Wandtablet:
+
+```yaml
+action: neonplan3d.ask
+data:
+  text: "Gute Nacht"
+  screen: "Flur"
+  speak: true
+```
+
+**Bildschirmnamen.** Hast du mehrere Tablets, gib jeder Ansicht einen Namen: im Editor unter **⚙ Einstellungen → 🎙 Sprachsteuerung → Bildschirmname** (gilt für dieses Gerät) oder an der Karte mit der Option `screen: Küche`. Nennt der Dienst einen Bildschirm, reagiert nur die Ansicht mit diesem Namen; ohne Angabe reagieren alle. Ist keine Ansicht offen, antwortet Assist „Kein NeonPlan-Bildschirm ist gerade offen“.
 
 **Testen:** Im Abschnitt **🎙️ Sprachsteuerung** startet **🎙️ Mikrofon testen** eine Probe. Sie prüft der Reihe nach https, Mikrofon, Pegel und Assist. Sie zeigt auch, welchen Raum ein gesprochener Satz öffnen würde, und schaltet dabei nichts. Steht irgendwo ein ✖, steht daneben, was zu tun ist.
 
@@ -673,7 +766,7 @@ Pro-Erweiterungen sind kostenpflichtige Zusatzfunktionen, einzeln im Shop erhäl
 
 ### 6.1 Kamera-Cockpit
 
-**Durch die Kamera schauen:** Im Standbild-Menü einer Kamera und im Raumfenster steht „Durch die Kamera schauen“. Die 3D-Ansicht fliegt an die Stelle der Kamera und blickt in ihre Richtung, das Livebild liegt halbtransparent über der Szene. Mit dem Regler unten stellst du die Überblendung ein, „Zurück zur Ansicht“ fliegt zurück. Passt das Bild nicht genau, korrigierst du Drehung und Neigung der Kamera im Editor.
+**Durch die Kamera schauen:** Im Standbild-Menü einer Kamera und im Raumfenster steht „Durch die Kamera schauen“. Die 3D-Ansicht fliegt an die Stelle der Kamera und blickt in ihre Richtung, das Livebild liegt halbtransparent über der Szene. Mit dem Regler unten stellst du die Überblendung ein, „Zurück zur Ansicht“ fliegt zurück. **⛶ Vollbild** zeigt das Kamerabild auf dem ganzen Bildschirm; wo der Browser das nicht kann (alte Tablets), öffnet sich die Kameraansicht von Home Assistant, dort auch mit Ton. Passt das Bild nicht genau, korrigierst du Drehung und Neigung der Kamera im Editor.
 
 ![Durch die Kamera schauen](images/view-camera-through.jpg)
 
@@ -687,12 +780,14 @@ Pro-Erweiterungen sind kostenpflichtige Zusatzfunktionen, einzeln im Shop erhäl
 
 **Live-Regie:** Ein Bildschirm, meist das Wandtablet, zeigt von selbst, was im Haus passiert. Klingelt es, fliegt die Ansicht zur Haustür und schaut durch die Kamera dort. Sieht eine Kamera jemanden, ist die Waschmaschine fertig oder kommt eine Warnung, fliegt sie ebenfalls dorthin. Danach kehrt sie zurück, wo sie war. Alles ist **aus**, bis du es einschaltest, und zwar an zwei Stellen:
 
-1. **Welche Ereignisse:** Editor → **🎬 Live-Regie**. Jedes Ereignis hat einen eigenen Schalter:
+1. **Welche Ereignisse:** Editor → **⚙ Einstellungen → 🎬 Live-Regie**. Jedes Ereignis hat einen eigenen Schalter:
    - **Es klingelt:** Die Klingel findet NeonPlan selbst, nämlich eine Ereignis-Entität der Klasse „Türklingel“ (Ring, UniFi Protect …) oder einen Sensor wie Reolinks „Besucher“. Du kannst sie auch selbst wählen, ebenso die Kamera an der Tür. Ohne Wahl nimmt NeonPlan die Kamera desselben Geräts oder eine im selben Bereich. Die Kamera muss im Plan platziert sein, sonst fliegt die Ansicht nur zur Klingel.
    - **Eine Kamera sieht jemanden:** „Nur Personen“ oder „Jede Bewegung“, für alle platzierten Kameras.
    - **Waschmaschine, Trockner oder Spülmaschine fertig:** Das Gerät muss als Möbel mit Strommessung oder Status verknüpft sein. Als fertig gilt es, wenn es nach dem Lauf 3 Minuten ruht. Eine Pause im Programm zählt also nicht.
    - **Neue Warnung:** Rauch, Wasser, Alarm, Fenster bei Regen und so weiter.
    - **Zurück nach:** die Sekunden bis zur Rückkehr (Standard 30). Die Klingel bleibt doppelt so lange.
+   - **Eigene Auslöser:** weitere Entitäten, jeweils mit einer Kamera. Geht eine davon an oder auf, z. B. eine zweite Klingel, das Garagentor oder das Gartentor, fliegt die Ansicht hin und schaut durch diese Kamera. Ohne Kamera fliegt sie zum Gerät.
+   - **Livebild beim Durchschauen:** Statt eines Standbilds alle paar Sekunden läuft das Video der Kamera. Das gilt auch für „Durch die Kamera schauen“ von Hand. Braucht mehr Leistung, auf sehr alten Tablets lieber aus lassen.
 2. **Auf welchem Bildschirm:** im selben Abschnitt **Auf diesem Gerät einschalten**. Das gilt nur für diesen Browser, also zum Beispiel das Wandtablet mit dem NeonPlan-Panel. Auf einer Dashboard-Karte schaltest du stattdessen **Live-Regie** in den Karten-Einstellungen ein (`director: true`).
 
 Wer das Tablet gerade bedient, wird nur von der Klingel und von Warnungen unterbrochen. Berührst du den Bildschirm, während die Regie etwas zeigt, bleibt die Ansicht, wo sie ist. Teil des Kamera-Cockpits.
@@ -765,7 +860,7 @@ Die Module bekommen eine leuchtende Zellstruktur, über die ein Lichtband Richtu
 
 **Hologramm**
 
-In der Hausansicht hängt ein Hologramm aus Glas am größten Solarfeld (ohne Feld neben dem Haus), verbunden durch einen Leuchtstrich. Es zeigt PV jetzt, Ertrag heute und Spitze, die Tageskurve seit Mitternacht (aus den Statistiken deines PV-Sensors), bei mehreren Anlagen eine Zeile je Wechselrichter, Akku mit Pfeil, Netz, Haus, Wallbox und den Autarkie-Balken. Es behält seine Größe in der Welt, wird beim Rauszoomen also kleiner; von hinten siehst du es gespiegelt wie eine Glasscheibe (abschaltbar mit **Von hinten gespiegelt (wie Glas)**, dann bleibt es von überall lesbar). Antippen klappt es auf die große Zahl zusammen. Im Abschnitt **Hologramm** wählst du Feld, Größe und Versatz – der Abschnitt steht auch ohne Solarfeld da (Spiegelung, Größe, Geräte-Karten), nur die Feld-Einstellungen warten auf ein Feld – oder **Frei im Plan**: Dann steht im Plan ein Griff ◈, den du dorthin ziehst, wo die Karte schweben soll, etwa über die Terrasse; Höhe über dem Boden dazu. Die Karte zeigt vom Haus weg.
+In der Hausansicht hängt ein Hologramm aus Glas am größten Solarfeld (ohne Feld neben dem Haus), verbunden durch einen Leuchtstrich. Es zeigt PV jetzt, Ertrag heute und Spitze, die Tageskurve seit Mitternacht (aus den Statistiken deines PV-Sensors), bei mehreren Anlagen eine Zeile je Wechselrichter, Akku mit Pfeil, Netz, Haus, Wallbox und den Balken **Autarkie jetzt** (der Anteil des Hausverbrauchs, der gerade nicht aus dem Netz kommt; ohne Netzwert bleibt er weg). Es behält seine Größe in der Welt, wird beim Rauszoomen also kleiner; von hinten siehst du es gespiegelt wie eine Glasscheibe (abschaltbar mit **Von hinten gespiegelt (wie Glas)**, dann bleibt es von überall lesbar). Antippen klappt es auf die große Zahl zusammen. Im Abschnitt **Hologramm** wählst du Feld, Größe und Versatz – der Abschnitt steht auch ohne Solarfeld da (Spiegelung, Größe, Geräte-Karten), nur die Feld-Einstellungen warten auf ein Feld – oder **Frei im Plan**: Dann steht im Plan ein Griff ◈, den du dorthin ziehst, wo die Karte schweben soll, etwa über die Terrasse; Höhe über dem Boden dazu. Die Karte zeigt vom Haus weg.
 
 **Geräte-Hologramme**
 
@@ -901,12 +996,11 @@ Haushalt Pro zeigt im Haus, was im Haushalt ansteht – dort, wo es passiert. Di
 - **Mülltonnen:** Wähle unter **Abfallkalender oder Sensor** einen Kalender (z. B. von *Waste Collection Schedule*) oder einen Sensor. Aus einem Kalender sucht NeonPlan die Einträge nach den Wörtern der Abfallart heraus (Papier, Bio, Gelber Sack, PMD, GFT, Recycling … in vielen Sprachen); passt das nicht, trägst du ein eigenes **Stichwort** ein. Ein Sensor darf die Tage bis zur Abholung, ein Datum oder „morgen“/„in 3 Tagen“ melden. Jede Tonne mit Termin trägt ein kleines **Schildchen** auf dem Deckel – „Heute“, „Morgen“, „in 3 Tagen“ – in ihrer Farbe; heute und morgen stehen hervor. Ein Tipp auf die Tonne zeigt die nächsten Termine. **Leuchten ab / bis** legt fest, ab wann am Vortag bis wann am Abholtag eine Tonne als „dran“ gilt (für alle Tonnen).
 - **Briefkasten:** Ein **Sensor für Post** – ein Merker (z. B. ein input_boolean „Post da“ aus einer Automation) oder die Einwurfklappe – und optional der **Sensor der Entnahmetür**. Liegt Post drin, leuchtet der Briefkasten und zeigt „Post da“, bis er geleert wurde.
 - **Pflanzen:** Eine Pflanze (plant.*) oder ein Feuchtesensor; unter dem eingestellten Wert (Standard 20 %) zeigt sie „Durst“.
+- **Pinnwand:** Unter **⚙ Einstellungen → Haus → Pinnwand (Text-Helfer)** wählst du einen Text-Helfer (`input_text`) oder Sensor. Sein Text steht oben in „Heute im Haushalt“, mehrere Zeilen mit `|` getrennt – Automationen schreiben hinein („Paket für Alla liegt in der Garage“, „Morgen 10 Uhr kommt der Handwerker“), die Karte zeigt es.
 - **Waschmaschine, Trockner, Spüler:** Mit einem **Restzeit-Sensor** zeigt die Markierung „noch 23 min“; danach „Fertig!“, bis die Tür aufgeht (**Tür-Sensor**) oder das Gerät wieder läuft. „Fertig“ erkennt NeonPlan am Zustand des Geräts (finished, beendet …) oder daran, dass es zu laufen aufgehört hat.
 - **Wartung und Verbrauchsteile:** An jedem elektrischen Möbel kann ein Sensor für Filter, Salz oder Klarspüler stehen – ein Binärsensor (an = fällig), eine Zahl (Prozent oder Tage übrig, fällig ab dem eingestellten Wert) oder ein Datum. Fällig leuchtet das Gerät gelb.
 - **Kühlschrank:** Steht eine Tür länger offen als eingestellt (Standard 2 Minuten), warnt NeonPlan oben im Bild. Dazu gehört der **Smart-Kühlschrank** (Side-by-Side mit beweglichen Türen) in der Möbel-Bibliothek.
 - **Heute im Haushalt:** Eine Glaskarte oben rechts listet, was gerade ansteht – Tonnen heute und morgen, Post, fertige Geräte, durstige Pflanzen, fällige Wartung, offene Kühlschranktüren. Ein Tipp öffnet das Gerät, der Kopf klappt sie ein. In der Dashboard-Karte schaltet `household_card: false` sie ab.
-
----
 
 ## 7. Erweiterungen, Shop und Möbel-Packs
 
@@ -956,7 +1050,7 @@ Die mittlere Kachelreihe zeigt die Pro-Erweiterungen. Aktive tragen ein ✓, ges
 
 Geräte in Packs haben eine kleine Leuchtfläche (Display, Status-LED): Verknüpft mit einem Media-Player, Schalter oder Licht leuchtet sie, solange das Gerät läuft; ein Aquarium leuchtet in der Farbe seines Lichts.
 
-Unten auf der Seite fasst ein **Balken** deine installierten Packs zusammen (Möbel-Packs mit der Zahl ihrer Möbel und Erweiterungen); **Liste zeigen** klappt die Liste mit **Entfernen** auf. Genauso fasst die Shop-Verbindung deine Käufe in einem Balken zusammen – installiert, Updates, noch nicht installiert – mit **Alle installieren/aktualisieren**. Darunter liegt **Möbel-Packs importieren …** für Pack-Dateien: Schnupper-Packs aus dem Newsletter, Downloads von der Website oder Installationen ohne Internet. Mehrere Dateien lassen sich auf einmal wählen.
+Unten auf der Seite fasst ein **Balken** deine installierten Packs zusammen (Möbel-Packs mit der Zahl ihrer Möbel und Erweiterungen); **Liste zeigen** klappt die Liste mit **Entfernen** auf. Genauso fasst die Shop-Verbindung deine Käufe in einem Balken zusammen – installiert, Updates, noch nicht installiert – mit **Alle installieren/aktualisieren**. Darunter liegt **Möbel-Packs importieren …** für Pack-Dateien: Schnupper-Packs aus dem Newsletter, Downloads von der Website oder Installationen ohne Internet. Mehrere Dateien lassen sich auf einmal wählen. Der Abschnitt **Module** darunter listet die eingespielten Module (Code aus dem Shop, siehe 5.10) mit **Modul einspielen …** und **Entfernen**.
 
 **Gut zu wissen:**
 
@@ -986,6 +1080,32 @@ Unter **🎈 Fun-Packs** schaltest du sie danach ein und aus.
 
 ---
 
+### 7.5 Module
+
+Ein **Modul** ist ein Pack, das Code mitbringt: NeonPlan lädt ihn nach und lässt ihn im Haus laufen – geprüft, signiert und an deine Installation gebunden wie ein Möbel-Pack. Module kommen nur aus dem Shop (mit Kundenkonto, viele kostenlos); ihr Code liegt nicht im öffentlichen Repository.
+
+**So funktioniert ein Modul – Schritt für Schritt:**
+
+1. **Holen:** Im Shop das Modul in den Warenkorb (kostenlose Module auch), bestellen, fertig. Es liegt dann in deinem Kundenkonto wie jedes Pack.
+2. **Installieren:** Hast du NeonPlan mit dem Shop verbunden (7.1), steht es unter Erweiterungen → **Alle installieren/aktualisieren** – ein Tipp. Ohne Verbindung lädst du die `.fp3dpack`-Datei aus dem Konto und spielst sie ein: **⚙ Einstellungen → 🧩 Module → Modul einspielen …** oder hier im Abschnitt **Module**.
+3. **Freigeben (seit 1.24):** Ein Modul läuft erst, wenn ein Administrator seinen Code gesehen und freigegeben hat. Im Abschnitt **Module** steht dann „wartet auf deine Freigabe“ – **Code ansehen & freigeben** zeigt Anbieter, Version, Größe, Fingerabdruck und den ganzen Code; **Freigeben** startet genau diesen Code, ohne Neustart.
+4. **Sehen:** Das Modul steht in beiden Listen als „Modul von Mastershort · v2“. Was es kann, steht in seiner Beschreibung im Shop; die Sätze eines Sprach-Moduls erscheinen sofort unter **🎙 Sprachsteuerung → Das versteht NeonPlan**, Warnungen eines Moduls in der Warnleiste, Karten über dem Haus.
+5. **Updates:** Kommt eine neue Fassung, holt der tägliche Shop-Check sie von selbst; ohne Shop-Verbindung spielst du die neue Datei ein. **Neuer Code läuft nie von allein:** Das Update wartet neben der laufenden Fassung („Update auf v4 wartet auf deine Freigabe“), bis du es mit **Update ansehen & freigeben** bestätigst. Bis dahin läuft die alte Fassung weiter. Möbel- und Funktions-Packs ohne Code aktualisieren sich wie bisher.
+6. **Entfernen:** In der Liste **Entfernen**, wie bei einem Pack. Dein Plan bleibt unberührt.
+
+Sicherheit: Ein Modul läuft nur mit gültiger Signatur und auf der Installation, für die es gekauft wurde. Du kannst den Code in der Datei lesen (er ist nicht verschleiert), aber nicht weitergeben – dafür gilt die Elastic License 2.0.
+
+**Warum Module?** Die Pro-Erweiterungen ziehen nach und nach in diese Form um (auf der Erweiterungen-Seite stehen sie schon unter Module, „wird ein Modul“). An der Bedienung ändert sich nichts. Für die Entwicklung ändert sich viel: Jede Erweiterung bekommt ihre Updates über den Shop, ohne auf das nächste NeonPlan-Release zu warten; mehrere Erweiterungen lassen sich gleichzeitig bauen und testen, jede mit ihrer eigenen Supporter-Beta; und der Kern bleibt klein und schnell – ein Wandtablet lädt nur, was es nutzt.
+
+> **Beta: Das Haus antwortet.** Das Sprach-Modul testen zuerst die Supporter: Mit dem [Supporter-Pass](https://mastershort.de/neonplan3d/unterstuetzer/) liegt es in deinem Konto – **Alle installieren** oder Datei einspielen (Schritt 2). Dann **⚙ Einstellungen → 🎙 Sprachsteuerung** öffnen: Unter „Das versteht NeonPlan“ stehen jetzt alle Fragen. Probier „Was ist offen?“, „Guten Morgen“, „Gute Nacht“, „Wie ist das Wetter?“ – am Mikrofon oder im Assist-Dialog. Für das Vorlesen braucht die Assist-Pipeline eine Sprachausgabe (Einstellungen → Sprachassistenten → Text-zu-Sprache). Was nicht verstanden wird oder falsch antwortet, bitte mit dem genauen Satz auf Discord in **#beta-feedback** – daraus wird die nächste Fassung. Nach der Beta ist das Modul für alle kostenlos.
+
+Module heute:
+
+| Modul | Was es tut | Preis |
+|---|---|---|
+| **Das Haus antwortet** | beantwortet gesprochene Fragen – „Was ist offen?“, „Wie ist das Wetter?“, „Guten Morgen“ … (5.10) | kostenlos |
+| **Fenster-Wächter** | warnt, wenn ein Fenster bei Kälte (unter 12 °C draußen) länger als 20 Minuten offen steht oder die Heizung bei offenem Fenster läuft (10 Minuten): Der Raum pulst, die Warnleiste nennt Fenster und Zeit; „Welche Fenster sind zu lange offen?“ fliegt sie ab | kostenlos |
+
 ## 8. Die Dashboard-Karte
 
 ![Karte im Dashboard](images/card-og-dim.jpg)
@@ -997,7 +1117,7 @@ Die Karte `custom:neonplan3d-card` bringt die 3D-Ansicht in jedes Dashboard. Sie
 | Abschnitt | Optionen |
 |---|---|
 | **Ansicht** | Etage oder ganzes Haus, Größe fest oder bildschirmfüllend, Höhe, Look, Wände, Qualität, Etagen darunter |
-| **Anzeigen** | Symbole, Heatmap, Schalter in der Karte, Etagen-Miniaturen, Raumnamen, Raumfenster, Vollbild-Knopf, Etagen auseinander, Leistungsanzeige |
+| **Anzeigen** | Symbole, Heatmap, Schalter in der Karte, Etagen-Miniaturen, Raumnamen, Raumfenster, Vollbild-Knopf, Uhr (Ecke wählbar, `clock: tl/tr/bl/br`), Etagen auseinander, Leistungsanzeige |
 | **Funktionen** | Warnungen, Sprung zur Warnung, Szenen-Knöpfe, Bewegungsspur, Kamera-Wand, Zeitreise, Wetter mit Wetter-Entität |
 | **Wandtablet (Kiosk)** | Rückkehr zur Startansicht, Nachtdimmung, Kamerafahrt als Bildschirmschoner |
 
@@ -1014,12 +1134,14 @@ fill: false             # den Bildschirm unter der Kopfzeile füllen
 walls: auto             # auto | cut
 controls_side: left     # left | right: Etagenbilder, Stern, Suche und Auge rechts
 keep_view: false        # true: Etagenwechsel ohne neuen Kameraflug
+angle_lock: false       # true: 3D-Sperre – der Blickwinkel bleibt fest, Ziehen verschiebt
 explode: true           # Etagen in der Hausansicht auseinanderziehen
 floor_stack: dim        # Etagen darunter: dim | stacked | single
 quality: auto           # auto | low | high
 theme: neon             # neon | blueprint | day
 accent: "#ff8a00"       # eigene Akzentfarbe (Linien im Neon-Look, Knöpfe, Pins); weglassen = Cyan
-markers: important      # none | important | all
+markers: important      # none | room | important | all
+marker_size: normal     # small | normal | large
 marker_names: false     # true: Geräte mit eigenem Namen zeigen ihn unter dem Symbol
 central: true           # der Stern mit dem Zentral-Menü (alle Lichter, Rollläden, Favoriten)
 buttons:                # eigene Knöpfe nur für diese Karte (ersetzen die aus dem Editor)
@@ -1049,6 +1171,7 @@ camera_wall: false      # Pro: Knopf „Kameras“ unten in der Karte öffnet di
 time_travel: false      # Pro: Knopf „Zeitreise“ unten in der Karte spielt die letzten 24 Stunden ab (nur ansehen)
 time_travel_speed: 360  # Tempo der Zeitreise: 60 | 360 | 900 | 3600 | 14400 (eine Stunde in 1 min, 10 s, 4 s, 1 s; ein Tag in 6 s, nur in der Woche)
 time_travel_range: 24h  # Start der Zeitreise: 24h oder 7d (die Woche; auch auf der Stufe Tablet, die sonst zwei Tage hält)
+roof: true              # false: Haus ganz ohne Dach zeigen
 roof_fade: true         # false: Dach bleibt beim Heranzoomen auf dem Haus
 start_view: { theta: 0.8, phi: 1.0, radius: 20 }   # eigene Startansicht dieser Karte; die Zeile steht im Editor unter Startansicht (weglassen = die des Plans)
 idle_return: 0          # Sekunden ohne Berührung bis zur Startansicht

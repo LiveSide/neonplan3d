@@ -4,24 +4,28 @@
 import { css, html, LitElement, nothing, type PropertyValues } from "lit";
 import {
   activateLicense,
+  approveModule,
   getLicense,
   importPack,
   installPack,
   refreshLicense,
   removeLicense,
   removePack,
+  reviewModule,
   markOffersSeen,
   markUpdatesSeen,
   offerLink,
   unseenUpdates,
   type CatalogPack,
   type LicenseStatus,
+  type ModuleReview,
 } from "../api.ts";
 import { DISCORD_URL, isBeta, supporterUrl } from "../beta.ts";
 import { FEATURES, FUN, knownFeature, manualUrl, registerUrl, released, shopUrl, unlockedFeatures, type Feature } from "../features.ts";
 import { DOG_BREEDS, PET_FURS_OF, type Building, type Pet } from "../model.ts";
 import { translate, type I18nKey } from "../i18n.ts";
 import { packName, type FurniturePack } from "../packs.ts";
+import { moduleWaits } from "../modules.ts";
 import { controls, tokens } from "../styles.ts";
 import type { HomeAssistant } from "../types.ts";
 
@@ -31,6 +35,8 @@ export class Extensions extends LitElement {
     packs: { attribute: false },
     building: { attribute: false },
     _packMsg: { state: true },
+    _moduleMsg: { state: true },
+    _review: { state: true },
     _license: { state: true },
     _licenseKey: { state: true },
     _licenseBusy: { state: true },
@@ -44,6 +50,9 @@ export class Extensions extends LitElement {
   /** The plan (the fun packs keep their settings in it, e.g. the pets). */
   declare building: Building | null | undefined;
   private declare _packMsg: { ok: boolean; text: string } | null;
+  private declare _moduleMsg: { ok: boolean; text: string } | null;
+  /** The module code an admin is reading before approving it. */
+  private declare _review: { pack: FurniturePack; data: ModuleReview | null; error: string | null; busy: boolean } | null;
   /** The shop connection (loaded when the page opens); null until then. */
   private declare _license: LicenseStatus | null;
   private declare _licenseKey: string;
@@ -61,6 +70,8 @@ export class Extensions extends LitElement {
   constructor() {
     super();
     this._packMsg = null;
+    this._moduleMsg = null;
+    this._review = null;
     this._license = null;
     this._licenseKey = "";
     this._licenseBusy = null;
@@ -186,7 +197,7 @@ export class Extensions extends LitElement {
           )}
         </div>
       </section>
-      ${this.renderFun(unlocked)} ${this.renderPacks()}
+      ${this.renderFun(unlocked)} ${this.renderPacks()} ${this.renderModules()}
     </div>`;
   }
 
@@ -362,7 +373,8 @@ export class Extensions extends LitElement {
     const hass = this.hass;
     await this.shopCall(pack.id, async () => {
       const res = await installPack(hass, pack.id);
-      this._packMsg = { ok: true, text: this.t("pack_imported", { name: res.name, publisher: res.publisher, n: res.items }) };
+      const text = this.t("pack_imported", { name: res.name, publisher: res.publisher, n: res.items });
+      this._packMsg = { ok: true, text: res.approval ? `${text} ${this.t("module_imported_waits")}` : text };
       this.dispatchEvent(new CustomEvent("packs-changed", { bubbles: true, composed: true }));
       return getLicense(hass);
     });
@@ -559,20 +571,17 @@ export class Extensions extends LitElement {
   }
 
   private renderPacks() {
-    const packs = this.packs ?? [];
+    // modules and Pro add-ons (modules soon) have their own section below: here only packs with furniture
+    const packs = (this.packs ?? []).filter((p) => !p.module && !p.features?.length);
     const items = packs.reduce((s, p) => s + p.items.length, 0);
-    const pro = packs.filter((p) => p.features?.length).length;
     return html`<section class="fp3d-ext-card">
       <h3>${this.t("packs")}</h3>
-      ${this.summaryBar("packs", [
-        { n: packs.length - pro, label: this.t("ext_sum_packs", { items }), tone: "ok" },
-        { n: pro, label: this.t("ext_sum_feature_packs"), tone: "missing" },
-      ])}
+      ${this.summaryBar("packs", [{ n: packs.length, label: this.t("ext_sum_packs", { items }), tone: "ok" }])}
       ${(this._open.has("packs") ? packs : []).map(
         (p) => html`<div class="fp3d-pack">
           <div>
             <b>${packName(p, this.hass?.language ?? "de")}</b>
-            <span class="fp3d-sub">${p.features?.length ? this.t("pack_features", { publisher: p.publisher, n: p.features.length }) : this.t("pack_by", { publisher: p.publisher, n: p.items.length })}</span>
+            <span class="fp3d-sub">${p.module ? this.t("pack_module", { publisher: p.publisher }) : p.features?.length ? this.t("pack_features", { publisher: p.publisher, n: p.features.length }) : this.t("pack_by", { publisher: p.publisher, n: p.items.length })}</span>
             ${p.licensee ? html`<span class="fp3d-sub">${this.t("pack_licensed", { name: p.licensee })}${p.release && p.release > 1 ? ` · v${p.release}` : ""}</span>` : nothing}
             ${(p.features ?? []).some((f) => !knownFeature(f)) ? html`<span class="fp3d-sub fp3d-pack-error">${this.t("pack_needs_update")}</span>` : nothing}
           </div>
@@ -589,8 +598,60 @@ export class Extensions extends LitElement {
     </section>`;
   }
 
-  /** Imports one or several pack files at once (a buyer of a bundle picks them all in one go). */
-  private async importPackFile(e: Event): Promise<void> {
+  /** Modules: signed packs that carry code – and the Pro add-ons, which become modules (the editor's ⚙ Module dialog shows the same list). */
+  private renderModules() {
+    const modules = (this.packs ?? []).filter((p) => p.module || p.features?.length);
+    const pro = modules.filter((p) => !p.module).length;
+    const waiting = modules.filter((p) => moduleWaits(p));
+    return html`<section class="fp3d-ext-card">
+      <h3>${this.t("settings_modules")}</h3>
+      ${this.summaryBar("modules", [
+        { n: modules.length - pro, label: this.t("ext_sum_modules"), tone: "ok" },
+        { n: pro, label: this.t("ext_sum_feature_packs"), tone: "missing" },
+      ])}
+      ${waiting.length
+        ? html`<p class="fp3d-sub fp3d-module-waits">
+            ${this.t("modules_waiting", { n: waiting.length })}
+            ${waiting.map((p) => html`<button class="fp3d-btn fp3d-primary" @click=${() => void this.openReview(p)}>${packName(p, this.hass?.language ?? "de")}</button>`)}
+          </p>`
+        : nothing}
+      ${!modules.length
+        ? html`<p class="fp3d-sub">${this.t("modules_none")}</p>`
+        : !this._open.has("modules")
+          ? nothing
+          : modules.map(
+            (p) => html`<div class="fp3d-pack">
+              <div>
+                <b>${packName(p, this.hass?.language ?? "de")}</b>
+                <span class="fp3d-sub">${p.module ? this.t("pack_module", { publisher: p.publisher }) : this.t((p.features ?? []).every((f) => f.startsWith("fun_")) ? "pack_fun_module" : "pack_pro_module", { publisher: p.publisher })}${p.release && p.release > 1 ? ` · v${p.release}` : ""}</span>
+                ${(p.features ?? []).some((f) => !knownFeature(f)) ? html`<span class="fp3d-sub fp3d-pack-error">${this.t("pack_needs_update")}</span>` : nothing}
+                ${p.licensee ? html`<span class="fp3d-sub">${this.t("pack_licensed", { name: p.licensee })}</span>` : nothing}
+                ${p.module && p.module.approved !== true
+                  ? html`<span class="fp3d-sub fp3d-module-waits">${this.t("module_waits")}</span>`
+                  : p.pending
+                    ? html`<span class="fp3d-sub fp3d-module-waits">${this.t("module_update_waits", { from: p.release ?? 1, to: p.pending.release })}</span>`
+                    : nothing}
+              </div>
+              <div class="fp3d-module-actions">
+                ${moduleWaits(p)
+                  ? html`<button class="fp3d-btn fp3d-primary" @click=${() => void this.openReview(p)}>${this.t(p.module?.approved === true ? "module_review_update" : "module_review")}</button>`
+                  : nothing}
+                <button class="fp3d-btn fp3d-danger" @click=${() => this.deletePack(p)}>${this.t("pack_remove")}</button>
+              </div>
+            </div>`,
+          )}
+      ${this.renderReview()}
+      <label class="fp3d-btn fp3d-primary fp3d-pack-import">
+        ${this.t("module_import")}
+        <input type="file" accept=".fp3dpack,.json,application/json" multiple hidden @change=${(e: Event) => this.importPackFile(e, true)} />
+      </label>
+      ${this._moduleMsg ? html`<p class="fp3d-sub ${this._moduleMsg.ok ? "fp3d-notice" : "fp3d-pack-error"}">${this._moduleMsg.text}</p>` : nothing}
+      <p class="fp3d-sub">${this.t("module_import_hint")} ${this.t("modules_pro_note")}</p>
+    </section>`;
+  }
+
+  /** Imports one or several pack files at once (a buyer of a bundle picks them all in one go); `modules` tells which section's message to set. */
+  private async importPackFile(e: Event, modules = false): Promise<void> {
     const input = e.target as HTMLInputElement;
     const files = [...(input.files ?? [])];
     input.value = "";
@@ -600,7 +661,8 @@ export class Extensions extends LitElement {
     for (const file of files) {
       try {
         const res = await importPack(this.hass, await file.text());
-        done.push(this.t("pack_imported", { name: res.name, publisher: res.publisher, n: res.items }));
+        const text = this.t("pack_imported", { name: res.name, publisher: res.publisher, n: res.items });
+        done.push(res.approval ? `${text} ${this.t("module_imported_waits")}` : text);
       } catch (err) {
         const { code, message } = (err ?? {}) as { code?: string; message?: string };
         const key = `pack_error_${code}` as I18nKey;
@@ -610,7 +672,60 @@ export class Extensions extends LitElement {
     }
     if (done.length) this.dispatchEvent(new CustomEvent("packs-changed", { bubbles: true, composed: true }));
     const summary = files.length > 1 ? [this.t("packs_imported_n", { n: done.length, total: files.length })] : [];
-    this._packMsg = { ok: failed.length === 0, text: [...summary, ...done, ...failed].join(" · ") };
+    const msg = { ok: failed.length === 0, text: [...summary, ...done, ...failed].join(" · ") };
+    if (modules) this._moduleMsg = msg;
+    else this._packMsg = msg;
+  }
+
+  /** Fetches the code an admin is asked to approve: the waiting update when there is one, else the installed code. */
+  private async openReview(pack: FurniturePack): Promise<void> {
+    if (!this.hass) return;
+    this._open = new Set([...this._open, "modules"]);
+    this._review = { pack, data: null, error: null, busy: true };
+    try {
+      const data = await reviewModule(this.hass, pack.id, pack.module?.approved === true && !!pack.pending);
+      this._review = { pack, data, error: null, busy: false };
+    } catch (err) {
+      const { code, message } = (err ?? {}) as { code?: string; message?: string };
+      this._review = { pack, data: null, error: code === "unauthorized" ? this.t("module_review_admin") : (message ?? String(err)), busy: false };
+    }
+  }
+
+  private async approveReview(): Promise<void> {
+    const review = this._review;
+    if (!this.hass || !review?.data) return;
+    this._review = { ...review, busy: true };
+    try {
+      await approveModule(this.hass, review.pack.id, review.data.sha);
+      this._review = null;
+      this._moduleMsg = { ok: true, text: this.t("module_approved", { name: packName(review.pack, this.hass.language ?? "de") }) };
+      this.dispatchEvent(new CustomEvent("packs-changed", { bubbles: true, composed: true }));
+    } catch (err) {
+      const { code, message } = (err ?? {}) as { code?: string; message?: string };
+      this._review = { ...review, busy: false, error: code === "unauthorized" ? this.t("module_review_admin") : (message ?? String(err)) };
+    }
+  }
+
+  /** The code to read before it runs: who made it, which version, how big, its fingerprint – and the code itself. */
+  private renderReview() {
+    const review = this._review;
+    if (!review) return nothing;
+    const d = review.data;
+    return html`<div class="fp3d-review" role="dialog" aria-modal="true">
+      <h4>${this.t("module_review_title", { name: packName(review.pack, this.hass?.language ?? "de") })}</h4>
+      ${d
+        ? html`<p class="fp3d-sub">${this.t("module_review_meta", { publisher: d.publisher, release: d.release, kb: Math.max(1, Math.round(d.code.length / 1024)), sha: d.sha.slice(0, 12) })}</p>
+            <p class="fp3d-sub">${this.t("module_review_note")}</p>
+            <pre class="fp3d-review-code">${d.code}</pre>`
+        : review.busy
+          ? html`<p class="fp3d-sub">…</p>`
+          : nothing}
+      ${review.error ? html`<p class="fp3d-sub fp3d-pack-error">${review.error}</p>` : nothing}
+      <div class="fp3d-module-actions">
+        <button class="fp3d-btn" @click=${() => (this._review = null)}>${this.t("cancel")}</button>
+        <button class="fp3d-btn fp3d-primary" ?disabled=${!d || review.busy} @click=${() => void this.approveReview()}>${this.t("module_approve")}</button>
+      </div>
+    </div>`;
   }
 
   private async deletePack(pack: FurniturePack): Promise<void> {
@@ -914,6 +1029,42 @@ export class Extensions extends LitElement {
       }
       .fp3d-pack-error {
         color: var(--fp3d-danger);
+      }
+      .fp3d-module-waits {
+        color: var(--fp3d-accent);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+      .fp3d-module-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+      .fp3d-review {
+        margin: 10px 0;
+        padding: 12px;
+        border: 1px solid var(--fp3d-accent);
+        border-radius: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .fp3d-review h4 {
+        margin: 0;
+      }
+      .fp3d-review-code {
+        max-height: 50vh;
+        overflow: auto;
+        margin: 0;
+        padding: 8px;
+        font-size: 11px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(0, 0, 0, 0.35);
+        border-radius: 6px;
       }
     `,
   ];

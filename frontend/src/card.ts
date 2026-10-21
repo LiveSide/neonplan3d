@@ -39,6 +39,7 @@ export class Floorplan3dCard extends LitElement {
     _heat: { state: true },
     _explode: { state: true },
     _fullscreen: { state: true },
+    _pseudoFull: { state: true },
     _vh: { state: true },
     _top: { state: true },
     _cameraWall: { state: true },
@@ -59,6 +60,8 @@ export class Floorplan3dCard extends LitElement {
   private declare _heat: HeatMode | null;
   private declare _explode: boolean | null;
   private declare _fullscreen: boolean;
+  /** Full screen made by the card itself (no Fullscreen API): spread over the page. */
+  private declare _pseudoFull: boolean;
   /** The visible screen height and the card's distance from the page top (measured, #344). */
   private declare _vh: number;
   private declare _top: number | null;
@@ -84,6 +87,7 @@ export class Floorplan3dCard extends LitElement {
     this._heat = null;
     this._explode = null;
     this._fullscreen = false;
+    this._pseudoFull = false;
     this._vh = window.innerHeight;
     this._top = null;
     this._cameraWall = false;
@@ -205,9 +209,29 @@ clearTimeout(this.cleanTimer);
     clearInterval(this.nightTimer);
   }
 
+  /**
+   * Full screen: the browser's where it has one; where it has none or refuses (the iPad, the Home Assistant app on
+   * iOS, #633) the card spreads over the whole page itself and the button brings it back.
+   */
   private toggleFullscreen(): void {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void this.shadowRoot?.querySelector("ha-card")?.requestFullscreen?.();
+    if (this._pseudoFull) {
+      this._pseudoFull = false;
+      this._fullscreen = false;
+      requestAnimationFrame(this.onViewport);
+      return;
+    }
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+      return;
+    }
+    const card = this.shadowRoot?.querySelector("ha-card") as (HTMLElement & { requestFullscreen?: () => Promise<void> }) | null;
+    const spread = () => {
+      this._pseudoFull = true;
+      this._fullscreen = true;
+      requestAnimationFrame(this.onViewport);
+    };
+    if (card?.requestFullscreen) card.requestFullscreen().catch(spread);
+    else spread();
   }
 
   /** Visual editor in the dashboard (no YAML needed). */
@@ -316,7 +340,7 @@ clearTimeout(this.cleanTimer);
     const eye = c?.controls_hidden !== undefined || (c?.controls_hide_after ?? 0) > 0;
     const t = (k: Parameters<typeof translate>[1]) => translate(this.hass, k);
     const accent = /^#[0-9a-f]{6}$/i.test(c?.accent ?? "") ? c!.accent : null;
-    return html`<ha-card class=${this._night ? "fp3d-night" : ""} style=${accent ? `--fp3d-accent:${accent}` : ""} @pointerdown=${this.touch} @keydown=${this.onKey} @wheel=${this.touch}>
+    return html`<ha-card class="${this._night ? "fp3d-night" : ""} ${this._pseudoFull ? "fp3d-pseudo-full" : ""}" style=${accent ? `--fp3d-accent:${accent}` : ""} @pointerdown=${this.touch} @keydown=${this.onKey} @wheel=${this.touch}>
       <div class="fp3d-card-body ${tt ? "fp3d-tt" : ""}" style="height:${size}">
         ${b && b.floors.some((f) => f.rooms.length)
           ? html`<fp3d-view3d
@@ -329,9 +353,11 @@ clearTimeout(this.cleanTimer);
               .wallMode=${walls}
               .explode=${explode}
               .keepRoof=${c?.roof_fade === false}
+              .hideRoof=${c?.roof === false}
               .quality=${this._config?.quality ?? "auto"}
               ?showStats=${this._config?.stats ?? false}
               .markerMode=${this._config?.markers ?? "important"}
+              .pinSize=${this._config?.marker_size ?? "normal"}
               .markerNames=${this._config?.marker_names === true}
               .central=${this._config?.central !== false}
               .walkable=${this._config?.walk !== false}
@@ -340,6 +366,7 @@ clearTimeout(this.cleanTimer);
               .buttons=${this._config?.buttons?.map((b, i) => ({ id: `card_${i}`, ...b })) ?? null}
               .heatMode=${heat}
               .theme=${this._config?.theme ?? "neon"}
+              .clock=${this._config?.clock ?? null}
               .accent=${this._config?.accent ?? null}
               .showEnergy=${this._config?.energy ?? true}
               .flows=${this._config?.flows ?? null}
@@ -348,6 +375,7 @@ clearTimeout(this.cleanTimer);
               .roomLabels=${c?.room_names !== false}
               .controlsRight=${c?.controls_side === "right"}
               .keepView=${c?.keep_view === true}
+              .angleLock=${c?.angle_lock === true}
               .floorStack=${c?.floor_stack ?? "dim"}
               .panelOpen=${!!this._roomId && c?.room_panel !== false}
               .alerts=${c?.alerts !== false}
@@ -355,6 +383,7 @@ clearTimeout(this.cleanTimer);
               .alertJump=${!!c?.alert_jump}
               .director=${!!c?.director}
               .voice=${!!c?.voice}
+              .screen=${c?.screen?.trim() || null}
               .scenes=${c?.scenes !== false}
               ?trail=${!!c?.motion_trail}
               .cameraWall=${this._cameraWall && !tt}
@@ -510,6 +539,20 @@ clearTimeout(this.cleanTimer);
         box-shadow: var(--fp3d-shadow);
         font-size: 18px;
         cursor: pointer;
+      }
+      /* full screen made by the card itself (iPad, the app on iOS): over the whole page */
+      ha-card.fp3d-pseudo-full {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        height: 100vh !important;
+        max-height: none !important;
+        border-radius: 0;
+      }
+      @supports (height: 100dvh) {
+        ha-card.fp3d-pseudo-full {
+          height: 100dvh !important;
+        }
       }
       ha-card {
         overflow: hidden;

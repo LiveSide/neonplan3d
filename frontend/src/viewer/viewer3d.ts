@@ -55,7 +55,7 @@ import { buildFloorGeometry, SLAB, stairHoleParts, type FloorGeometry } from "./
 import { OrbitControls, type OrbitView } from "./controls.ts";
 import { makeFoldable, type FoldMasks } from "./fold.ts";
 import { CameraProjections, PROJECTION_LAYER, type ProjectionSurface, type ProjectorPose } from "./projection.ts";
-import { pushAwning, pushCameraModel, pushPackGlow, pushPackLamp, pushPackMotion, screenRect, pushFridgeDoors } from "./furniture.ts";
+import { pushAwning, pushCameraModel, pushPackGlow, pushPackLamp, pushPackMotion, screenRect, pushFridgeDoors, setLightLook } from "./furniture.ts";
 import { pushPipeTube, type PipeTube } from "./pipes.ts";
 // the walk through the house at eye height (lives with the viewer it drives)
 export { FloorMap, WalkCamera, type WalkState } from "./walk.ts";
@@ -161,6 +161,10 @@ export interface DeviceMarker {
   /** LED strip: roll about its length (degrees) and standing upright (its length runs up from the base). */
   roll?: number;
   upright?: boolean;
+  /** LED strip: rising along its length (degrees; D539). */
+  rise?: number;
+  /** Ceiling fan: how fast its blades turn (0–1; D606). */
+  fanSpeed?: number;
   /** Show the HTML marker (false: the 3D object alone stands for the device). */
   pin?: boolean;
   /** A placed device fixed against moving. */
@@ -201,7 +205,7 @@ export interface TrailSpot {
   age: number;
 }
 
-export type LampModel = "ceiling" | "downlight" | "spot" | "panel" | "pendant" | "floor" | "uplight" | "table" | "wall" | "strip" | "bollard" | "garden";
+export type LampModel = "ceiling" | "downlight" | "spot" | "panel" | "pendant" | "fan" | "floor" | "uplight" | "table" | "wall" | "strip" | "bollard" | "garden";
 
 /** Piece of energy cable (floor-local coordinates); the flow runs from a to b. */
 /** A ray from the camera through the pointer, in building coordinates (heights above the ground). */
@@ -252,7 +256,8 @@ export interface ScreenState {
   plain?: boolean;
   /** Furniture with a state: glowing faces on top of the item instead of a screen – the whole top, or a half of it. */
   // (see also SoundSource below)
-  faces?: { part: "all" | "left" | "right" | "top" | "bottom" | "band" | "cabin" | "lights" | "burners" | "lid" | "beacon"; color: [number, number, number]; level: number }[];
+  // "gang": one rocker or socket of a wall switch or socket (`index` of `of`)
+  faces?: { part: "all" | "left" | "right" | "top" | "bottom" | "band" | "cabin" | "lights" | "burners" | "lid" | "beacon" | "gang" | "drum" | "apring"; color: [number, number, number]; level: number; index?: number; of?: number }[];
 }
 
 /** Position of the sun (from sun.sun): degrees above the horizon and clockwise from north. */
@@ -340,11 +345,13 @@ const FLOW_FRAME_MS = 33;
 const CABLE_WIDTH = 0.028;
 const CABLE_HALO = 0.09;
 const LAMP_BODY = 0x2a3a60;
+const FAN_BLADE = 0x22314f;
+const FAN_BLADE_TOP = 0x2f4170;
 const LAMP_SHADE = 0x1d2946;
 /** Lamps that hang from the ceiling (hidden in the cut view). */
 /** LED strips mounted below this height (metres) light upwards instead of down. */
 const LOW_STRIP = 1.0;
-const HANGING = new Set<LampModel>(["ceiling", "downlight", "spot", "panel", "pendant", "strip"]);
+const HANGING = new Set<LampModel>(["ceiling", "downlight", "spot", "panel", "pendant", "fan", "strip"]);
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
 /** Turns of the colour wheel per second while a colour effect runs. */
@@ -358,6 +365,7 @@ const LAMP_SIZE: Record<LampModel, [number, number, number]> = {
   bollard: [0.16, 0.16, 0.8],
   garden: [0.12, 0.12, 0.3],
   pendant: [0.4, 0.4, 0.8],
+  fan: [1.3, 1.3, 0.45],
   floor: [0.42, 0.42, 1.7],
   table: [0.26, 0.26, 0.45],
   wall: [0.22, 0.12, 0.2],
@@ -571,6 +579,8 @@ export class FloorplanViewer {
     wins: Group;
     winSolid: MeshBasicMaterial;
     winLines: LineBasicMaterial;
+    winGlass: MeshBasicMaterial;
+    roofWinGlass: MeshBasicMaterial;
   } | null = null;
   /** The hologram's anchor: a point on the solar field (building coordinates) and the field's normal. */
   private anchors: { p: [number, number, number]; n: [number, number, number]; floorId: string; size: number; roof: boolean; views: "house" | "all" | "floor"; room?: string | null; near?: number }[] = [];
@@ -582,6 +592,7 @@ export class FloorplanViewer {
   private roofO = 0;
   /** The roof stays put while the camera comes close (no lift, no fade): the editor's roof tool, or a choice of the viewer. */
   private keepRoof = false;
+  private hideRoof = false;
   /** Robot vacuums: their info from Home Assistant, how they move, and their meshes. */
   private robots = new Map<string, { info: RobotInfo; motion: RobotMotion; group: Group; led: MeshBasicMaterial }>();
   private robotGeo: BufferGeometry | null = null;
@@ -589,6 +600,11 @@ export class FloorplanViewer {
   private robotLedGeo: BufferGeometry | null = null;
   private robotLast = 0;
   private robotTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Ceiling fans (D606): their blades in a group of their own, turning with the fan's speed. */
+  private fans = new Map<string, { group: Group; mesh: Mesh; r: number; speed: number; floorId: string; y: number }>();
+  private fanMat: MeshBasicMaterial | null = null;
+  private fanLast = 0;
+  private fanTimer: ReturnType<typeof setTimeout> | undefined;
   private floorStack: FloorStack = "dim";
   /** Floors by id, and per-frame bookkeeping so labels are only placed when something moved. */
   private floorMap = new Map<string, FloorView>();
@@ -777,6 +793,11 @@ export class FloorplanViewer {
     this.keepView = on;
   }
 
+  /** 3D lock: the angle stays where it is; dragging moves the view, zooming still works. */
+  setAngleLock(on: boolean): void {
+    this.controls.angleLock = on;
+  }
+
   setFloor(floorId: string | null, animate = true): void {
     this.keepNext = this.keepView && floorId !== null && this.floorId !== null && floorId !== this.floorId;
     this.floorId = floorId;
@@ -793,6 +814,13 @@ export class FloorplanViewer {
     if (mode === this.floorStack) return;
     this.floorStack = mode;
     this.applyTargets(false);
+  }
+
+  /** Leave the roof out altogether (a card option, D601): the house looks as if it had none. */
+  setHideRoof(on: boolean): void {
+    if (on === this.hideRoof) return;
+    this.hideRoof = on;
+    this.invalidate();
   }
 
   setKeepRoof(on: boolean): void {
@@ -847,6 +875,7 @@ export class FloorplanViewer {
   /** Replace the device markers; pins are reused per entity, light cones rebuilt per floor. */
   setDevices(devices: DeviceMarker[]): void {
     this.devices = devices;
+    this.syncFans(devices);
     this.labelsDirty = true;
     this.effectFloors = new Set(devices.filter((d) => d.effect && d.glow).map((d) => d.floorId));
     this.deviceFloor = new Map(devices.map((d) => [d.id, d.floorId]));
@@ -1144,6 +1173,10 @@ export class FloorplanViewer {
     if (theme === this.theme) return;
     this.theme = theme;
     this.themeUniform.value = themeIndex(theme);
+    // waste bins keep their colours in the light looks: drawn anew in full colour (#609)
+    const light = theme !== "neon";
+    setLightLook(light);
+    if (this.building?.floors.some((f) => f.furniture.some((m) => m.type === "waste_bin"))) this.rebuild();
     const blending = lineBlending(theme);
     const lineMats = [...this.floors.map((f) => f.materials.lines), ...(this.roof ? [this.roof.lines] : [])];
     for (const m of lineMats) {
@@ -1573,6 +1606,7 @@ export class FloorplanViewer {
     clearTimeout(this.flowTimer);
     clearTimeout(this.effectTimer);
     clearTimeout(this.robotTimer);
+    clearTimeout(this.fanTimer);
     clearTimeout(this.orbitTimer);
     clearTimeout(this.weatherTimer);
     for (const o of [this.rain, this.snow, this.skyDisc]) {
@@ -1597,6 +1631,9 @@ export class FloorplanViewer {
     this.robotGeo?.dispose();
     this.robotLedGeo?.dispose();
     this.robotMat?.dispose();
+    for (const f of this.fans.values()) f.mesh.geometry.dispose();
+    this.fans.clear();
+    this.fanMat?.dispose();
     this.renderer.dispose();
     // frees the GPU context now instead of when the garbage collector gets to it
     this.renderer.forceContextLoss();
@@ -1665,6 +1702,7 @@ export class FloorplanViewer {
   private clear(): void {
     // robots share one geometry: keep them out of the floor groups while those are disposed
     for (const r of this.robots.values()) r.group.removeFromParent();
+    for (const f of this.fans.values()) f.group.removeFromParent();
     for (const fv of this.floors) {
       for (const pic of fv.screenPics.values()) {
         (pic.mesh.material as Material).dispose();
@@ -1799,6 +1837,7 @@ export class FloorplanViewer {
         spot: [H - h, "spot"],
         panel: [H - 0.05, "ceiling"],
         pendant: [Math.max(0.5, H - h), "pendant"],
+        fan: [Math.max(0.5, H - h), "pendant"],
         floor: [base + h - 0.15, "omni"],
         uplight: [base + h, "up"],
         table: [base + h - 0.1, "omni"],
@@ -1819,7 +1858,11 @@ export class FloorplanViewer {
         const sideways = !!d.upright || Math.abs(d.roll ?? 0) > 45;
         for (const t of [-1 / 3, 0, 1 / 3]) {
           if (d.upright) out.push({ x: d.x, y: base + w * (0.5 + t), z: d.z, color, level: glow.level * 0.55, kind: "omni", room });
-          else out.push({ x: d.x + Math.cos(a) * w * t, y, z: d.z + Math.sin(a) * w * t, color, level: glow.level * 0.55, kind: sideways ? "omni" : kind, room });
+          else {
+            // a rising strip: its sources climb with it
+            const r = (d.rise ?? 0) * DEG;
+            out.push({ x: d.x + Math.cos(a) * w * t * Math.cos(r), y: y + Math.sin(r) * w * t, z: d.z + Math.sin(a) * w * t * Math.cos(r), color, level: glow.level * 0.55, kind: sideways || r ? "omni" : kind, room });
+          }
         }
       } else out.push({ x: d.x, y, z: d.z, color, level: glow.level, kind, room });
     }
@@ -2224,6 +2267,8 @@ export class FloorplanViewer {
       this.roof.wins.traverse((o) => ((o as Mesh).geometry as BufferGeometry | undefined)?.dispose());
       this.roof.winSolid.dispose();
       this.roof.winLines.dispose();
+      this.roof.winGlass.dispose();
+      this.roof.roofWinGlass.dispose();
       this.scene.remove(this.roof.wins);
       this.scene.remove(this.roof.group);
       this.roof = null;
@@ -2242,6 +2287,9 @@ export class FloorplanViewer {
     const glass = themed(new MeshBasicMaterial({ vertexColors: true, transparent: true, side: DoubleSide, depthWrite: false }), this.themeUniform);
     const wins = new Group();
     const winSolid = themed(new MeshBasicMaterial({ vertexColors: true, side: DoubleSide }), this.themeUniform);
+    // the glass of the windows over a room: see-through like the windows in the walls (#598)
+    const winGlass = themed(new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35, side: DoubleSide, depthWrite: false }), this.themeUniform);
+    const roofWinGlass = themed(new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35, side: DoubleSide, depthWrite: false }), this.themeUniform);
     const winLines = themed(new LineBasicMaterial({ vertexColors: true, transparent: true, blending: lineBlending(this.theme), depthWrite: false }), this.themeUniform, true);
     const below: { floorId: string; win: Group }[] = [];
     const parts = geos.map((geo) => {
@@ -2263,18 +2311,22 @@ export class FloorplanViewer {
       }
       // roof windows that only show in the roof ride and fade with it
       if (geo.winRoof?.solid.count) part.add(new Mesh(geo.winRoof.solid.geometry(), winSolid), new LineSegments(geo.winRoof.lines.geometry(), winLines));
+      // their glass: as see-through as the windows in the walls, and it fades with the roof (#645)
+      if (geo.winRoof?.glass.count) part.add(new Mesh(geo.winRoof.glass.geometry(), roofWinGlass));
       part.renderOrder = 8;
       group.add(part);
       let win: Group | null = null;
-      if (geo.win?.solid.count) {
+      if (geo.win?.solid.count || geo.win?.glass.count) {
         win = new Group();
         win.add(new Mesh(geo.win.solid.geometry(), winSolid), new LineSegments(geo.win.lines.geometry(), winLines));
+        if (geo.win.glass.count) win.add(new Mesh(geo.win.glass.geometry(), winGlass));
         wins.add(win);
       }
       for (const [floorId, w] of geo.winBelow ?? []) {
-        if (!w.solid.count) continue;
+        if (!w.solid.count && !w.glass.count) continue;
         const g = new Group();
         g.add(new Mesh(w.solid.geometry(), winSolid), new LineSegments(w.lines.geometry(), winLines));
+        if (w.glass.count) g.add(new Mesh(w.glass.geometry(), winGlass));
         wins.add(g);
         below.push({ floorId, win: g });
       }
@@ -2283,7 +2335,7 @@ export class FloorplanViewer {
     group.renderOrder = 8;
     this.scene.add(group);
     this.scene.add(wins);
-    this.roof = { group, parts, below, solid, lines, glass, live, lives, wins, winSolid, winLines };
+    this.roof = { group, parts, below, solid, lines, glass, live, lives, wins, winSolid, winLines, winGlass, roofWinGlass };
     this.placeRoof();
   }
 
@@ -2302,7 +2354,7 @@ export class FloorplanViewer {
     const zoom = this.keepRoof ? 1 : Math.min(1, Math.max(0, (this.controls.view.radius / this.houseRadius - 0.62) / 0.3));
     // a house with a single floor shows that floor as its house view, roof included (D208)
     const house = this.floorId === null || this.floors.length === 1;
-    const target = house && this.wallMode !== "cut" ? ROOF_OPACITY * zoom : 0;
+    const target = house && this.wallMode !== "cut" && !this.hideRoof ? ROOF_OPACITY * zoom : 0;
     const k = 1 - Math.exp(-dt / FLOOR_TAU);
     const before = this.roofO;
     this.roofO += (target - this.roofO) * k;
@@ -2334,6 +2386,7 @@ export class FloorplanViewer {
     roof.solid.depthWrite = this.roofO > 0.9;
     roof.lines.opacity = this.roofO;
     roof.glass.opacity = this.roofO * 0.28;
+    roof.roofWinGlass.opacity = this.roofO * 0.35;
     roof.live.opacity = this.roofO;
     return this.roofO !== before && this.roofO !== target;
   }
@@ -2553,7 +2606,7 @@ export class FloorplanViewer {
     const shapeSig =
       this.wallMode +
       (this.lowQuality ? "L" : this.highQuality ? "H" : "M") +
-      lamps.map((d) => `${d.id},${d.lamp ?? d.model},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0}`).join(";");
+      lamps.map((d) => `${d.id},${d.lamp ?? d.model},${d.variant},${d.x},${d.z},${d.y},${d.rotation ?? 0},${d.roll ?? 0},${d.upright ? 1 : 0},${d.rise ?? 0},${d.size?.join("/")},${d.base ?? 0},${d.pack ?? ""},${d.mirror ? 1 : 0}`).join(";");
     const glows = lamps.map((d) => this.glowOf(d));
     const colorSig = lamps.map((d, i) => `${flash(d.id)},${glows[i] ? `${glows[i]!.level.toFixed(3)},${glows[i]!.color.map((c) => c.toFixed(3)).join("/")}` : "off"}`).join(";");
     if (shapeSig !== fv.lampShapeSig || !fv.lampMesh.geometry.getAttribute("position")) {
@@ -2574,7 +2627,8 @@ export class FloorplanViewer {
         // shades get the sentinel colour and are recoloured below
         if (d.model) pushCameraModel(buf, d.model, d.x, d.model === "camera_ceiling" ? H : d.y, d.z, d.rotation ?? 0);
         else if (packed) pushPackLamp(buf, packed, { x: d.x, z: d.z, rotation: d.rotation ?? 0, w: pw, d: pd, h: ph, mirror: d.mirror }, d.base ?? 0, SHADE_SENTINEL);
-        else pushLampModel(buf, { ...d, lamp: d.lamp! }, d.top ?? H, SHADE_SENTINEL);
+        // a ceiling fan's blades turn in a group of their own (syncFans)
+        else pushLampModel(buf, { ...d, lamp: d.lamp! }, d.top ?? H, SHADE_SENTINEL, d.lamp !== "fan");
         // keyed by the furniture: two lamps may share one light (one switch for two strips)
         ranges.set(d.furnitureId ?? d.id, { start, end: buf.count });
         if (d.pickable !== false) tris.push({ id: d.id, start, end: buf.count });
@@ -2824,6 +2878,7 @@ export class FloorplanViewer {
         spot: Ht - h,
         panel: Ht - 0.03,
         pendant: Math.max(0.4, Ht - h) + 0.08,
+        fan: Math.max(0.5, Ht - Math.max(0.25, h)) + 0.02,
         floor: base + h - 0.15,
         uplight: base + h,
         table: base + h - 0.09,
@@ -2842,6 +2897,11 @@ export class FloorplanViewer {
           if (d.upright) {
             // an upright strip glows up its length
             hp.push(d.x, base + w * (0.5 + t), d.z);
+            hc.push(...glow.color.map((c) => c * glow.level * 0.7 * 0.6));
+          } else if (d.rise) {
+            // a rising strip glows along its slope
+            const r = d.rise * DEG;
+            hp.push(d.x + Math.cos(ang) * w * t * Math.cos(r), y + Math.sin(r) * w * t, d.z + Math.sin(ang) * w * t * Math.cos(r));
             hc.push(...glow.color.map((c) => c * glow.level * 0.7 * 0.6));
           } else push(d.x + Math.cos(ang) * w * t, d.z + Math.sin(ang) * w * t, 0.6);
         }
@@ -2965,6 +3025,73 @@ export class FloorplanViewer {
               // the screen material is double-sided: one winding is enough (both would add up twice)
               buf.tri(p00, p10, p11, col);
               buf.tri(p00, p11, p01, col);
+            }
+            continue;
+          }
+          if (face.part === "apring") {
+            // an access point's LED ring: under the disc (ceiling) or on the plate's front (wall), with a soft halo
+            const wall = f.variant === "wall";
+            const aw = Math.abs(w);
+            const r = wall ? Math.min(aw, h) * 0.3 : Math.min(aw, d) * 0.3;
+            const col = new Color(...face.color.map((v) => Math.min(1, v * (0.4 + 0.6 * face.level))) as [number, number, number]);
+            const dark = new Color(0, 0, 0);
+            const n = 24;
+            const at = (a: number, rr: number) => (wall ? P(Math.cos(a) * rr, base + h / 2 + Math.sin(a) * rr, d / 2 + 0.004) : P(Math.cos(a) * rr, base - 0.003, Math.sin(a) * rr));
+            for (let i = 0; i < n; i++) {
+              const a0 = (i / n) * Math.PI * 2;
+              const a1 = ((i + 1) / n) * Math.PI * 2;
+              buf.tri(at(a0, r * 0.8), at(a0, r), at(a1, r), col);
+              buf.tri(at(a0, r * 0.8), at(a1, r), at(a1, r * 0.8), col);
+              buf.tri(at(a0, r), at(a0, r * 1.5), at(a1, r * 1.5), col, dark, dark);
+              buf.tri(at(a0, r), at(a1, r * 1.5), at(a1, r), col, dark, col);
+            }
+            continue;
+          }
+          if (face.part === "drum") {
+            // a washer's or dryer's round door: a ring of light round the glass and a faint glow inside (#516)
+            const aw = Math.abs(w);
+            const r = Math.min(aw * 0.36, (h - 0.2) * 0.42);
+            const cy = base + (h - 0.14) / 2 + 0.04;
+            const zf = d / 2 - 0.006;
+            const col = new Color(...face.color.map((v) => Math.min(1, v * (0.35 + 0.65 * face.level))) as [number, number, number]);
+            const glass = col.clone().multiplyScalar(0.12);
+            const dark = new Color(0, 0, 0);
+            const n = 28;
+            const at = (a: number, rr: number) => P(Math.cos(a) * rr, cy + Math.sin(a) * rr, zf);
+            for (let i = 0; i < n; i++) {
+              const a0 = (i / n) * Math.PI * 2;
+              const a1 = ((i + 1) / n) * Math.PI * 2;
+              // the glass, the bright ring and its soft halo on the front
+              buf.tri(P(0, cy, zf), at(a0, r * 0.78), at(a1, r * 0.78), glass);
+              buf.tri(at(a0, r * 0.78), at(a0, r), at(a1, r), col);
+              buf.tri(at(a0, r * 0.78), at(a1, r), at(a1, r * 0.78), col);
+              buf.tri(at(a0, r), at(a0, r * 1.18), at(a1, r * 1.18), col, dark, dark);
+              buf.tri(at(a0, r), at(a1, r * 1.18), at(a1, r), col, dark, col);
+            }
+            continue;
+          }
+          if (face.part === "gang") {
+            // a wall switch's or socket's gang: its rocker (socket) glows in front, with a soft halo on the wall
+            const n = Math.max(1, face.of ?? 1);
+            const aw = Math.abs(w);
+            const gw = aw / n;
+            const cx = (-aw / 2 + gw * ((face.index ?? 0) + 0.5)) * Math.sign(w);
+            const zf = d / 2 + (f.variant === "outdoor" ? 0.02 : 0.008);
+            const col = new Color(...face.color.map((v) => Math.min(1, v * (0.35 + 0.65 * face.level))) as [number, number, number]);
+            const halo = col.clone().multiplyScalar(0.5);
+            const dark = new Color(0, 0, 0);
+            const hx = gw * 0.34;
+            const y0 = base + h * 0.16;
+            const y1 = base + h * 0.84;
+            const q = [P(cx - hx, y0, zf), P(cx + hx, y0, zf), P(cx + hx, y1, zf), P(cx - hx, y1, zf)];
+            buf.tri(q[0], q[1], q[2], col);
+            buf.tri(q[0], q[2], q[3], col);
+            const g = 0.012 + 0.015 * face.level;
+            const o = [P(cx - hx - g, y0 - g, zf - 0.001), P(cx + hx + g, y0 - g, zf - 0.001), P(cx + hx + g, y1 + g, zf - 0.001), P(cx - hx - g, y1 + g, zf - 0.001)];
+            for (let i = 0; i < 4; i++) {
+              const j = (i + 1) % 4;
+              buf.tri(q[i], o[j], o[i], halo, dark, dark);
+              buf.tri(q[i], q[j], o[j], halo, halo, dark);
             }
             continue;
           }
@@ -3683,7 +3810,7 @@ export class FloorplanViewer {
     const z = this.grab?.id === f.id ? this.grab.z : f.z;
     const H = fv.floor.height;
     // a spot lowered by hand stands at its height above the floor like a wall item
-    const hanging = ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant"].includes(f.type) && f.mount_y == null;
+    const hanging = ["lamp_ceiling", "lamp_downlight", "lamp_spot", "lamp_panel", "lamp_pendant", "lamp_fan"].includes(f.type) && f.mount_y == null;
     const h = Math.max(0.1, f.type === "lamp_pendant" ? 0.3 : f.h);
     const y0 = packItem(f.type) || f.type === "lamp_wall" || f.type === "led_strip"
       ? mountBase(fv.floor, f)
@@ -3891,6 +4018,69 @@ export class FloorplanViewer {
     return { info, motion: { pos: [...info.rest] as [number, number], heading: info.restHeading, path: [], next: 0 }, group, led: ledMat };
   }
 
+  /** Ceiling fans: a group with the blades for each, at its place and with its speed. */
+  private syncFans(devices: DeviceMarker[]): void {
+    const seen = new Set<string>();
+    for (const d of devices) {
+      if (d.lamp !== "fan") continue;
+      const key = d.furnitureId ?? d.id;
+      seen.add(key);
+      const [w, , h] = d.size ?? LAMP_SIZE.fan;
+      const H = d.top ?? this.floorMap.get(d.floorId)?.floor.height ?? 2.5;
+      const r = w / 2;
+      let fan = this.fans.get(key);
+      if (fan && Math.abs(fan.r - r) > 1e-3) {
+        fan.group.removeFromParent();
+        fan.mesh.geometry.dispose();
+        this.fans.delete(key);
+        fan = undefined;
+      }
+      if (!fan) {
+        const buf = new GeoBuffer();
+        pushFanBlades(buf, 0, 0, 0, r, 0);
+        this.fanMat ??= new MeshBasicMaterial({ vertexColors: true });
+        const mesh = new Mesh(buf.geometry(), this.fanMat);
+        const group = new Group();
+        group.add(mesh);
+        group.rotation.y = -((d.rotation ?? 0) * DEG);
+        fan = { group, mesh, r, speed: 0, floorId: d.floorId, y: 0 };
+        this.fans.set(key, fan);
+      }
+      fan.floorId = d.floorId;
+      fan.speed = d.fanSpeed ?? 0;
+      fan.y = fanBladeY(H, h);
+      fan.group.position.set(d.x, fan.y, d.z);
+    }
+    for (const [key, f] of this.fans) {
+      if (seen.has(key)) continue;
+      f.group.removeFromParent();
+      f.mesh.geometry.dispose();
+      this.fans.delete(key);
+    }
+    this.fanLast = 0;
+  }
+
+  /** Turn the fans' blades; true while one of them runs. */
+  private stepFans(now: number): boolean {
+    if (!this.fans.size) return false;
+    const dt = this.fanLast ? Math.min(0.2, (now - this.fanLast) / 1000) : 0;
+    this.fanLast = now;
+    let turning = false;
+    for (const f of this.fans.values()) {
+      const fv = this.floorMap.get(f.floorId);
+      if (!fv) continue;
+      if (f.group.parent !== fv.group) fv.group.add(f.group);
+      // hanging above cut walls they are left out like the lamps
+      f.group.visible = !(this.wallMode === "cut" && f.y > Math.min(fv.floor.cut_height, fv.floor.height));
+      if (f.speed <= 0) continue;
+      turning = true;
+      // up to about one turn a second at full speed
+      f.group.rotation.y -= f.speed * Math.PI * 2 * dt;
+    }
+    if (!turning) this.fanLast = 0;
+    return turning;
+  }
+
   /** Move the robots; true while one of them drives. */
   private stepRobots(now: number): boolean {
     if (!this.robots.size) return false;
@@ -4002,10 +4192,10 @@ export class FloorplanViewer {
   }
 
   /** Fly to a point of a floor (search) and let the device there flash. */
-  focus(floorId: string, x: number, z: number, y: number, entityId: string | null): void {
+  focus(floorId: string, x: number, z: number, y: number, entityId: string | null, view?: { radius?: number; phi?: number; theta?: number }): void {
     const fv = this.floorMap.get(floorId);
     if (!fv) return;
-    this.controls.flyTo({ target: new Vector3(x, fv.floor.elevation + fv.ty + y, z), radius: 5.5, phi: 0.78 }, 900);
+    this.controls.flyTo({ target: new Vector3(x, fv.floor.elevation + fv.ty + y, z), radius: view?.radius ?? 5.5, phi: view?.phi ?? 0.78, ...(view?.theta !== undefined ? { theta: view.theta } : {}) }, 900);
     if (entityId) {
       this.flashes.set(entityId, performance.now() + 2400);
       const pin = this.host.querySelector<HTMLElement>(`.fp3d-dev[data-entity="${CSS.escape(entityId)}"]`);
@@ -4042,6 +4232,7 @@ export class FloorplanViewer {
     }
     const roofMoving = this.placeRoof(dt);
     const robotsMoving = this.stepRobots(now);
+    const fansTurning = this.stepFans(now);
     const weatherMoving = this.stepWeather(now);
     const moving = cameraMoving || floorsMoving || openingsMoving || flashing || roofMoving;
     const busy: string[] = [];
@@ -4057,6 +4248,7 @@ export class FloorplanViewer {
     if (this.solarActive) busy.push("solar");
     if (this.effectTick) busy.push("effect");
     if (robotsMoving) busy.push("robot");
+    if (fansTurning) busy.push("fan");
     if (orbiting) busy.push("orbit");
     if (this.tintTick) busy.push("tint");
     this.effectTick = this.tintTick = false;
@@ -4109,6 +4301,13 @@ export class FloorplanViewer {
         this.robotTimer = undefined;
         this.invalidate();
       }, this.lowQuality ? 66 : 33);
+    }
+    if (!moving && fansTurning && !this.fanTimer) {
+      // turning blades: about 20 frames per second are enough (they blur anyway), 12 on the tablet level
+      this.fanTimer = setTimeout(() => {
+        this.fanTimer = undefined;
+        this.invalidate();
+      }, this.lowQuality ? 83 : 50);
     }
     if (!moving && (this.flowActive || this.solarActive || this.soundActive || this.poolActive) && !this.flowTimer) {
       // only the energy flow (or the living modules) moves: about 30 frames per second are enough
@@ -4581,12 +4780,33 @@ export function createViewer(host: HTMLElement, options?: ViewerOptions): Floorp
   return new FloorplanViewer(host, options);
 }
 
+/** Height of a ceiling fan's blades: in its motor housing, `h` below the ceiling `H` its light's bottom. */
+function fanBladeY(H: number, h: number): number {
+  return Math.max(0.5, H - Math.max(0.25, h)) + 0.11;
+}
+
+/** Four blades of a ceiling fan around (cx, cz), reaching out to `r`, turned by `ang` (radians). */
+export function pushFanBlades(buf: GeoBuffer, cx: number, y: number, cz: number, r: number, ang: number): void {
+  const r0 = 0.12;
+  const reach = Math.max(r0 + 0.1, r);
+  for (let i = 0; i < 4; i++) {
+    const a = ang + (i * Math.PI) / 2;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    // a blade widening a little towards its tip
+    const pts: [number, number][] = [[r0, -0.045], [reach, -0.065], [reach, 0.065], [r0, 0.045]];
+    const poly = pts.map(([u, v]) => [cx + u * c - v * s, cz + u * s + v * c] as [number, number]);
+    pushPrism(buf, poly, y - 0.006, y + 0.006, FAN_BLADE, FAN_BLADE_TOP, { aoFrom: 0, bottom: true });
+  }
+}
+
 /** Model of a lamp into a buffer (3D view and furniture previews); `H` is the ceiling height. */
 export function pushLampModel(
   buf: GeoBuffer,
-  d: Pick<DeviceMarker, "x" | "z" | "size" | "base" | "rotation" | "variant" | "roll" | "upright"> & { lamp: LampModel },
+  d: Pick<DeviceMarker, "x" | "z" | "size" | "base" | "rotation" | "variant" | "roll" | "upright" | "rise"> & { lamp: LampModel },
   H: number,
   shadeCol: number,
+  blades = true,
 ): void {
   const [w, dd, h] = d.size ?? LAMP_SIZE[d.lamp];
   const base = d.base ?? 0;
@@ -4632,6 +4852,16 @@ export function pushLampModel(
         cyl(r * 0.35, bottom + 0.14, bottom + 0.2, shadeCol, shadeCol, 12);
         cyl(r, bottom, bottom + 0.14, shadeCol, shadeCol, 16);
       }
+      break;
+    }
+    case "fan": {
+      // a ceiling fan: canopy, downrod, motor housing, the blades and its light bowl underneath
+      const bottom = Math.max(0.5, H - Math.max(0.25, h));
+      cyl(0.06, H - 0.03, H, LAMP_BODY, LAMP_BODY, 10);
+      cyl(0.012, bottom + 0.16, H - 0.03, LAMP_BODY, LAMP_BODY, 6);
+      cyl(0.13, bottom + 0.07, bottom + 0.16, LAMP_BODY, LAMP_BODY, 16);
+      cyl(0.11, bottom, bottom + 0.07, shadeCol, shadeCol, 16);
+      if (blades) pushFanBlades(buf, d.x, fanBladeY(H, h), d.z, w / 2, ang);
       break;
     }
     case "downlight":
@@ -4689,7 +4919,7 @@ export function pushLampModel(
       // length it lies against a slope, standing upright it climbs from its mount height
       const t = Math.max(0.02, h);
       const y1 = d.base != null ? d.base + t : H - 0.04;
-      if (!d.roll && !d.upright) {
+      if (!d.roll && !d.upright && !d.rise) {
         box(-w / 2, w / 2, -dd / 2, dd / 2, y1 - t, y1, shadeCol);
         break;
       }
@@ -4698,10 +4928,13 @@ export function pushLampModel(
       const sr = Math.sin(roll);
       const cy = d.upright ? base + w / 2 : y1 - t / 2;
       // local: x along the length, y through the thickness, z across the depth
+      // rising along its length (D539): turned about its depth, its middle stays at its height
+      const rise = (d.upright ? 0 : (d.rise ?? 0)) * DEG;
       const P = (lx: number, ly: number, lz: number): number[] => {
         let x = lx;
         let y = ly * cr - lz * sr;
         const z = ly * sr + lz * cr;
+        if (rise) [x, y] = [x * Math.cos(rise) - y * Math.sin(rise), x * Math.sin(rise) + y * Math.cos(rise)];
         if (d.upright) [x, y] = [-y, x];
         return [d.x + x * ca - z * sa, cy + y, d.z + x * sa + z * ca];
       };

@@ -20,8 +20,6 @@ const PLINTH_LOW = new Color(0x141f30);
 /** How far the earth reaches under the floor slab. */
 const BELOW = 0.35;
 /** A light well in front of a cellar window: depth from the wall and how far it reaches below the sill. */
-// FORK d14tk: highest elevation that still counts as "on the ground" - same value as in groundLevel()
-const GROUND_MAX = 0.3;
 const WELL_DEPTH = 0.8;
 const WELL_BELOW = 0.2;
 const WELL_SIDE = 0.1;
@@ -62,13 +60,10 @@ function outlineOf(b: Building, floor: Floor): Vec2[] | null {
 function coverAbove(b: Building, floor: Floor, p: Vec2, ground: number): number {
   let top = -Infinity;
   for (const f of b.floors) {
-    // FORK d14tk (upstream issue #602): only areas lying on the ground cover a well. A balcony on an
-    // upper floor is flat and not "standing", so it used to count - and since areaGround() puts an
-    // upper floor's area at that floor's level, the rim was lifted metres up to meet it. The test is
-    // the one groundLevel() uses for the same question.
-    if (f.elevation > GROUND_MAX) continue;
+    // only areas on the ground cover a well: a balcony on an upper floor floats over it (#602)
+    if (f.elevation > 0.3) continue;
     for (const a of f.outdoor ?? []) {
-      if (a.points.length < 3 || a.type === "pool" || outdoorStanding(a.type) || !pointInPolygon(p, a.points)) continue;
+      if (a.points.length < 3 || a.type === "pool" || a.type === "balcony" || outdoorStanding(a.type) || !pointInPolygon(p, a.points)) continue;
       top = Math.max(top, f.elevation + areaGround(f, a) + OUTDOOR_TOP[a.type] - floor.elevation);
     }
   }

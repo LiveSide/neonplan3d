@@ -61,9 +61,15 @@ const SENSOR_CLASSES = new Set([
   "nitrogen_dioxide",
   "moisture",
   "sound_pressure",
+  // water values of a pool or a pond (D600): pH, and conductivity for salt
+  "ph",
+  "conductivity",
 ]);
-/** Sensors without a class still count when their unit is a meter's (e.g. older meter readers). */
-const METER_UNITS = new Set(["m³", "m3", "L", "l", "kWh", "Wh", "MWh", "lx"]);
+/**
+ * Sensors without a class still count when their unit is a meter's (e.g. older meter readers) or a water value's:
+ * redox / ORP in mV, salt or chlorine in mg/L or ppm, conductivity in µS/cm (D600).
+ */
+const METER_UNITS = new Set(["m³", "m3", "L", "l", "kWh", "Wh", "MWh", "lx", "mV", "mg/L", "mg/l", "ppm", "µS/cm", "μS/cm", "mS/cm"]);
 const BINARY_CLASSES = new Set(["door", "window", "opening", "garage_door", "motion", "occupancy", "presence", "smoke", "moisture", "gas", "carbon_monoxide"]);
 
 /** Order in lists and panels. */
@@ -323,6 +329,21 @@ export function entityName(hass: HomeAssistant, entityId: string, areaName?: str
   return name;
 }
 
+/**
+ * Whether a radiator heats by its own sensor (D637): a valve's work state ("opened", "heating", "on"), a binary
+ * sensor, or an opening in percent (above 0); null when the sensor says nothing usable.
+ */
+export function heatSensorOn(hass: HomeAssistant, ref: EntityRef | undefined): boolean | null {
+  if (!ref || ref === "none") return null;
+  const st = hass.states[ref];
+  if (!st || isUnavailable(st)) return null;
+  const s = st.state.toLowerCase();
+  if (["on", "open", "opened", "heating", "heat", "true", "active", "running"].includes(s)) return true;
+  if (["off", "closed", "idle", "false", "inactive", "standby"].includes(s)) return false;
+  const v = Number(s);
+  return Number.isFinite(v) ? v > 0 : null;
+}
+
 export function isUnavailable(st: HassEntity | undefined): boolean {
   return !st || st.state === "unavailable" || st.state === "unknown";
 }
@@ -569,6 +590,8 @@ export interface OpeningEntities {
   tiltInvert?: boolean;
   /** A door without a sensor is drawn closed. */
   shut?: boolean;
+  /** A door's smart lock. */
+  lock?: string | null;
   /** The contacts report the other way round (on = closed). */
   contactInvert?: boolean;
 }
@@ -597,6 +620,8 @@ export function openingEntities(hass: HomeAssistant, floors: readonly Floor[]): 
     contact: o.sensor === "handle" && o.contact == null ? null : pick(o.contact, autoK),
     tilt: o.tilt === "none" ? null : o.tilt,
     contact2: o.leaves === 2 && o.contact2 && o.contact2 !== "none" ? o.contact2 : null,
+    // a smart lock on a door, or on a terrace door (a window down to the floor, #645)
+    lock: (o.type === "door" || (o.type === "window" && o.sill <= 0.01)) && o.lock && o.lock !== "none" ? o.lock : null,
     tilt2: o.leaves === 2 && o.tilt2 && o.tilt2 !== "none" ? o.tilt2 : null,
     position: o.position && o.position !== "none" ? o.position : null,
     positionInverted: !!o.position_inverted,
@@ -838,6 +863,8 @@ export function confirmEntities(hass: HomeAssistant, floors: readonly Floor[]): 
     for (const f of floor.furniture) {
       const e = f.confirm ? links.get(f.id)?.entity : null;
       if (e && e !== "none") out.add(e);
+      // a wall switch or socket asks before switching any of its gangs
+      if (f.confirm) for (const g of f.gangs ?? []) if (g.entity && g.entity !== "none") out.add(g.entity);
     }
   }
   return out;
@@ -905,6 +932,7 @@ const LAMP_NAMES: Record<string, RegExp> = {
   lamp_bollard: /(weg|garten|garden|path|poller|außen|aussen|outdoor)/i,
   lamp_garden: /(garten|garden|spot|außen|aussen|outdoor|baum|tree)/i,
   lamp_pendant: /(pendel|pendant|hänge|esstisch|dining)/i,
+  lamp_fan: /(ventilator|fan|lüfter|luefter|decke|ceiling)/i,
   lamp_floor: /(steh|floor)/i,
   lamp_table: /(tisch|nacht|table|bedside|lese|reading)/i,
   lamp_wall: /(wand|wall)/i,
@@ -983,6 +1011,22 @@ export function furnitureEntities(hass: HomeAssistant, floors: readonly Floor[])
     }
   }
   return out;
+}
+
+/** An access point's status (D582): online, offline, or null when nothing says (unknown). */
+export function apOnline(st: HassEntity | undefined): boolean | null {
+  if (!st) return null;
+  const s = String(st.state).toLowerCase();
+  if (s === "unavailable") return false;
+  if (s === "unknown" || s === "") return null;
+  return !["off", "disconnected", "offline", "not_home", "disabled", "down", "isolated"].includes(s);
+}
+
+/** How fast a ceiling fan's blades turn (0–1): its percentage while it is on, a middle speed when it reports none. */
+export function fanSpeed(st: HassEntity | undefined): number {
+  if (!st || st.state !== "on") return 0;
+  const pct = st.attributes.percentage;
+  return typeof pct === "number" && Number.isFinite(pct) ? Math.max(0, Math.min(1, pct / 100)) : 0.6;
 }
 
 /** Glow colour of a TV screen for the app that is running (brand colours of common apps). */

@@ -31,7 +31,9 @@ const WINDOW_FRAME = shade(0xc9d3e6, 0.85);
 /** The frame of an open or tilted roof window glows warm, like a wall window does. */
 const WINDOW_WARM = shade(0xffb347, 0.95);
 const WINDOW_GLASS = new Color(0x2b6b8f);
-const WINDOW_BLIND = new Color(0x3a4258);
+const WINDOW_BLIND = new Color(0x1a2742);
+/** The faint cyan edge of each slat (like the blind texture of the windows in the walls). */
+const WINDOW_SLAT = new Color(0x37e0ff).multiplyScalar(0.35);
 /** The frame's sides between the roof and the sash: they close the gap a low view looked through (#490). */
 const WINDOW_CURB = new Color(0x4a566f);
 
@@ -58,14 +60,14 @@ export interface RoofGeometry {
    * The roof windows of this part, apart from the roof: they stay when the roof fades out over a room, so the
    * room shows its windows in the slope, open or shut, the blind down or up (#482).
    */
-  win?: { solid: GeoBuffer; lines: LineBuffer };
+  win?: { solid: GeoBuffer; lines: LineBuffer; glass: GeoBuffer };
   /** The roof windows that only show in the roof: they fade out with it (the default). */
-  winRoof?: { solid: GeoBuffer; lines: LineBuffer };
+  winRoof?: { solid: GeoBuffer; lines: LineBuffer; glass: GeoBuffer };
   /**
    * Floating roof windows over a room of a LOWER floor (a slope reaching down over it, #482): they belong to that
    * floor and show with it, in its own heights (its floor at 0).
    */
-  winBelow?: Map<string, { floor: Floor; solid: GeoBuffer; lines: LineBuffer }>;
+  winBelow?: Map<string, { floor: Floor; solid: GeoBuffer; lines: LineBuffer; glass: GeoBuffer }>;
 }
 
 /** The floor the roof sits on: the highest one with rooms. */
@@ -106,10 +108,10 @@ function pushRoofWindows(b: Building, parts: RoofGeometry[], states: ReadonlyMap
     const st = states.get(w.id) ?? { open: 0, tilt: 0, cover: 0 };
     const float = !!room && (below !== null || room.floor.id === part.floor.id);
     const win = below
-      ? ((part.winBelow ??= new Map()).get(below.id) ?? part.winBelow.set(below.id, { floor: below, solid: new GeoBuffer(), lines: new LineBuffer() }).get(below.id)!)
+      ? ((part.winBelow ??= new Map()).get(below.id) ?? part.winBelow.set(below.id, { floor: below, solid: new GeoBuffer(), lines: new LineBuffer(), glass: new GeoBuffer() }).get(below.id)!)
       : float
-        ? (part.win ??= { solid: new GeoBuffer(), lines: new LineBuffer() })
-        : (part.winRoof ??= { solid: new GeoBuffer(), lines: new LineBuffer() });
+        ? (part.win ??= { solid: new GeoBuffer(), lines: new LineBuffer(), glass: new GeoBuffer() })
+        : (part.winRoof ??= { solid: new GeoBuffer(), lines: new LineBuffer(), glass: new GeoBuffer() });
     const up = (p: number[], k: number) => [p[0] + face.n[0] * k, p[1] + face.n[1] * k, p[2] + face.n[2] * k];
     const mix = (p: number[], q: number[], t: number) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
     // the fixed frame in the roof; it glows warm while the window is open or tilted
@@ -135,8 +137,9 @@ function pushRoofWindows(b: Building, parts: RoofGeometry[], states: ReadonlyMap
     const top1 = up(d, 0.065);
     const bot0 = swing(top0);
     const bot1 = swing(top1);
-    win.solid.tri(bot0, bot1, top1, WINDOW_GLASS);
-    win.solid.tri(bot0, top1, top0, WINDOW_GLASS);
+    // see-through glass like a window in a wall (#598): only a shut blind closes it
+    win.glass.tri(bot0, bot1, top1, WINDOW_GLASS);
+    win.glass.tri(bot0, top1, top0, WINDOW_GLASS);
     for (const [p, q] of [[bot0, bot1], [bot1, top1], [top1, top0], [top0, bot0]]) win.lines.seg(p, q, frame);
     // the blind comes down from the top over the sash
     if (st.cover > 0.02) {
@@ -147,6 +150,12 @@ function pushRoofWindows(b: Building, parts: RoofGeometry[], states: ReadonlyMap
       const t1 = up(top1, 0.01);
       win.solid.tri(b0, b1, t1, WINDOW_BLIND);
       win.solid.tri(b0, t1, t0, WINDOW_BLIND);
+      // its slats across, like the blinds of the windows in the walls (#598)
+      const slats = Math.max(1, Math.round((h * k) / 0.05));
+      for (let i = 1; i <= slats; i++) {
+        const t = i / slats;
+        win.lines.seg(up(mix(t0, b0, t), 0.004), up(mix(t1, b1, t), 0.004), WINDOW_SLAT);
+      }
     }
   }
 }

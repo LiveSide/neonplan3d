@@ -37,6 +37,24 @@ export interface Wall {
   free?: string;
   /** Own height in metres; undefined = full floor height. */
   height?: number;
+  /** A sloping top: the heights h0 at plan point p and h1 at q, straight in between (D569). */
+  slope?: WallSlope;
+}
+
+export interface WallSlope {
+  p: Vec2;
+  q: Vec2;
+  h0: number;
+  h1: number;
+}
+
+/** The top of a sloping wall above a plan point (the point projected onto its line, held at the ends). */
+export function slopeTop(slope: WallSlope, x: number, z: number): number {
+  const dx = slope.q[0] - slope.p[0];
+  const dz = slope.q[1] - slope.p[1];
+  const l2 = dx * dx + dz * dz;
+  const t = l2 > 0 ? Math.min(1, Math.max(0, ((x - slope.p[0]) * dx + (z - slope.p[1]) * dz) / l2)) : 0;
+  return slope.h0 + (slope.h1 - slope.h0) * t;
 }
 
 export interface WallOptions {
@@ -66,6 +84,7 @@ interface Segment {
 interface Draft {
   free?: string;
   height?: number;
+  slope?: WallSlope;
   a: number;
   b: number;
   left: number;
@@ -206,8 +225,25 @@ export function generateWalls(rooms: readonly Room[], options: WallOptions, free
     const ts = list.map((s) => rooms.find((r) => r.id === s.room)?.wall_thickness?.[s.edge]).filter((t): t is number => typeof t === "number" && t > 0);
     return ts.length ? Math.max(...ts) : undefined;
   };
+  // a sloping wall (D569): set on one of its room edges, as a line in the plan with its two heights
+  const slopeOf = (list: Segment[]): WallSlope | undefined => {
+    for (const s of list) {
+      const room = rooms.find((r) => r.id === s.room);
+      const sl = room?.wall_slopes?.[s.edge];
+      if (!room || !sl) continue;
+      const p = room.points[s.edge];
+      const q = room.points[(s.edge + 1) % room.points.length];
+      return { p: [p[0], p[1]], q: [q[0], q[1]], h0: Math.max(0.05, sl[0]), h1: Math.max(0.05, sl[1]) };
+    }
+    return undefined;
+  };
   // a height of 0 on an edge: no wall there at all (an open floor plan whose rooms share one space)
   const noWall = (list: Segment[]): boolean => list.some((s) => heightSet(s) === 0);
+  // its height, or a slope and the height of its higher end
+  const withSlope = (list: Segment[]): { height?: number; slope?: WallSlope } => {
+    const slope = slopeOf(list);
+    return slope ? { height: Math.max(slope.h0, slope.h1), slope } : { height: heightOf(list) };
+  };
   const open: [string, string][] = [];
   let drafts: Draft[] = [];
   for (const g of groups.values()) {
@@ -231,7 +267,7 @@ export function generateWalls(rooms: readonly Room[], options: WallOptions, free
         roomLeft: first.room,
         roomRight: partner.room,
         sources: [src(first), src(partner)],
-        height: heightOf([first, partner]),
+        ...withSlope([first, partner]),
       });
     } else {
       drafts.push({
@@ -243,7 +279,7 @@ export function generateWalls(rooms: readonly Room[], options: WallOptions, free
         roomLeft: first.room,
         roomRight: null,
         sources: [src(first)],
-        height: heightOf([first]),
+        ...withSlope([first]),
       });
     }
   }
@@ -309,6 +345,7 @@ export function generateWalls(rooms: readonly Room[], options: WallOptions, free
       footprint,
       ...(w.free ? { free: w.free } : {}),
       ...(w.height !== undefined ? { height: w.height } : {}),
+      ...(w.slope ? { slope: w.slope } : {}),
     };
   });
   return { walls, warnings: [...new Set(warnings)], open };
@@ -351,6 +388,8 @@ function mergeCollinear(drafts: Draft[], verts: Vec2[], fixed: ReadonlySet<numbe
         w1.free ||
         w2.free ||
         w1.height !== w2.height ||
+        !!w1.slope ||
+        !!w2.slope ||
         w1.exterior !== w2.exterior ||
         w1.roomLeft !== w2.roomLeft ||
         w1.roomRight !== w2.roomRight ||

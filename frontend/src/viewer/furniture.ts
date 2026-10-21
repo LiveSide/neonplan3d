@@ -5,8 +5,9 @@
 
 import { Color } from "three";
 import type { Furniture, Vec2 } from "../model.ts";
-import { builtinBase, stairsULayout, POOL_VALVE_Y } from "../model.ts";
+import { builtinBase, gangsOf, stairsULayout, POOL_VALVE_Y } from "../model.ts";
 import { mountBase, packItem, packMotion, packMovingPart, packScreen, type PackItem, type PackMotion } from "../packs.ts";
+import { fitParts } from "../pack-scale.ts";
 import { binColors, binShape, householdCountry, mailboxShape, type BinShape, type MailboxShape } from "../household.ts";
 import type { Floor } from "../model.ts";
 import { ALWAYS, DEG, EDGE_TOP, GeoBuffer, LineBuffer, pushLoft, pushLyingCyl, pushPrism, shade } from "./geo.ts";
@@ -402,12 +403,40 @@ function fridge(b: Builder, w: number, d: number, h: number): void {
 const tone = (hex: string, k: number) => shade(parseInt(hex.slice(1), 16), k).getHex();
 
 /**
+ * The blueprint and day looks keep only bright, strong colours and turn the rest into their own tones: waste bins
+ * are drawn in their full colour there, or a brown or blue bin turns blue or grey like any cupboard (#609).
+ */
+let lightLook = false;
+export function setLightLook(on: boolean): void {
+  lightLook = on;
+}
+
+/** Vertex colours from `from` on: saturated ones darkened by the shading are lifted back to a kept brightness. */
+export function keepBright(c: number[], from: number): void {
+  for (let i = from; i + 2 < c.length; i += 3) {
+    const mx = Math.max(c[i], c[i + 1], c[i + 2]);
+    const mn = Math.min(c[i], c[i + 1], c[i + 2]);
+    // wheels and dark parts stay dark; grey and white parts follow the look
+    if (mx < 0.1 || (mx - mn) / mx < 0.45 || mx >= 0.62) continue;
+    const k = 0.62 / mx;
+    c[i] *= k;
+    c[i + 1] *= k;
+    c[i + 2] *= k;
+  }
+}
+
+/**
  * A waste bin in its shape and colours (household.ts): wheelie bins taper to the bottom and have their wheels and
  * handle at the back (-z), a 1100 l container stands on four castors, a sack is tied at the top.
  */
 function wasteBin(b: Builder, w: number, d: number, h: number, shape: BinShape, colors: [string, string]): void {
-  const body = tone(colors[0], 0.55);
-  const lid = tone(colors[1], 0.8);
+  // in the light looks at least as bright as the looks keep a colour (a dark brown or green bin too)
+  const full = (hex: string) => {
+    const mx = Math.max(...new Color(hex).toArray());
+    return tone(hex, mx > 0.05 ? Math.max(1, 0.62 / mx) : 1);
+  };
+  const body = lightLook ? full(colors[0]) : tone(colors[0], 0.55);
+  const lid = lightLook ? full(colors[1]) : tone(colors[1], 0.8);
   const lidTop = tone(colors[1], 1);
   if (shape === "bag") {
     // a full sack: wider in the middle, gathered and tied at the top
@@ -457,6 +486,72 @@ function wasteBin(b: Builder, w: number, d: number, h: number, shape: BinShape, 
     b.seg(-w / 2, h + 0.002, (back + d / 2) / 2, w / 2, h + 0.002, (back + d / 2) / 2, EDGE_GLOW);
     b.seg(0, h * 0.25, d / 2 - 0.01, 0, h - 0.06, d / 2 - 0.01, EDGE_FAINT);
   }
+}
+
+/**
+ * Wall switch or socket: a flat frame with one rocker or socket per gang (front at +z, the back on the wall);
+ * "outdoor" a grey box with a lid over each socket.
+ */
+function wallPlate(b: Builder, w: number, d: number, h: number, n: number, socket: boolean, outdoor: boolean): void {
+  const gw = w / n;
+  b.box(-w / 2, w / 2, 0, h, -d / 2, d / 2, outdoor ? C.metal : C.white, outdoor ? C.metal : C.whiteTop, EDGE_FURN);
+  for (let i = 0; i < n; i++) {
+    const cx = -w / 2 + gw * (i + 0.5);
+    if (i) b.seg(-w / 2 + gw * i, h * 0.06, d / 2 + 0.001, -w / 2 + gw * i, h * 0.94, d / 2 + 0.001, EDGE_FAINT);
+    if (!socket) {
+      // the rocker with its seam
+      b.box(cx - gw * 0.34, cx + gw * 0.34, h * 0.16, h * 0.84, d / 2, d / 2 + 0.006, C.white, C.whiteTop, EDGE_FAINT);
+      b.seg(cx - gw * 0.3, h * 0.5, d / 2 + 0.007, cx + gw * 0.3, h * 0.5, d / 2 + 0.007, EDGE_FAINT);
+    } else if (outdoor) {
+      // the hinged lid over the socket
+      b.box(cx - gw * 0.4, cx + gw * 0.4, h * 0.12, h * 0.9, d / 2, d / 2 + 0.018, C.metal, C.metal, EDGE_FAINT);
+      b.seg(cx - gw * 0.36, h * 0.86, d / 2 + 0.019, cx + gw * 0.36, h * 0.86, d / 2 + 0.019, EDGE_FAINT);
+    } else {
+      // the round recess with its two holes
+      const r = Math.min(gw, h) * 0.34;
+      b.lyingCyl("z", cx, d / 2 + 0.002, h / 2 - r, h / 2 + r, 0.004, r * 2, C.dark, C.dark, 14, EDGE_FAINT);
+      b.seg(cx - r * 0.45, h / 2, d / 2 + 0.0045, cx - r * 0.45 + 0.004, h / 2, d / 2 + 0.0045, EDGE_FURN);
+      b.seg(cx + r * 0.45 - 0.004, h / 2, d / 2 + 0.0045, cx + r * 0.45, h / 2, d / 2 + 0.0045, EDGE_FURN);
+    }
+  }
+}
+
+/** Wi-Fi access point: a flat disc under the ceiling (its LED ring below) or a square plate on the wall (ring in front). */
+function wifiAp(b: Builder, w: number, d: number, h: number, wall: boolean): void {
+  if (wall) {
+    b.box(-w / 2, w / 2, 0, h, -d / 2, d / 2, C.white, C.whiteTop, EDGE_FURN);
+    const r = Math.min(w, h) * 0.3;
+    for (let i = 0; i < 20; i++) {
+      const a0 = (i / 20) * Math.PI * 2;
+      const a1 = ((i + 1) / 20) * Math.PI * 2;
+      b.seg(Math.cos(a0) * r, h / 2 + Math.sin(a0) * r, d / 2 + 0.002, Math.cos(a1) * r, h / 2 + Math.sin(a1) * r, d / 2 + 0.002, EDGE_FAINT);
+    }
+    return;
+  }
+  const r = Math.min(w, d) / 2;
+  b.cyl(0, 0, r, 0, h, C.white, C.whiteTop, 24, EDGE_FURN);
+  // the mounting plate on the ceiling
+  b.cyl(0, 0, r * 0.5, h, h + 0.01, C.metal, C.metal, 12);
+}
+
+/** Water heater: a standing tank with its pipes below, or a slim flat tank on the wall (like an Ariston Velis). */
+function waterHeater(b: Builder, w: number, d: number, h: number, wall: boolean): void {
+  if (wall) {
+    b.pad(-w / 2, w / 2, 0, h, -d / 2, d / 2, C.white, C.whiteTop, 0.05, EDGE_FURN);
+    // the display near the top and the two pipes underneath
+    b.box(-w * 0.18, w * 0.18, h * 0.8, h * 0.88, d / 2, d / 2 + 0.006, C.dark);
+    for (const x of [-w * 0.2, w * 0.2]) b.cyl(x, 0, 0.012, -0.12, 0, C.metal, C.metal, 6);
+    return;
+  }
+  const r = Math.min(w, d) / 2;
+  b.cyl(0, 0, r, 0.04, h - 0.05, C.white, C.whiteTop, 20, EDGE_FURN);
+  // a domed top, the feet and the controls in front
+  b.cyl(0, 0, r * 0.85, h - 0.05, h, C.white, C.whiteTop, 20);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    b.cyl(Math.cos(a) * r * 0.7, Math.sin(a) * r * 0.7, 0.03, 0, 0.04, C.dark, C.dark, 6);
+  }
+  b.box(-r * 0.3, r * 0.3, h * 0.55, h * 0.65, r - 0.01, r + 0.01, C.dark);
 }
 
 /** A mailbox in its local shape. */
@@ -1503,9 +1598,14 @@ function buildFurniture(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f:
     case "fridge_smart":
       fridgeSmart(b, w, d, h);
       break;
-    case "waste_bin":
+    case "waste_bin": {
+      const c0 = buf.c.length;
       wasteBin(b, w, d, h, binShape(f), binColors(f, householdCountry()));
+      // the light looks keep only bright saturated colours: the shading towards the floor made the lower half of a
+      // bin fall back to the look's grey (#609), so its coloured parts keep their brightness all the way down
+      if (lightLook) keepBright(buf.c, c0);
       break;
+    }
     case "mailbox": {
       // like the other built-in wall models it is drawn at its own height (a wall mailbox at 1 m, a bank at 0.75 m)
       const p0 = buf.p.length;
@@ -1516,6 +1616,25 @@ function buildFurniture(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f:
       for (let i = l0 + 1; i < lines.p.length; i += 3) lines.p[i] += lift;
       if (lift > 0) return; // hangs on the wall: no shadow on the floor
       break;
+    }
+    case "wifi_ap":
+      // under the ceiling or on the wall: lifted by its mount height, no shadow
+      wifiAp(b, w, d, h, f.variant === "wall");
+      return;
+    case "water_heater":
+      waterHeater(b, w, d, h, f.variant === "wall");
+      if (f.variant === "wall") return;
+      break;
+    case "wall_switch":
+    case "wall_socket": {
+      // drawn at its own height like the other built-in wall models; never a shadow on the floor
+      const p0 = buf.p.length;
+      const l0 = lines.p.length;
+      wallPlate(b, w, d, h, gangsOf(f).length, f.type === "wall_socket", f.variant === "outdoor");
+      const lift = builtinBase(f);
+      for (let i = p0 + 1; i < buf.p.length; i += 3) buf.p[i] += lift;
+      for (let i = l0 + 1; i < lines.p.length; i += 3) lines.p[i] += lift;
+      return;
     }
     case "awning":
       // drawn with its moving fabric and arms by pushAwning (it runs in and out with its cover)
@@ -1703,7 +1822,7 @@ function packModel(
   skip: ((p: PackItem["parts"][number]) => boolean) | null = null,
 ): void {
   const onlyGlow = !!only;
-  for (const q of item.parts) {
+  for (const q of fitParts(item, w, d, h)) {
     if (skip?.(q)) continue;
     // only some parts (the glowing ones of a speaker, a car's windows), a hair larger so they cover the item's own
     if (only && !only(q)) continue;
