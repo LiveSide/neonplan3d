@@ -380,12 +380,17 @@ def verify_pack(text: str, keys: dict[str, str] | None = None, instance: str | N
         not str(payload["id"]).startswith("studio.") or payload["features"] or payload.get("module")
     ):
         raise PackError("bad_signature", "the studio key signs studio furniture only")
-    # FORK d14tk: an own key signs own furniture only - no Pro features, and no
-    # pack id that could replace one from the shop.
-    if signature["key"] in local and (not str(payload["id"]).startswith(LOCAL_ID_PREFIXES) or payload["features"]):
+    # FORK d14tk: an own key signs own furniture only - no Pro features, no module code, and no
+    # pack id that could replace one from the shop. Upstream holds its own studio key to the same
+    # line (STUDIO_KEYS above); "module" is a pack's JavaScript, which is not furniture.
+    if signature["key"] in local and (
+        not str(payload["id"]).startswith(LOCAL_ID_PREFIXES)
+        or payload["features"]
+        or payload.get("module")
+    ):
         raise PackError(
             "bad_signature",
-            'an own key signs own furniture only: pack id "local.*" or "studio.*", no features',
+            'an own key signs own furniture only: pack id "local.*" or "studio.*", no features, no module',
         )
     if instance is not None and payload["instance"] is not None and payload["instance"] != instance:
         raise PackError("wrong_instance", "the pack is bound to another installation")
