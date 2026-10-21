@@ -527,7 +527,7 @@ export class Fp3dView3d extends LitElement {
   private pickupKey = "";
   private householdTimer: ReturnType<typeof setInterval> | undefined;
   /** Haushalt Pro: small holograms – bins that go out today or tomorrow, post, a thirsty plant (set by the furniture pass). */
-  private binHolos: { floorId: string; x: number; z: number; y: number; name: string; color: string; when: string; soon?: boolean }[] = [];
+  private binHolos: { floorId: string; x: number; z: number; y: number; name: string; color: string; when: string; soon?: boolean; n?: [number, number] }[] = [];
   /** Haushalt Pro: appliances that ended their program while the page is open ("finished" until the door opens). */
   private finished = new FinishedMemory();
   /** Washers, dryers and dishwashers as last read: whether they run (the live director notices a program ending). */
@@ -1369,7 +1369,7 @@ export class Fp3dView3d extends LitElement {
         const floor = b.floors.find((f) => f.id === bh.floorId);
         if (!floor) continue;
         // a small tag sitting on the lid, always there: tiny from afar, a little larger close up
-        anchors.push({ p: [bh.x, floor.elevation + bh.y + 0.04, bh.z], n: [0, 1, 0], floorId: bh.floorId, size: holoSize * 0.75, roof: false, views: "all" });
+        anchors.push({ p: [bh.x, floor.elevation + bh.y + 0.04, bh.z], n: bh.n ? [bh.n[0], 0, bh.n[1]] : [0, 1, 0], floorId: bh.floorId, size: holoSize * 0.75, roof: false, views: "all" });
         cards.push({ kind: "bin", name: bh.name, w: null, dayIds: [], battery: null, bin: { color: bh.color, when: bh.when, soon: !!bh.soon } });
       }
     }
@@ -2987,7 +2987,14 @@ export class Fp3dView3d extends LitElement {
       const label = f.name || translate(hass, `bin_kind_${f.bin_kind ?? "rest"}` as Parameters<typeof translate>[1]);
       // a tag on the bin in its colour: when it goes out ("Tomorrow", "in 3 days"); today and tomorrow stand out
       const hex = `#${col.map((v) => Math.round(v * 255).toString(16).padStart(2, "0")).join("")}`;
-      this.binHolos.push({ floorId: floor.id, x: f.x, z: f.z, y: mountBase(floor, f) + f.h, name: label, color: hex, when: text, soon: due.days <= 1 });
+      if (f.type === "waste_bin") this.binHolos.push({ floorId: floor.id, x: f.x, z: f.z, y: mountBase(floor, f) + f.h, name: label, color: hex, when: text, soon: due.days <= 1 });
+      else {
+        // FORK d14tk: a pack bin may stand in a stack (sorting bins): its tag sits on its front, not on its lid
+        const r = (f.rotation * Math.PI) / 180;
+        const n: [number, number] = [-Math.sin(r), Math.cos(r)];
+        const out = f.d / 2 + 0.01;
+        this.binHolos.push({ floorId: floor.id, x: f.x + n[0] * out, z: f.z + n[1] * out, y: mountBase(floor, f) + f.h * 0.5 - 0.04, name: label, color: hex, when: text, soon: due.days <= 1, n });
+      }
       return { item: due.days <= 1 ? { icon: "trash-can-outline", text: `${label}: ${text}`, entity: src, hot: due.glow } : undefined };
     }
     if (f.type !== "mailbox") {
