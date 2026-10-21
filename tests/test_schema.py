@@ -45,6 +45,11 @@ def test_inverted_contact_and_plant_card_offsets() -> None:
     gate |= {"width": 2.5, "sill": 0, "height": 2.1}
     assert OPENING_SCHEMA(gate)["contact_invert"] is False
     assert OPENING_SCHEMA({**gate, "contact_invert": True})["contact_invert"] is True
+    # window board / sill: automatic unless the plan says otherwise (#655)
+    assert OPENING_SCHEMA(gate)["sill_board"] == "auto"
+    assert OPENING_SCHEMA({**gate, "sill_board": "inside"})["sill_board"] == "inside"
+    with pytest.raises(vol.Invalid):
+        OPENING_SCHEMA({**gate, "sill_board": "both"})
     inv = {"id": "f1", "type": "inverter", "x": 0, "z": 0, "rotation": 0, "w": 0.5, "d": 0.2, "h": 0.6, "variant": None}
     assert "plant_right" not in FURNITURE_SCHEMA(inv)
     moved = FURNITURE_SCHEMA({**inv, "plant_right": 1.5, "plant_up": -2})

@@ -115,9 +115,11 @@ import {
   type Vec2,
   DOOR_STYLES,
   WINDOW_STYLES,
+  SILL_BOARDS,
   openingStyle,
   isFrontDoor,
   type OpeningStyle,
+  type SillBoard,
   type ScreenPicture,
   STAIR_TYPES,
   setTerrain,
@@ -10206,6 +10208,14 @@ export class Fp3dEditor extends LitElement {
             </div>`
           : nothing}
         ${garage ? nothing : this.renderStyleSelect(o)}
+        ${window && o.style !== "glass_wall"
+          ? html`<label class="fp3d-field fp3d-wide" title=${this.t("sill_board_hint")}
+              >${this.t("sill_board")}
+              <select ?disabled=${!admin} @change=${(e: Event) => this.updateOpening({ sill_board: ((e.target as HTMLSelectElement).value || "auto") as SillBoard })}>
+                ${SILL_BOARDS.map((m) => html`<option value=${m} ?selected=${(o.sill_board ?? "auto") === m}>${this.t(`sill_board_${m}`)}</option>`)}
+              </select></label
+            >`
+          : nothing}
         ${this.renderSidelightFields(o)}
         <label class="fp3d-field fp3d-wide" title=${this.t("opening_mark_hint")}
           >${this.t("opening_mark")}

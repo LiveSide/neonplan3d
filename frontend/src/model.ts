@@ -58,6 +58,10 @@ export interface Room {
 
 export type OpeningType = "door" | "window" | "garage";
 
+/** Where a window gets its board / sill: automatic, none, only inside or only outside (#655). */
+export type SillBoard = "auto" | "none" | "inside" | "outside";
+export const SILL_BOARDS: readonly SillBoard[] = ["auto", "none", "inside", "outside"];
+
 /** Entity link of an opening: null = assigned automatically by area, "none" = no entity. */
 export type EntityRef = string | null;
 
@@ -117,6 +121,12 @@ export interface Opening {
   well_rim?: number | null;
   /** Highlight in 3D while open (null, default) or while closed (a WC or a child's room door). */
   mark?: "closed" | null;
+  /**
+   * Windows: the window board inside and the sill outside. "auto" (default): both from a sill height of
+   * 0.3 m, none for a window that sits directly on another opening of the same wall (a transom light, a
+   * split floor-to-ceiling front, #655); "none", "inside" or "outside" force it.
+   */
+  sill_board?: SillBoard | null;
   /** Ask before moving the blind or garage door; it then does not follow a swipe either. */
   confirm?: boolean;
   cover: EntityRef;
