@@ -10840,6 +10840,10 @@ export class Fp3dEditor extends LitElement {
               >
               ${o.well !== false ? this.len(this.t("well_rim"), o.well_rim ?? 0, (v) => this.updateOpening({ well_rim: Math.max(-0.3, Math.min(1, v)) || null }), 0.01, -0.3) : nothing}`
           : nothing}
+        <label class="fp3d-check fp3d-wide" title=${this.t("frosted_hint")}
+          ><input type="checkbox" .checked=${!!o.frosted} ?disabled=${!admin} @change=${(ev: Event) => this.updateOpening({ frosted: (ev.target as HTMLInputElement).checked || undefined })} />
+          ${this.t("frosted")}</label
+        >
         ${o.type === "window"
           ? html`<label class="fp3d-check fp3d-wide" title=${this.t("rain_ignore_hint")}
               ><input type="checkbox" .checked=${!!o.rain_ignore} ?disabled=${!admin} @change=${(ev: Event) => this.updateOpening({ rain_ignore: (ev.target as HTMLInputElement).checked || undefined })} />

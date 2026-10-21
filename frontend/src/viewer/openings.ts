@@ -45,6 +45,8 @@ const LEAF_FRONT_TOP = 0x1c2a47;
 const HANDLE = 0x5b7cff;
 const HANDLE_TOP = 0x8aa2ff;
 const GLASS = shade(0x37e0ff, 0.08);
+/** Frosted glass: an opaque milky pane in the frames buffer (no see-through). */
+const FROSTED = 0xb9c8cf;
 const TILT_ANGLE = 0.2;
 
 type Tf = (x: number, n: number, y: number) => number[];
@@ -190,6 +192,10 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
     // local frame: x from the opening start along the wall, n from the wall axis towards the room
     const tf: Tf = (x, n, y) => [info.start[0] + info.axis[0] * x + info.toRoom[0] * n, y, info.start[1] + info.axis[1] * x + info.toRoom[1] * n];
     const mid = frameMid(info);
+    // clear panes are additive glass, frosted ones an opaque milky surface with the frames
+    const frosted = info.opening.frosted === true;
+    const paneBuf = frosted ? frames : glass;
+    const paneC = frosted ? new Color(FROSTED) : GLASS;
     // highlighted while open, or while closed when the opening asks for it (and a sensor knows)
     const markClosed = info.opening.mark === "closed";
     // a passage (wall opening without a door) shows nothing but the gap in the wall
@@ -228,7 +234,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
           splitBox(frames, tf, a, a + fw, n0, n1, 0.02, T - 0.02, frameC, frameTop, cut, bucket);
           splitBox(frames, tf, b - fw, b, n0, n1, 0.02, T - 0.02, frameC, frameTop, cut, bucket);
           splitBox(frames, tf, a + fw, b - fw, n0, n1, 0.02, 0.12, frameC, frameTop, cut, bucket);
-          panel(glass, tf, a + fw, b - fw, glassN, 0.12, T - 0.02, GLASS, cut, bucket);
+          panel(paneBuf, tf, a + fw, b - fw, glassN, 0.12, T - 0.02, paneC, cut, bucket);
         }
         x0 = lights.x0;
         x1 = lights.x1;
@@ -263,12 +269,12 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
           splitBox(frames, leafTf, lw - 0.05, lw, -thick, 0, 0.01, T - 0.01, leafC, leafTop, cut, leafBucket);
           splitBox(frames, leafTf, 0.05, lw - 0.05, -thick, 0, 0.01, 0.12, leafC, leafTop, cut, leafBucket);
           splitBox(frames, leafTf, 0.05, lw - 0.05, -thick, 0, T - 0.08, T - 0.01, leafC, leafTop, cut, leafBucket);
-          panel(glass, leafTf, 0.05, lw - 0.05, -thick / 2, 0.12, T - 0.08, GLASS, cut, leafBucket);
+          panel(paneBuf, leafTf, 0.05, lw - 0.05, -thick / 2, 0.12, T - 0.08, paneC, cut, leafBucket);
         } else {
           splitBox(frames, leafTf, 0, lw, -thick, 0, 0.01, T - 0.01, leafC, leafTop, cut, leafBucket);
         }
-        if (style === "front_glass") panel(glass, leafTf, 0.12, lw - 0.12, 0.001, T * 0.55, T - 0.18, GLASS, cut, leafBucket);
-        else if (front) panel(glass, leafTf, 0.1, 0.18, 0.001, 0.3, T - 0.3, GLASS, cut, leafBucket);
+        if (style === "front_glass") panel(paneBuf, leafTf, 0.12, lw - 0.12, 0.001, T * 0.55, T - 0.18, paneC, cut, leafBucket);
+        else if (front) panel(paneBuf, leafTf, 0.1, 0.18, 0.001, 0.3, T - 0.3, paneC, cut, leafBucket);
         // handle on both sides: a knob on a room door, a bar on a front door
         const hy = Math.min(1.05, T * 0.5);
         const hh = front ? 0.3 : 0.012;
@@ -305,7 +311,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
       for (let k = 0; k < n; k++) {
         const x0 = fw + k * pane + (k ? 0.02 : 0);
         const x1 = fw + (k + 1) * pane - (k < n - 1 ? 0.02 : 0);
-        panel(glass, tf, x0, x1, mid, S + 0.03, T - fw, GLASS, cut, bucket);
+        panel(paneBuf, tf, x0, x1, mid, S + 0.03, T - fw, paneC, cut, bucket);
       }
     } else {
       const fw = 0.06;

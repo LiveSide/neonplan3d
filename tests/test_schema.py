@@ -56,6 +56,9 @@ def test_inverted_contact_and_plant_card_offsets() -> None:
     assert OPENING_SCHEMA({**gate, "frame_pos": "outside"})["frame_pos"] == "outside"
     with pytest.raises(vol.Invalid):
         OPENING_SCHEMA({**gate, "frame_pos": "flush"})
+    # frosted glass: off unless the plan says so
+    assert OPENING_SCHEMA(gate)["frosted"] is False
+    assert OPENING_SCHEMA({**gate, "frosted": True})["frosted"] is True
     inv = {"id": "f1", "type": "inverter", "x": 0, "z": 0, "rotation": 0, "w": 0.5, "d": 0.2, "h": 0.6, "variant": None}
     assert "plant_right" not in FURNITURE_SCHEMA(inv)
     moved = FURNITURE_SCHEMA({**inv, "plant_right": 1.5, "plant_up": -2})

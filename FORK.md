@@ -246,6 +246,19 @@ er damit eine halbe Wanddicke zu weit innen.
 * Tests: `viewer/openings.test.ts` (Mitte, außen, innen, Tür, dünne Wand),
   `tests/test_schema.py`.
 
+### Milchglas (1.20.2.6)
+
+**Problem.** Fenster und Glastüren kennen nur klares Glas. Ein Bad- oder
+Treppenhausfenster oder eine feste Scheibe unten in einer Fensterfront aus
+Milchglas sieht in 3D durchsichtig aus.
+
+**Lösung.** Neues Feld `frosted` an Öffnungen (Standard `false`). Ist es
+gesetzt, zeichnet `buildOpeningParts()` die Scheiben (feste Scheibe, Flügel,
+Glastür, Seitenteil, Glaswand) nicht als additives Glas, sondern als
+undurchsichtige milchige Fläche im Rahmen-Buffer (`FROSTED`). Editor: Haken
+„Milchglas“ im Öffnungsformular. `OPENING_SCHEMA`: `frosted`. Tests:
+`tests/test_schema.py`.
+
 ### Geänderte Dateien
 
 | Datei | Änderung |

@@ -128,6 +128,8 @@ export interface Opening {
   contact_invert?: boolean;
   /** Windows: no rain warning for this one (it may stay open in the rain, under a canopy, D328). */
   rain_ignore?: boolean;
+  /** Frosted glass (Milchglas): its panes are drawn opaque and milky instead of clear (a bathroom window, a fixed pane low down). */
+  frosted?: boolean;
   /** Windows below the ground: false leaves out the light well (a path runs past the window, #524). */
   well?: boolean;
   /** How far the light well's rim and grate stand above the ground in m (null = level with it), e.g. above gravel. */

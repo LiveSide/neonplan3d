@@ -168,6 +168,8 @@ OPENING_SCHEMA = vol.Schema(
         vol.Optional("contact_invert", default=False): bool,
         # no rain warning for this window
         vol.Optional("rain_ignore", default=False): bool,
+        # frosted glass: the panes are drawn opaque and milky
+        vol.Optional("frosted", default=False): bool,
         # a window below the ground: its light well (False: none) and how far its rim stands above the ground
         vol.Optional("well", default=True): bool,
         vol.Optional("well_rim", default=None): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=-0.3, max=1))),
