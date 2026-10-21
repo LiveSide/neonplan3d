@@ -135,6 +135,7 @@ export function stackedOnOpening(info: OpeningInfo, infos: readonly OpeningInfo[
 
 /** Which of the window board (inside) and the sill (outside) a window gets, by its setting and position. */
 export function sillBoards(info: OpeningInfo, infos: readonly OpeningInfo[]): { inside: boolean; outside: boolean } {
+  // FORK d14tk: the window's own sill board (see FORK.md)
   const mode = info.opening.sill_board ?? "auto";
   if (mode === "none") return { inside: false, outside: false };
   if (mode === "inside" || mode === "outside") {
@@ -143,6 +144,21 @@ export function sillBoards(info: OpeningInfo, infos: readonly OpeningInfo[]): { 
   }
   const auto = info.sill > 0.3 && !stackedOnOpening(info, infos);
   return { inside: auto, outside: auto && info.exterior };
+}
+
+/**
+ * Where a window's frame sits across the wall (its centre plane, n towards the room): in the middle of the
+ * wall, or flush with the outer face or with the room face by the window's frame_pos. The frame is 0.07 deep
+ * and the sash sits 0.06 in front of it on the room side; a wall too thin for that keeps the middle.
+ */
+export function frameMid(info: OpeningInfo): number {
+  const centre = (info.faceRoom - info.faceOut) / 2;
+  if (info.opening.type !== "window") return centre;
+  // FORK d14tk: the frame's place in the wall (see FORK.md)
+  const pos = info.opening.frame_pos ?? "middle";
+  if (pos === "outside") return Math.min(centre, -info.faceOut + 0.035);
+  if (pos === "inside") return Math.max(centre, info.faceRoom - 0.095);
+  return centre;
 }
 
 export interface OpeningParts {
@@ -173,7 +189,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
     const { sill: S, top: T, bucket } = info;
     // local frame: x from the opening start along the wall, n from the wall axis towards the room
     const tf: Tf = (x, n, y) => [info.start[0] + info.axis[0] * x + info.toRoom[0] * n, y, info.start[1] + info.axis[1] * x + info.toRoom[1] * n];
-    const mid = (info.faceRoom - info.faceOut) / 2;
+    const mid = frameMid(info);
     // highlighted while open, or while closed when the opening asks for it (and a sensor knows)
     const markClosed = info.opening.mark === "closed";
     // a passage (wall opening without a door) shows nothing but the gap in the wall

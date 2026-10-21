@@ -31,7 +31,7 @@ import { bestFace, clampField, faceAt, faceCompass, fieldFace, fieldModules, GRO
 import type { SurfaceGrab, SurfaceRay } from "../viewer/viewer3d.ts";
 import { storedImageIds } from "../transfer.ts";
 import { fromWall, furnitureOnWall, openingsOnWall, roomEdgeFrame, slideAlong, toWall, type WallFrame } from "../geometry/wall-frame.ts";
-import { type CarLinks, type Background, OUTDOOR_TOP, sidelightLayout, DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS,
+import { type CarLinks, type Background, floorAttach, type FloorAttach, OUTDOOR_TOP, sidelightLayout, DEFAULT_WEATHER_EFFECTS, WEATHER_EFFECTS,
   normalizeBuilding,
   furnitureFootprint,
   type FreeWall,
@@ -126,10 +126,12 @@ import {
   DOOR_STYLES,
   WINDOW_STYLES,
   SILL_BOARDS,
+  FRAME_POSITIONS,
   openingStyle,
   isFrontDoor,
   type OpeningStyle,
   type SillBoard,
+  type FramePos,
   type ScreenPicture,
   STAIR_TYPES,
   setTerrain,
@@ -10242,6 +10244,19 @@ export class Fp3dEditor extends LitElement {
                   </div>`
                 : nothing}
               ${this.len(this.t("height"), floor.height, (v) => this.updateFloor({ height: Math.max(1, v) }), 0.05, 1)}
+              ${floors.length > 1
+                ? html`<label class="fp3d-field fp3d-wide" title=${this.t("floor_attached_hint")}
+                    >${this.t("floor_attached")}
+                    <select
+                      ?disabled=${!admin}
+                      @change=${(e: Event) => this.updateFloor({ attached: ((e.target as HTMLSelectElement).value || null) as FloorAttach | null })}
+                    >
+                      <option value="" ?selected=${!floorAttach(floor)}>${this.t("floor_attached_none")}</option>
+                      <option value="above" ?selected=${floorAttach(floor) === "above"}>${this.t("floor_attached_above")}</option>
+                      <option value="below" ?selected=${floorAttach(floor) === "below"}>${this.t("floor_attached_below")}</option>
+                    </select></label
+                  >`
+                : nothing}
               ${Object.keys(this.hass?.floors ?? {}).length
                 ? html`<label class="fp3d-field fp3d-wide"
                     >${this.t("ha_floor")}
@@ -10745,6 +10760,14 @@ export class Fp3dEditor extends LitElement {
               >${this.t("sill_board")}
               <select ?disabled=${!admin} @change=${(e: Event) => this.updateOpening({ sill_board: ((e.target as HTMLSelectElement).value || "auto") as SillBoard })}>
                 ${SILL_BOARDS.map((m) => html`<option value=${m} ?selected=${(o.sill_board ?? "auto") === m}>${this.t(`sill_board_${m}`)}</option>`)}
+              </select></label
+            >`
+          : nothing}
+        ${window
+          ? html`<label class="fp3d-field fp3d-wide" title=${this.t("frame_pos_hint")}
+              >${this.t("frame_pos")}
+              <select ?disabled=${!admin} @change=${(e: Event) => { const v = (e.target as HTMLSelectElement).value as FramePos; this.updateOpening({ frame_pos: v === "middle" ? null : v }); }}>
+                ${FRAME_POSITIONS.map((m) => html`<option value=${m} ?selected=${(o.frame_pos ?? "middle") === m}>${this.t(`frame_pos_${m}`)}</option>`)}
               </select></label
             >`
           : nothing}
@@ -13099,7 +13122,17 @@ export class Fp3dEditor extends LitElement {
         >
         ${this.hass
           ? html`${this.entitySelect(this.t("rain_entity"), s.rain_entity ?? null, undefined, this.entityOptions((id) => isRainSource(this.hass!, id)), (v) => set({ rain_entity: v === "none" ? null : v }))}
-              <p class="fp3d-sub fp3d-wide">${this.t("rain_entity_hint")}</p>`
+              <p class="fp3d-sub fp3d-wide">${this.t("rain_entity_hint")}</p>
+              ${s.rain_warning !== false
+                ? html`${this.entitySelect(
+                      this.t("rain_warning_entity"),
+                      s.rain_warning_entity ?? null,
+                      undefined,
+                      this.entityOptions((id) => id.startsWith("binary_sensor.") || isRainSource(this.hass!, id)),
+                      (v) => set({ rain_warning_entity: v === "none" ? null : v }),
+                    )}
+                    <p class="fp3d-sub fp3d-wide">${this.t("rain_warning_entity_hint")}</p>`
+                : nothing}`
           : nothing}
         <label class="fp3d-check fp3d-wide" title=${this.t("alert_names_hint")}
           ><input type="checkbox" .checked=${s.alert_names !== false} @change=${(ev: Event) => set({ alert_names: (ev.target as HTMLInputElement).checked })} />

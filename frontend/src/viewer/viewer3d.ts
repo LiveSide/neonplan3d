@@ -47,7 +47,7 @@ import {
 } from "three";
 import type { Building, Floor, Furniture, Room, StartView } from "../model.ts";
 import { recolorLamps, SHADE_SENTINEL, shadeFactors } from "./lamp-colors.ts";
-import { centroid, GANG_TYPES, outdoorZones, pointInPolygon, openingStyle, setTerrain, WALL_LAMP_Y, zonesOf } from "../model.ts";
+import { centroid, floorAttach, floorLevels, GANG_TYPES, outdoorZones, pointInPolygon, openingStyle, setTerrain, WALL_LAMP_Y, zonesOf } from "../model.ts";
 import { placeWallPlate } from "../geometry/walls.ts";
 import { buildEarth } from "./earth.ts";
 import { clampIntoRoom } from "../geometry/snap.ts";
@@ -180,6 +180,8 @@ export interface DeviceMarker {
   pack?: string | null;
   /** Height its light comes from (pack lamps). */
   lightY?: number;
+  /** Where its light comes from, plan x, height, plan z (pack lamps: the middle of their glowing parts). */
+  lightAt?: [number, number, number];
   /** A colour effect runs (colour loop …): the colour is animated in 3D. */
   effect?: boolean;
   /** Pendant shape: shade (default), globe, cone or drum. */
@@ -2456,14 +2458,23 @@ export class FloorplanViewer {
     return this.floorId === null && this.floors.length > 1;
   }
 
+  /** The level of each floor (by rank): floors joined by `attached` (a street level and the flat over it) share one. */
+  private levels(): number[] {
+    const byRank = [...this.floors].sort((a, b) => a.rank - b.rank);
+    return floorLevels(byRank.map((f) => f.floor));
+  }
+
   /** Target height offset and opacity of every floor for the current view. */
   private applyTargets(immediate: boolean): void {
     const sel = this.floorId ? this.floorMap.get(this.floorId) : undefined;
+    const levels = this.levels();
     for (const fv of this.floors) {
       let ty = 0;
       let to = 1;
-      if (!sel) ty = this.explode ? fv.rank * EXPLODE_GAP : 0;
-      else if (fv.rank > sel.rank) {
+      if (!sel) ty = this.explode ? levels[fv.rank] * EXPLODE_GAP : 0;
+      else if (levels[fv.rank] === levels[sel.rank]) {
+        // a floor attached to the opened one (or the one it is attached to) shows whole and in place
+      } else if (fv.rank > sel.rank) {
         ty = 5 + fv.rank; // floors above fly away
         to = 0;
       } else if (fv.rank < sel.rank) {
@@ -4455,7 +4466,7 @@ export class FloorplanViewer {
     const placed: { fv: FloorView; left: number; y: number; h: number }[] = [];
     for (const fv of this.floors) {
       const box = fv.bbox;
-      if (!(house && fv.o > 0.5 && box)) {
+      if (!(house && fv.o > 0.5 && box) || floorAttach(fv.floor)) {
         this.place(fv.label, null);
         continue;
       }

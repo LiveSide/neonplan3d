@@ -1,1 +1,10 @@
+# Not pinned on purpose: this brings the Home Assistant release the integration has to
+# work with, and a merge of an upstream release is measured against the current one.
 pytest-homeassistant-custom-component
+
+# FORK d14tk: tools/mesh2pack.py builds furniture out of 3D models. Without these the
+# geometry tests in tests/test_mesh2pack.py skip themselves instead of failing, and the
+# tool's core - voxels, likeness, turned boxes - goes unmeasured. numpy and pillow come
+# with Home Assistant.
+scipy
+trimesh

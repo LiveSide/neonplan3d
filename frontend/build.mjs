@@ -116,7 +116,9 @@ function copyFonts() {
 // editor 800 KB on 2026-10-14 for the awning (form, sensors) and the 1.18.2 fixes
 // main 570 KB, 3D 770 KB and card editor 230 KB on 2026-10-14 for the awnings (five kinds) and their texts
 // main 590 KB, editor 820 KB, card editor 235 KB on 2026-10-15 for the household (bins, mailboxes, Haushalt Pro) and its texts
-const BUDGET = { "neonplan3d.js": 664 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 804 * 1024, "neonplan3d-editor.js": 924 * 1024, "neonplan3d-card-editor.js": 266 * 1024 };
+// FORK d14tk: the editor carries the fork's own fields (attached floors, sill board, frame position,
+// rain warning), so its bundles need a little more room than upstream's budget allows (see FORK.md).
+const BUDGET = { "neonplan3d.js": 672 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 816 * 1024, "neonplan3d-editor.js": 940 * 1024, "neonplan3d-card-editor.js": 276 * 1024 };
 
 copyFonts();
 if (watch) {

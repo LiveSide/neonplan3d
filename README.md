@@ -1,5 +1,24 @@
 # NeonPlan 3D
 
+> ### Fork: eigene Möbel
+>
+> Dies ist ein Fork von [Mastershort/neonplan3d](https://github.com/Mastershort/neonplan3d).
+> Er ergänzt eine Sache: **eine Installation darf eigene Möbel-Packs unterschreiben
+> und importieren.** Anleitung: [own-furniture/README.md](own-furniture/README.md),
+> was geändert wurde und wie Updates des Originals eingepflegt werden:
+> [FORK.md](FORK.md).
+>
+> Eigene Schlüssel schalten **keine** Pro-Erweiterungen frei und können kein
+> gekauftes Pack verdrängen. Alles andere ist unverändert. Die fertigen
+> Möbel-Packs und der Supporter-Pass im [Shop](https://mastershort.de/neonplan3d/)
+> finanzieren das Original, dieser Fork ersetzt sie nicht.
+>
+> **This is a fork.** It lets an installation sign and import its own furniture
+> packs; own keys cannot unlock paid Pro features. See [FORK.md](FORK.md).
+>
+> HACS: dieses Repository als eigenes Repository hinzufügen
+> (`d14tk/neonplan3d`, Kategorie Integration), nicht das Original.
+
 [![Spenden mit PayPal](https://img.shields.io/badge/PayPal-Spenden-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=Z3G2VWKSK5VJL)
 
 **by Mastershort** – draw your home right inside Home Assistant and live in it as a neon 3D house: lights glow in their colours, blinds and curtains move, doors and windows open, cameras watch, the TV shows what is playing, energy flows through the walls – and you can simply **talk to it**. No external tools, no cloud, made for wall tablets – old Fire tablets included.

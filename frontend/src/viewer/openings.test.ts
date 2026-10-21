@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Opening } from "../model.ts";
 import type { OpeningInfo } from "./build.ts";
-import { sillBoards, stackedOnOpening } from "./openings.ts";
+import { frameMid, sillBoards, stackedOnOpening } from "./openings.ts";
 
 /** A window (or door) on the wall along x from (sx, sz), as the floor builder describes it. */
 function info(id: string, sx: number, width: number, sill: number, top: number, extra: Partial<Opening> & { axis?: [number, number]; exterior?: boolean; sz?: number } = {}): OpeningInfo {
@@ -64,4 +64,16 @@ test("the sill setting overrides the automatic rule", () => {
   // a terrace door never gets a board, whatever the setting
   const terrace = info("t", 1, 1.0, 0, 2.1, { sill_board: "inside" });
   assert.deepEqual(sillBoards(terrace, [terrace]), { inside: false, outside: false });
+});
+
+test("a window frame sits in the middle of the wall, or flush with the outer or inner face", () => {
+  const thick = (o: Partial<Opening>) => ({ ...info("w", 1, 1.2, 0.9, 2.2, o), faceRoom: 0.15, faceOut: 0.15 });
+  assert.equal(frameMid(thick({})), 0);
+  assert.equal(frameMid(thick({ frame_pos: "middle" })), 0);
+  assert.ok(Math.abs(frameMid(thick({ frame_pos: "outside" })) - -0.115) < 1e-9);
+  assert.ok(Math.abs(frameMid(thick({ frame_pos: "inside" })) - 0.055) < 1e-9);
+  // doors keep the middle, a thin wall too
+  assert.equal(frameMid(thick({ type: "door", frame_pos: "outside" })), 0);
+  const thin = { ...info("t", 1, 1.2, 0.9, 2.2, { frame_pos: "inside" }), faceRoom: 0.04, faceOut: 0.04 };
+  assert.equal(frameMid(thin), 0);
 });

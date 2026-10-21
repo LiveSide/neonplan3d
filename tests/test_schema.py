@@ -4,6 +4,7 @@ import pytest
 import voluptuous as vol
 
 from custom_components.neonplan3d.schema import (
+    FLOOR_SCHEMA,
     FURNITURE_SCHEMA,
     HOLOGRAM_SCHEMA,
     OPENING_SCHEMA,
@@ -50,6 +51,11 @@ def test_inverted_contact_and_plant_card_offsets() -> None:
     assert OPENING_SCHEMA({**gate, "sill_board": "inside"})["sill_board"] == "inside"
     with pytest.raises(vol.Invalid):
         OPENING_SCHEMA({**gate, "sill_board": "both"})
+    # window frame across the wall: middle unless the plan says otherwise
+    assert OPENING_SCHEMA(gate)["frame_pos"] is None
+    assert OPENING_SCHEMA({**gate, "frame_pos": "outside"})["frame_pos"] == "outside"
+    with pytest.raises(vol.Invalid):
+        OPENING_SCHEMA({**gate, "frame_pos": "flush"})
     inv = {"id": "f1", "type": "inverter", "x": 0, "z": 0, "rotation": 0, "w": 0.5, "d": 0.2, "h": 0.6, "variant": None}
     assert "plant_right" not in FURNITURE_SCHEMA(inv)
     moved = FURNITURE_SCHEMA({**inv, "plant_right": 1.5, "plant_up": -2})
@@ -271,3 +277,36 @@ def test_roof_section_keeps_its_end_shapes() -> None:
     assert (one["end_u0"], one["end_u1"]) == ("hip", "gable")
     with pytest.raises(vol.Invalid):
         ROOF_SECTION_SCHEMA({**sec, "end_u0": "pyramid"})
+FLOOR = {
+    "id": "f1",
+    "name": "Wohnung",
+    "elevation": 0,
+    "height": 2.5,
+    "cut_height": 1.2,
+    "rooms": [],
+    "openings": [],
+    "furniture": [],
+    "placements": [],
+    "background": None,
+}
+
+
+def test_floor_attached_to_the_floor_above_or_below() -> None:
+    # FORK d14tk: a street level with garages half a storey under the flat belongs to the flat above it
+    assert FLOOR_SCHEMA(FLOOR)["attached"] is None
+    assert FLOOR_SCHEMA({**FLOOR, "attached": "above"})["attached"] == "above"
+    assert FLOOR_SCHEMA({**FLOOR, "attached": "below"})["attached"] == "below"
+    # an early build of the fork stored True for the floor above
+    assert FLOOR_SCHEMA({**FLOOR, "attached": True})["attached"] == "above"
+    with pytest.raises(vol.Invalid):
+        FLOOR_SCHEMA({**FLOOR, "attached": "sideways"})
+    with pytest.raises(vol.Invalid):
+        FLOOR_SCHEMA({**FLOOR, "attached": False})
+
+
+def test_rain_warning_entity() -> None:
+    # FORK d14tk: an entity of its own for the window warning only (heavy rain, rain with strong wind)
+    base = {"wall_exterior": 0.3, "wall_interior": 0.12, "grid": 0.05}
+    assert SETTINGS_SCHEMA(base)["rain_warning_entity"] is None
+    warn = SETTINGS_SCHEMA({**base, "rain_warning_entity": "binary_sensor.regenwarnung"})
+    assert warn["rain_warning_entity"] == "binary_sensor.regenwarnung"
