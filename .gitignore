@@ -13,3 +13,7 @@ private/
 
 # Fork: das Release-ZIP wird gebaut, nicht eingecheckt (tools/fork_release.py)
 neonplan3d.zip
+
+# Fork: tools/packs_store.py legt den Store einer Installation hier ab, bevor es
+# schreibt. Darin stecken auch gekaufte Packs, das Repo ist oeffentlich.
+backups/
