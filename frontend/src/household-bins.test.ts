@@ -13,5 +13,5 @@ test("a pack item with a kind of waste is a bin and reads its calendar; without 
   assert.equal(isBin(item("waste_bin")), true);
   assert.equal(isBin(item("sofa", { bin_kind: "paper" })), false);
   assert.deepEqual(wasteCalendars([{ furniture: [paper] }]), ["calendar.papier"]);
-  assert.deepEqual(householdEntities(paper), ["calendar.papier"]);
+  assert.deepEqual(householdEntities(paper), ["calendar.papier", null]);
 });
