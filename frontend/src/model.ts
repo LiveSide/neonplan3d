@@ -755,6 +755,8 @@ export interface BuildingSettings {
    * following the weather entity or rain_entity, so light rain still shows. Null: the warning follows the rain.
    */
   rain_warning_entity?: string | null;
+  /** FORK d14tk: own colours ("#rrggbb"); for now the radiators'. */
+  materials?: { radiator?: string | null } | null;
   /** Warnings name the device after the room (default on); off = only "Room · Smoke" when the warning has a room (#374). */
   alert_names?: boolean;
   /** An entity that reports a power outage (a grid or UPS sensor); null = no outage warning (#214). */
@@ -893,6 +895,15 @@ let terrainNow: { set: boolean; level: number } = { set: false, level: DEFAULT_G
 export function setTerrain(b: Pick<Building, "settings"> | null): void {
   const t = b?.settings.terrain ?? null;
   terrainNow = { set: t?.level != null, level: t?.level ?? DEFAULT_GROUND };
+  // FORK d14tk: the plan's own radiator colour travels with the ground (same call sites, see FORK.md)
+  const m = /^#?([0-9a-f]{6})$/i.exec(b?.settings.materials?.radiator?.trim() ?? "");
+  radiatorNow = m ? parseInt(m[1], 16) : null;
+}
+
+let radiatorNow: number | null = null;
+/** FORK d14tk: settings.materials.radiator as a number, null = the built-in white. */
+export function radiatorColor(): number | null {
+  return radiatorNow;
 }
 
 /** Height of the ground (m, the ground floor at 0). */

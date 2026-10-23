@@ -5,7 +5,7 @@
 
 import { Color } from "three";
 import type { Furniture, Vec2 } from "../model.ts";
-import { builtinBase, gangsOf, stairsULayout, POOL_VALVE_Y } from "../model.ts";
+import { builtinBase, gangsOf, radiatorColor, stairsULayout, POOL_VALVE_Y } from "../model.ts";
 import { isRobotVacuum, mountBase, packItem, packMotion, packMovingPart, packRobotCentre, packRobotPart, packScreen, type PackItem, type PackMotion, type PackPart } from "../packs.ts";
 import { fitParts } from "../pack-scale.ts";
 import { binColors, binShape, householdCountry, mailboxShape, type BinShape, type MailboxShape } from "../household.ts";
@@ -1208,11 +1208,15 @@ function tvWall(b: Builder, w: number, d: number, h: number): void {
 }
 
 /** Radiator on the wall (back at -z): panel with vertical fins, standing on short brackets. */
+// FORK d14tk: radiators in the plan's own colour (settings.materials.radiator, see FORK.md)
 function radiator(b: Builder, w: number, d: number, h: number): void {
   const y0 = RADIATOR_Y;
+  const own = radiatorColor();
+  const body = own ?? C.white;
+  const bodyTop = own ?? C.whiteTop;
   b.box(-w / 2 + 0.05, -w / 2 + 0.08, 0, y0, -d / 2, -d / 2 + 0.03, C.metal);
   b.box(w / 2 - 0.08, w / 2 - 0.05, 0, y0, -d / 2, -d / 2 + 0.03, C.metal);
-  b.box(-w / 2, w / 2, y0, y0 + h, -d / 2 + 0.02, d / 2, C.white, C.whiteTop, EDGE_FURN);
+  b.box(-w / 2, w / 2, y0, y0 + h, -d / 2 + 0.02, d / 2, body, bodyTop, EDGE_FURN);
   const n = Math.max(3, Math.round(w / 0.1));
   for (let i = 1; i < n; i++) {
     const x = -w / 2 + (w / n) * i;

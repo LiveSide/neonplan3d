@@ -338,6 +338,12 @@ PYTHONPATH="$(pwd);$(pwd)/tests/windows" "$HOME/.venvs/neonplan3d-test/Scripts/p
 `tools/mesh2pack.py` sich sonst selbst überspringen: 14 Tests, die stillschweigend
 nichts prüfen.
 
+## Heizkörper in eigener Farbe (2.0.0.3)
+
+`settings.materials.radiator` (`"#rrggbb"`) färbt alle Heizkörper des Plans, ohne Angabe bleibt das eingebaute Neon-Blau.
+Die Farbe wird in `setTerrain()` (model.ts) gemerkt, also an denselben Stellen wie der Boden gesetzt; `radiator()` in
+`viewer/furniture.ts` liest sie über `radiatorColor()`.
+
 ## Updates des Originals einpflegen
 
 Der Fork hat zwei Remotes: `origin` (dieses Repo) und `upstream` (das Original).
