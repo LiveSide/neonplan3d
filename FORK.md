@@ -401,6 +401,14 @@ Dann ist dieser Fork überflüssig. Den Block in `packs.py` entfernen, zurück a
 das Original wechseln, die eigenen Packs mit dem Studio-Schlüssel neu
 unterschreiben lassen.
 
+### Bildschirme: Schein passend zur Größe (2.0.0.2)
+
+**Problem.** Ein leuchtender Bildschirm bekommt einen Schein von 18 bis 30 cm rundherum, auch ein
+Laptop oder Tablet von 25 cm Breite; der Schein ist dann größer als das Gerät.
+
+**Lösung.** `buildScreens()` (`viewer/viewer3d.ts`): der Schein ist höchstens 40 % der kürzeren
+Bildschirmseite breit und folgt dem `glow_scale` des Möbels (0 = kein Schein).
+
 ## Automatisch dem Original folgen
 
 Der Workflow `.github/workflows/fork-sync.yml` läuft alle drei Stunden (und von Hand unter

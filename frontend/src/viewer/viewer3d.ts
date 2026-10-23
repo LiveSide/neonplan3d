@@ -3513,7 +3513,9 @@ export class FloorplanViewer {
       buf.tri(P(r.x0, r.y0, z), P(r.x1, r.y1, z), P(r.x0, r.y1, z), core);
       if (st.plain) continue;
       // glow frame fading out around the screen
-      const g = 0.18 + 0.12 * st.level;
+      // FORK d14tk: as wide as fits the screen (a laptop or a tablet glows a few centimetres, not 30 cm round it),
+      // scaled by the item's glow_scale (see FORK.md)
+      const g = Math.min(0.18 + 0.12 * st.level, 0.4 * Math.min(r.x1 - r.x0, r.y1 - r.y0)) * (f.glow_scale ?? 1);
       const halo = core.clone().multiplyScalar(0.5);
       const inner = [P(r.x0, r.y0, z), P(r.x1, r.y0, z), P(r.x1, r.y1, z), P(r.x0, r.y1, z)];
       const outer = [P(r.x0 - g, r.y0 - g, z + 0.01), P(r.x1 + g, r.y0 - g, z + 0.01), P(r.x1 + g, r.y1 + g, z + 0.01), P(r.x0 - g, r.y1 + g, z + 0.01)];
