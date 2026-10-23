@@ -350,6 +350,12 @@ Nachts stand die Mondscheibe bisher gegenüber der Sonne (Azimut + 180°, Höhe 
 Jetzt rechnet `frontend/src/moon.ts` (Näherung nach SunCalc, etwa 1° genau) Azimut und Höhe aus Breite und Länge
 von Home Assistant (`hass.config`); unter dem Horizont gibt es keine Scheibe. Ohne Standort bleibt das alte Verhalten.
 
+## Tür ohne Sensor ganz offen (2.0.0.5)
+
+Neben `shut` (ohne Sensor geschlossen) gibt es `open_wide`: eine Tür ohne Kontakt wird ganz offen statt halb offen
+gezeichnet. Feld in `schema.py` (Öffnung), `model.ts` und `devices.ts` (`wide`). Im Editor gibt es noch keinen Schalter,
+das Feld wird im Plan gesetzt.
+
 ## Updates des Originals einpflegen
 
 Der Fork hat zwei Remotes: `origin` (dieses Repo) und `upstream` (das Original).

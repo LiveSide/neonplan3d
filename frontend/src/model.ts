@@ -124,6 +124,8 @@ export interface Opening {
   tilt_invert?: boolean;
   /** Door: drawn closed when no sensor says otherwise (default: half open, so the door is seen). */
   shut?: boolean;
+  /** FORK d14tk: drawn wide open when no sensor says otherwise (see FORK.md). */
+  open_wide?: boolean;
   /** The contact sensors report the other way round (on = closed, #329). */
   contact_invert?: boolean;
   /** Windows: no rain warning for this one (it may stay open in the rain, under a canopy, D328). */

@@ -599,6 +599,8 @@ export interface OpeningEntities {
   tiltInvert?: boolean;
   /** A door without a sensor is drawn closed. */
   shut?: boolean;
+  /** FORK d14tk: a door without a sensor is drawn wide open. */
+  wide?: boolean;
   /** A door's smart lock. */
   lock?: string | null;
   /** The contacts report the other way round (on = closed). */
@@ -643,6 +645,7 @@ export function openingEntities(hass: HomeAssistant, floors: readonly Floor[]): 
       tiltOffset: o.tilt_offset ?? null,
       tiltInvert: !!o.tilt_invert,
       shut: !!o.shut,
+      ...(o.open_wide ? { wide: true } : {}),
       ...(o.contact_invert ? { contactInvert: true } : {}),
     };
   };
@@ -766,7 +769,7 @@ export function openingState(
       return { open: leaf, open2: pos(e.contact2) === "open" ? 1 : 0, tilt: 0, tilt2: 0, cover: null, sensed: true, ...lockOpen };
     }
     // a door with a roller shutter (front door, French window, sliding door): the blind comes down over it
-    return { open: p === null ? (e.shut ? 0 : DOOR_DEFAULT_OPEN) : p === "closed" ? 0 : 1, open2: pos(e.contact2) === "open" ? 1 : 0, tilt: 0, tilt2: 0, cover, sensed: p !== null || cover !== null, ...lockOpen };
+    return { open: p === null ? (e.shut ? 0 : e.wide ? 1 : DOOR_DEFAULT_OPEN) : p === "closed" ? 0 : 1, open2: pos(e.contact2) === "open" ? 1 : 0, tilt: 0, tilt2: 0, cover, sensed: p !== null || cover !== null, ...lockOpen };
   }
   if (type === "garage") {
     // a garage door without a cover shows its contact: open or closed (read like a door's, so text states and

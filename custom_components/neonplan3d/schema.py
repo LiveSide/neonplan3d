@@ -167,6 +167,8 @@ OPENING_SCHEMA = vol.Schema(
         vol.Optional("tilt_invert", default=False): bool,
         # a door without a sensor is drawn closed instead of half open
         vol.Optional("shut", default=False): bool,
+        # FORK d14tk: a door without a sensor is drawn wide open instead of half open
+        vol.Optional("open_wide", default=False): bool,
         # the contact sensors report the other way round (on = closed)
         vol.Optional("contact_invert", default=False): bool,
         # no rain warning for this window
