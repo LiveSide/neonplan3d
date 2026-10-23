@@ -86,8 +86,8 @@ def union_lang(path: str, tag: str) -> None:
 
 def report(title: str, body: str) -> None:
     """An issue in the fork (one per title), so a stop does not go unnoticed."""
-    print(f"::error::{title}")
-    if not os.environ.get("GH_TOKEN"):
+    print(f"::error::{title}\n{body}")
+    if os.environ.get("GITHUB_ACTIONS") != "true":
         return
     found = subprocess.run(
         ["gh", "issue", "list", "--repo", REPO, "--state", "open", "--search", f'"{title}" in:title', "--json", "number"],
