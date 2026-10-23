@@ -252,6 +252,27 @@ test("furniture finds its entities in the room's area: the TV, and power sensors
   assert.equal(appColor({ entity_id: "media_player.x", state: "off", attributes: {} }), null);
 });
 
+test("an awning over the terrace takes the terrace area's awning cover, never a roller blind (#688)", () => {
+  const hass = hassWith();
+  const add = (id: string, attributes: Record<string, unknown>) => {
+    hass.entities![id] = { entity_id: id, area_id: "terrasse" };
+    hass.states[id] = { entity_id: id, state: "closed", attributes };
+  };
+  add("cover.rollladen_terrasse", { friendly_name: "Rollladen Terrassentür", device_class: "shutter" });
+  add("cover.markise", { friendly_name: "Markise", device_class: "awning" });
+  const awning = { id: "aw", type: "awning", x: 5, z: 5, rotation: 0, w: 3, d: 2.5, h: 0.22, variant: null, entity: null, power: null };
+  const floor: Floor = {
+    ...newFloor("f", "F", 0),
+    rooms: [],
+    outdoor: [{ id: "t", type: "terrace", points: [[4, 4], [8, 4], [8, 8], [4, 8]], area_id: "terrasse" }] as Floor["outdoor"],
+    furniture: [awning, { ...awning, id: "aw2", x: 6 }],
+  };
+  const links = furnitureEntities(hass, [floor]);
+  assert.deepEqual(links.get("aw"), { entity: "cover.markise", power: null });
+  // a second awning finds no other awning cover: it stays unlinked instead of taking the roller blind
+  assert.equal(links.get("aw2"), undefined);
+});
+
 test("lamps take a light of their room, preferring one whose name fits", () => {
   const hass = hassWith();
   hass.entities!["light.stehlampe"].area_id = "wohnen";

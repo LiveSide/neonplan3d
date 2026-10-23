@@ -1,15 +1,25 @@
 {
   "domain": "neonplan3d",
   "name": "NeonPlan 3D",
-  "after_dependencies": ["recorder"],
-  "codeowners": ["@d14tk"],
+  "after_dependencies": [
+    "bluetooth",
+    "recorder"
+  ],
+  "codeowners": [
+    "@Mastershort"
+  ],
   "config_flow": true,
-  "dependencies": ["frontend", "http", "panel_custom", "websocket_api"],
-  "documentation": "https://github.com/d14tk/neonplan3d#readme",
+  "dependencies": [
+    "frontend",
+    "http",
+    "panel_custom",
+    "websocket_api"
+  ],
+  "documentation": "https://mastershort.de/en/neonplan3d/manual/",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/d14tk/neonplan3d/issues",
+  "issue_tracker": "https://github.com/mastershort/neonplan3d/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "1.25.1.1"
+  "version": "2.0.0.1"
 }

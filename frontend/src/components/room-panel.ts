@@ -4,7 +4,8 @@
 import { css, html, LitElement, nothing, type TemplateResult } from "lit";
 import { areaEntities, entityName, groupByDevice, isUnavailable, kindOf, roomClimateSensors, roomClimateValue, roomPanelEntities, fromCelsius, tempUnit, type DeviceKind } from "../devices.ts";
 import { formatNumber, translate, type I18nKey } from "../i18n.ts";
-import { hasFeature } from "../features.ts";
+import { hasFeature, released } from "../features.ts";
+import { locatedPersons, personsShown } from "../presence.ts";
 import { iconPath } from "../icons.ts";
 import { openMoreInfo, stateText } from "../markers.ts";
 import type { Building, Floor, Room } from "../model.ts";
@@ -136,6 +137,16 @@ export class Fp3dRoomPanel extends LitElement {
     ></button>`;
   }
 
+  /** Who is in the room now (locating), as a short line under the name. */
+  private renderHere(room: Room) {
+    if (!this.building || !released("locate") || !personsShown(this.building)) return nothing;
+    const here = locatedPersons(this.hass, this.building).filter((p) => p.roomId === room.id);
+    if (!here.length) return nothing;
+    return html`<p class="fp3d-rp-facts fp3d-rp-here">
+      ${here.map((p, i) => html`${i ? ", " : ""}<span style="color:${p.color}">●</span> ${p.name}`)}
+    </p>`;
+  }
+
   protected render() {
     const room = this.room;
     if (!room || !this.hass) return nothing;
@@ -173,6 +184,7 @@ export class Fp3dRoomPanel extends LitElement {
         <div>
           <h2>${room.name}</h2>
           ${facts.length ? html`<p class="fp3d-rp-facts">${facts.join(" · ")}</p>` : nothing}
+          ${this.renderHere(room)}
           ${this.readOnly ? html`<p class="fp3d-rp-facts fp3d-rp-ro-note">⏪ ${this.t("tt_readonly")}</p>` : nothing}
         </div>
         <button class="fp3d-rp-close" aria-label=${this.t("close")} @click=${() => this.fire("close")}>

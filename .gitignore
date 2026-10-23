@@ -22,3 +22,7 @@ backups/
 # niemandem ausser dieser Maschine, das Repo ist oeffentlich.
 neonplan3d_publishers.json
 .memsearch/
+# local test harnesses (screenshots, probes) – never in the repository
+frontend/_*.mjs
+frontend/_*.mts
+frontend/_*.ts

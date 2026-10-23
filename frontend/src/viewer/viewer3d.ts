@@ -74,10 +74,11 @@ import { buildPools, disposePools, type PoolPiece } from "./pool-water.ts";
 import { accentOnUniform, accentUniform, parseAccent, lineBlending, themed, themeIndex, type Theme, type ThemeUniform } from "./theme.ts";
 
 export type { Theme } from "./theme.ts";
-import { ALWAYS, DEG, GeoBuffer, LineBuffer, pushPrism } from "./geo.ts";
+import { ALWAYS, DEG, GeoBuffer, LineBuffer, pushPrism, triangulate } from "./geo.ts";
 import { buildLightSurface, lightColors, roomIndexAt, type LightKind, type LightSource, type LightSurface, zoneOf } from "./lighting.ts";
 import { buildOpeningParts, CLOSED, type OpeningState } from "./openings.ts";
 import { circlePath, cleaningPath, stepRobot, type RobotInfo, type RobotMotion } from "./robot.ts";
+import { decorDelay, lowEndDevice } from "./pace.ts";
 
 export type { RobotInfo } from "./robot.ts";
 
@@ -232,6 +233,25 @@ export interface FlowPiece {
   dist: number;
   power: number;
   color: [number, number, number];
+  /** Width against a cable's (1; a module's pipe may be wider). */
+  width?: number;
+  /** A module's pipe: solid in its colour with a dark edge (readable on bright floors), a soft light running along it. */
+  pipe?: boolean;
+  /** Shown only in the house view (hidden while a floor is opened). */
+  house?: boolean;
+  /** Shown only while a floor is opened (hidden in the house view). */
+  floor?: boolean;
+}
+
+/** A see-through surface over an area of a floor (floor coordinates): a module's tint on a room, soil under a lawn. */
+export interface PatchPiece {
+  floorId: string;
+  points: [number, number][];
+  y: number;
+  color: [number, number, number];
+  opacity: number;
+  /** Adds light instead of tinting (a heated floor glowing warm). */
+  glow?: boolean;
 }
 
 /** A lit TV or monitor screen: colour of the running app and brightness (0..1). */
@@ -260,7 +280,7 @@ export interface ScreenState {
   /** Furniture with a state: glowing faces on top of the item instead of a screen – the whole top, or a half of it. */
   // (see also SoundSource below)
   // "gang": one rocker or socket of a wall switch or socket (`index` of `of`)
-  faces?: { part: "all" | "left" | "right" | "top" | "bottom" | "band" | "cabin" | "lights" | "burners" | "lid" | "beacon" | "gang" | "drum" | "apring"; color: [number, number, number]; level: number; index?: number; of?: number; accent?: boolean }[];
+  faces?: { part: "all" | "left" | "right" | "top" | "bottom" | "band" | "cabin" | "lights" | "burners" | "lid" | "beacon" | "gang" | "drum" | "apring" | "strata"; color: [number, number, number]; level: number; index?: number; of?: number; accent?: boolean; top?: [number, number, number] }[];
 }
 
 /** Position of the sun (from sun.sun): degrees above the horizon and clockwise from north. */
@@ -290,6 +310,14 @@ export interface PersonPin {
   roomId: string;
   x: number;
   z: number;
+  /** Ring colour of the person (default pink). */
+  color?: string;
+  /** Entity whose details a tap opens (the locating sensor: room, certainty, since when). */
+  entity?: string;
+  /** A thing (keys, a phone without a person): a small pin even when people stand as figures. */
+  thing?: boolean;
+  /** Short name under the pin (located people), none without. */
+  tag?: string;
 }
 
 export interface ViewerStats {
@@ -348,6 +376,9 @@ const FLOW_FRAME_MS = 33;
 /** Cable core and the soft glow around it (m). */
 // thin cables with a faint halo: the moving light dots show the flow, not the cable
 const CABLE_WIDTH = 0.028;
+/** A module's pipe: the core's width (times the line's width) and its dark edge on either side (m). */
+const PIPE_CORE = 0.026;
+const PIPE_EDGE = 0.012;
 const CABLE_HALO = 0.09;
 const LAMP_BODY = 0x2a3a60;
 const FAN_BLADE = 0x22314f;
@@ -359,6 +390,8 @@ const LOW_STRIP = 1.0;
 const HANGING = new Set<LampModel>(["ceiling", "downlight", "spot", "panel", "pendant", "fan", "strip"]);
 const FLASH_MS = 450;
 const EFFECT_MS = 125;
+/** Tablet level: light and sun follow a moving door or blind about 5 times a second (ms). */
+const LOW_LIGHT_MS = 200;
 /** Turns of the colour wheel per second while a colour effect runs. */
 const EFFECT_SPEED = 0.08;
 const LAMP_SIZE: Record<LampModel, [number, number, number]> = {
@@ -391,6 +424,11 @@ interface FloorMaterials {
   /** Pool water: see-through, so the basin shows below it. */
   water: MeshBasicMaterial;
   flow: MeshBasicMaterial;
+  /** A module's solid pipes (not added light: they keep their colour on a bright floor). */
+  pipeLine: MeshBasicMaterial;
+  patch: MeshBasicMaterial;
+  /** A module's surfaces that add light (a heated floor glowing warm). */
+  patchGlow: MeshBasicMaterial;
   /** Energie Pro: the living overlay of the solar fields on this floor (garden, walls). */
   solarLive: MeshBasicMaterial;
   lamps: MeshBasicMaterial;
@@ -421,6 +459,11 @@ interface FloorView {
   glassMesh: Mesh;
   blindsMesh: Mesh;
   flowMesh: Mesh;
+  /** A module's solid pipes: always, those shown only in the house view, and those only on an opened floor. */
+  pipeLineMesh: Mesh;
+  pipeHouseMesh: Mesh;
+  pipeFloorMesh: Mesh;
+  pipeLineSig: string;
   /** The living solar overlay of this floor's fields, if it has any. */
   solarMesh: Mesh | null;
   solarLive: SolarLive | null;
@@ -438,6 +481,10 @@ interface FloorView {
   /** Pool Pro: the pipes as tubes. */
   pipeMesh: Mesh;
   pipeSig: string;
+  /** A module's see-through surfaces (see PatchPiece). */
+  patchMesh: Mesh;
+  patchGlowMesh: Mesh;
+  patchSig: string;
   /** Triangle ranges of lamps (entity ids), furniture walls mesh and openings, for tapping. */
   lampTris: { id: string; start: number; end: number }[];
   /** Triangle range of every camera's field-of-view wedge, by device id (a tap on it hits the camera). */
@@ -475,6 +522,8 @@ interface FloorView {
   mask: FoldMasks;
   /** Shown opening states (animated towards the targets set from Home Assistant). */
   openings: Map<string, OpeningState>;
+  /** When the light of this floor followed its doors and blinds last (performance.now). */
+  lightAt: number;
   /** Current and target height offset and opacity. */
   y: number;
   o: number;
@@ -488,9 +537,7 @@ const ACTIVE_FLOOR = new Color(0x1a2a4d);
 
 export function isLowEnd(): boolean {
   const nav = navigator as Navigator & { deviceMemory?: number };
-  const mem = nav.deviceMemory ?? 8;
-  const cores = navigator.hardwareConcurrency || 8;
-  return mem <= 3 || cores <= 4 || /Silk|KF[A-Z]{2,4}\b/.test(navigator.userAgent);
+  return lowEndDevice(navigator.userAgent, nav.deviceMemory, navigator.hardwareConcurrency);
 }
 
 export class FloorplanViewer {
@@ -515,6 +562,7 @@ export class FloorplanViewer {
   private flashes = new Map<string, number>();
   private flows: FlowPiece[] = [];
   private pipes: PipeTube[] = [];
+  private patches: PatchPiece[] = [];
   /** Editor: things on surfaces (solar fields, roof windows) are grabbed and moved with a ray from the camera. */
   private surfaceGrab: SurfaceGrab | null = null;
   private surfaceDragging = false;
@@ -537,6 +585,11 @@ export class FloorplanViewer {
   private flowTimer: ReturnType<typeof setTimeout> | undefined;
   private persons: PersonPin[] = [];
   private readonly personPins = new Map<string, HTMLDivElement>();
+  /** Where each person pin is drawn now: it glides to its room instead of jumping (floor id, x, z). */
+  private readonly personAt = new Map<string, { floorId: string; x: number; z: number }>();
+  /** Located people as a simple neon figure (default) or as a round pin. */
+  private personLook: "figure" | "pin" = "figure";
+  private readonly figures = new Map<string, Group>();
   private floorInfo = new Map<string, string>();
   /** Text behind the room names (the "values" heat mode: temperature, humidity, CO₂ per room). */
   private roomInfo = new Map<string, string>();
@@ -561,6 +614,13 @@ export class FloorplanViewer {
   private lastStatsFrame = 0;
   private lowQuality = false;
   private highQuality = false;
+  /** Tablet level: when the view was last touched or something began to move (decorative animations rest 30 s later). */
+  private lastWake = performance.now();
+  /** The tints and selection last written into each floor's colours (applyHighlight skips floors that stay). */
+  private highlighted = new WeakMap<object, string>();
+  private decorWas = false;
+  /** A frame asked for by a module's decoration (pets, ghost, fish), at the decorative pace. */
+  private decorTimer: ReturnType<typeof setTimeout> | undefined;
   /** Seconds used for animated colour effects (advanced in steps while an effect runs). */
   private effectTime = 0;
   /** The frame was asked for by the effect timer or a room tint (shown in the statistics). */
@@ -705,6 +765,8 @@ export class FloorplanViewer {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(host);
     document.addEventListener("visibilitychange", this.onVisibility);
+    // any touch on the view (canvas, pins, cards over it) wakes resting animations on the tablet level
+    for (const type of ["pointerdown", "pointerup", "wheel", "keydown"]) host.addEventListener(type, this.onInput, { capture: true, passive: true });
     if (typeof IntersectionObserver === "function") {
       this.intersection = new IntersectionObserver((entries) => {
         const on = entries.some((e) => e.isIntersecting);
@@ -721,6 +783,37 @@ export class FloorplanViewer {
   get low(): boolean {
     return this.lowQuality;
   }
+
+  /** Tablet level: the decorative animations rest (nobody touched the view for a while). */
+  get resting(): boolean {
+    return this.decor(0) === null;
+  }
+
+  /** Someone used the view (or something new began to move): the decorative animations run again on the tablet level. */
+  wake(): void {
+    const resting = this.resting;
+    this.lastWake = performance.now();
+    if (resting) this.invalidate();
+  }
+
+  /** A module's decoration moved (pets, ghost, fish): a frame now – on the tablet level at the decorative pace, none while resting. */
+  animate(): void {
+    if (!this.lowQuality) return this.invalidate();
+    if (this.decorTimer || this.frame) return;
+    const ms = this.decor(0);
+    if (ms === null) return;
+    this.decorTimer = setTimeout(() => {
+      this.decorTimer = undefined;
+      this.invalidate();
+    }, ms);
+  }
+
+  /** Delay until the next frame of a decorative animation (its own on normal devices), null while it rests. */
+  private decor(ms: number, lowMs?: number): number | null {
+    return decorDelay(ms, this.lowQuality, performance.now() - this.lastWake, lowMs);
+  }
+
+  private readonly onInput = () => this.wake();
 
   /** Vehicles in the parking spots (spot id -> pack item type); a change rebuilds the floors. */
   setParked(parked: Map<string, string>): void {
@@ -784,6 +877,7 @@ export class FloorplanViewer {
 
   setBuilding(building: Building): void {
     const first = this.building === null;
+    this.lastWake = performance.now();
     this.building = building;
     // this bundle's own copy of the ground (outdoor areas, earth around cellars)
     setTerrain(building);
@@ -804,10 +898,12 @@ export class FloorplanViewer {
   }
 
   setFloor(floorId: string | null, animate = true): void {
+    this.lastWake = performance.now();
     this.keepNext = this.keepView && floorId !== null && this.floorId !== null && floorId !== this.floorId;
     this.floorId = floorId;
     this.roomId = null;
     this.labelsDirty = true;
+    this.applyHouseLines();
     this.applyTargets(!animate);
     this.applyHighlight();
     this.fit(animate ? 700 : 0);
@@ -843,6 +939,7 @@ export class FloorplanViewer {
 
   /** Highlight a room and fly into it (null = back to the floor overview). */
   selectRoom(roomId: string | null): void {
+    this.lastWake = performance.now();
     this.roomId = roomId;
     this.labelsDirty = true;
     this.applyHighlight();
@@ -1107,6 +1204,42 @@ export class FloorplanViewer {
     this.invalidate();
   }
 
+  /** A module's see-through surfaces (a warm tint on a room's floor, soil under a lawn). */
+  setPatches(patches: PatchPiece[]): void {
+    this.patches = patches;
+    for (const fv of this.floors) this.buildPatches(fv);
+    this.invalidate();
+  }
+
+  private buildPatches(fv: FloorView): void {
+    const mine = this.patches.filter((t) => t.floorId === fv.floor.id && t.points.length >= 3 && t.opacity > 0);
+    const sig = JSON.stringify(mine);
+    if (sig === fv.patchSig) return;
+    fv.patchSig = sig;
+    for (const glow of [false, true]) {
+      const p: number[] = [];
+      const c: number[] = [];
+      for (const t of mine) {
+        if (!!t.glow !== glow) continue;
+        const a = Math.min(1, t.opacity);
+        for (const tri of triangulate(t.points)) {
+          for (const i of tri) {
+            p.push(t.points[i][0], t.y, t.points[i][1]);
+            c.push(t.color[0], t.color[1], t.color[2], a);
+          }
+        }
+      }
+      const mesh = glow ? fv.patchGlowMesh : fv.patchMesh;
+      const g = new Geometry();
+      g.setAttribute("position", new Float32BufferAttribute(p, 3));
+      g.setAttribute("color", new Float32BufferAttribute(c, 4));
+      mesh.geometry.dispose();
+      mesh.geometry = g;
+      mesh.visible = p.length > 0;
+    }
+  }
+
+
   private buildPipes(fv: FloorView): void {
     const mine = this.pipes.filter((t) => t.floorId === fv.floor.id);
     const sig = JSON.stringify(mine);
@@ -1120,6 +1253,66 @@ export class FloorplanViewer {
   }
 
   /** People in their rooms (pink markers in the floor and room views). */
+  /** How people stand in the house: a simple neon figure or a round pin (the ⚙ menu). */
+  setPersonLook(look: "figure" | "pin"): void {
+    if (look === this.personLook) return;
+    this.personLook = look;
+    this.setPersons(this.persons);
+  }
+
+  /**
+   * A person as a flat neon silhouette, 1.6 m tall, facing +z (turned to the camera each frame): limbs as strips,
+   * a round head, a ring on the floor; a wider, faint copy around it glows. Two meshes, a few hundred triangles.
+   */
+  private makeFigure(color: string): Group {
+    const build = (grow: number): Geometry => {
+      const p: number[] = [];
+      const strip = (ax: number, ay: number, bx: number, by: number, w: number) => {
+        const len = Math.hypot(bx - ax, by - ay) || 1;
+        const nx = (-(by - ay) / len) * (w / 2 + grow);
+        const ny = ((bx - ax) / len) * (w / 2 + grow);
+        p.push(ax + nx, ay + ny, 0, bx + nx, by + ny, 0, bx - nx, by - ny, 0, ax + nx, ay + ny, 0, bx - nx, by - ny, 0, ax - nx, ay - ny, 0);
+      };
+      const n = 18;
+      const r = 0.14 + grow;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const b = ((i + 1) / n) * Math.PI * 2;
+        p.push(0, 1.47, 0, Math.cos(a) * r, 1.47 + Math.sin(a) * r, 0, Math.cos(b) * r, 1.47 + Math.sin(b) * r, 0);
+      }
+      strip(0, 1.32, 0, 0.8, 0.13); // body
+      strip(0, 1.24, -0.28, 0.9, 0.07); // arms
+      strip(0, 1.24, 0.28, 0.9, 0.07);
+      strip(-0.02, 0.82, -0.15, 0.02, 0.08); // legs
+      strip(0.02, 0.82, 0.15, 0.02, 0.08);
+      const geo = new Geometry();
+      geo.setAttribute("position", new Float32BufferAttribute(p, 3));
+      return geo;
+    };
+    const core = new Mesh(build(0), new MeshBasicMaterial({ color, transparent: true, opacity: 0.9, depthWrite: false, side: DoubleSide }));
+    const glow = new Mesh(
+      build(0.05),
+      new MeshBasicMaterial({ color, transparent: true, opacity: 0.22, blending: AdditiveBlending, depthWrite: false, side: DoubleSide }),
+    );
+    core.renderOrder = 6;
+    glow.renderOrder = 5;
+    const fig = new Group();
+    fig.add(glow, core);
+    fig.visible = false;
+    return fig;
+  }
+
+  private dropFigure(id: string): void {
+    const fig = this.figures.get(id);
+    if (!fig) return;
+    this.scene.remove(fig);
+    for (const m of fig.children as Mesh[]) {
+      m.geometry.dispose();
+      (m.material as MeshBasicMaterial).dispose();
+    }
+    this.figures.delete(id);
+  }
+
   setPersons(persons: PersonPin[]): void {
     this.labelsDirty = true;
     this.persons = persons;
@@ -1131,28 +1324,63 @@ export class FloorplanViewer {
         pin = document.createElement("div");
         pin.className = "fp3d-person";
         pin.dataset.entity = p.id;
+        const id = p.id;
+        pin.addEventListener("pointerdown", (e) => e.stopPropagation());
+        pin.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const target = this.persons.find((x) => x.id === id);
+          if (!target?.entity) return;
+          const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const h = this.host.getBoundingClientRect();
+          this.options.onDeviceHold?.(target.entity, r.left + r.width / 2 - h.left, r.top + r.height / 2 - h.top);
+        });
         this.personPins.set(p.id, pin);
         this.labels.append(pin);
       }
       pin.title = p.name;
       pin.setAttribute("aria-label", p.name);
-      if (pin.dataset.picture !== (p.picture ?? "") || pin.dataset.initials !== p.initials) {
+      pin.style.setProperty("--fp3d-pc", p.color ?? "#ff5fd2");
+      // located people stand as a figure (the pin then only carries the name above its head)
+      const figure = this.personLook === "figure" && !!p.entity && !p.thing;
+      pin.classList.toggle("fp3d-person-figure", figure);
+      const fig = this.figures.get(p.id);
+      if (figure && (!fig || fig.userData.color !== (p.color ?? "#ff5fd2"))) {
+        this.dropFigure(p.id);
+        const made = this.makeFigure(p.color ?? "#ff5fd2");
+        made.userData.color = p.color ?? "#ff5fd2";
+        this.figures.set(p.id, made);
+        this.scene.add(made);
+      } else if (!figure && fig) this.dropFigure(p.id);
+      pin.classList.toggle("fp3d-person-tap", !!p.entity);
+      if (pin.dataset.picture !== (p.picture ?? "") || pin.dataset.initials !== p.initials || pin.dataset.tag !== (p.tag ?? "")) {
         pin.dataset.picture = p.picture ?? "";
         pin.dataset.initials = p.initials;
+        pin.dataset.tag = p.tag ?? "";
         pin.replaceChildren();
+        const face = document.createElement("span");
+        face.className = "fp3d-person-face";
         if (p.picture) {
           const img = document.createElement("img");
           img.src = p.picture;
           img.alt = "";
           img.addEventListener("error", () => img.replaceWith(document.createTextNode(p.initials)));
-          pin.append(img);
-        } else pin.textContent = p.initials;
+          face.append(img);
+        } else face.textContent = p.initials;
+        pin.append(face);
+        if (p.tag) {
+          const tag = document.createElement("span");
+          tag.className = "fp3d-person-tag";
+          tag.textContent = p.tag;
+          pin.append(tag);
+        }
       }
     }
     for (const [id, pin] of this.personPins) {
       if (seen.has(id)) continue;
       pin.remove();
       this.personPins.delete(id);
+      this.personAt.delete(id);
+      this.dropFigure(id);
     }
     this.invalidate();
   }
@@ -1621,6 +1849,8 @@ export class FloorplanViewer {
     this.resizeObserver.disconnect();
     this.intersection?.disconnect();
     document.removeEventListener("visibilitychange", this.onVisibility);
+    for (const type of ["pointerdown", "pointerup", "wheel", "keydown"]) this.host.removeEventListener(type, this.onInput, { capture: true });
+    clearTimeout(this.decorTimer);
     this.controls.dispose();
     this.clear();
     this.disposeRetired();
@@ -2041,6 +2271,10 @@ export class FloorplanViewer {
       blinds: themed(makeFoldable(new MeshBasicMaterial({ map: this.blindTexture, vertexColors: true, side: DoubleSide }), mask), this.themeUniform),
       water: themed(new MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false, side: DoubleSide }), this.themeUniform),
       flow: flowMaterial(this.flowTime),
+      pipeLine: pipeLineMaterial(this.flowTime),
+      // a module's surfaces: colour and opacity per vertex, over the floor without hiding what stands on it
+      patch: new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+      patchGlow: new MeshBasicMaterial({ vertexColors: true, transparent: true, blending: AdditiveBlending, depthWrite: false, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
       solarLive: solarLiveMaterial(this.flowTime),
       lamps: themed(new MeshBasicMaterial({ vertexColors: true }), this.themeUniform),
       halos: new PointsMaterial({
@@ -2123,12 +2357,26 @@ export class FloorplanViewer {
       fridgeMesh.visible = false;
       const pipeMesh = new Mesh(new Geometry(), materials.lamps);
       pipeMesh.visible = false;
+      const patchMesh = new Mesh(new Geometry(), materials.patch);
+      patchMesh.visible = false;
+      patchMesh.renderOrder = 3;
+      const patchGlowMesh = new Mesh(new Geometry(), materials.patchGlow);
+      patchGlowMesh.visible = false;
+      patchGlowMesh.renderOrder = 3;
       const screenMesh = new Mesh(new Geometry(), materials.screens);
       screenMesh.visible = false;
       screenMesh.renderOrder = 5;
       const flowMesh = new Mesh(new Geometry(), materials.flow);
       flowMesh.renderOrder = 5;
       flowMesh.frustumCulled = false;
+      const pipeLineMesh = new Mesh(new Geometry(), materials.pipeLine);
+      const pipeHouseMesh = new Mesh(new Geometry(), materials.pipeLine);
+      const pipeFloorMesh = new Mesh(new Geometry(), materials.pipeLine);
+      for (const m of [pipeLineMesh, pipeHouseMesh, pipeFloorMesh]) {
+        m.renderOrder = 4;
+        m.frustumCulled = false;
+        m.visible = false;
+      }
       // the living overlay of the garden and wall fields
       const solarLive = buildSolarLive(garden, floor.elevation);
       const solarMesh = solarLive ? new Mesh(solarLive.geometry, materials.solarLive) : null;
@@ -2164,6 +2412,9 @@ export class FloorplanViewer {
         blindsMesh,
         glassMesh,
         flowMesh,
+        pipeLineMesh,
+        pipeHouseMesh,
+        pipeFloorMesh,
         lampMesh,
         sunMesh,
         haloMesh,
@@ -2171,6 +2422,8 @@ export class FloorplanViewer {
         trailMesh,
         fridgeMesh,
         pipeMesh,
+        patchMesh,
+        patchGlowMesh,
         screenMesh,
         glassWalls,
         ...(solarMesh ? [solarMesh] : []),
@@ -2227,6 +2480,10 @@ export class FloorplanViewer {
         glassMesh,
         blindsMesh,
         flowMesh,
+        pipeLineMesh,
+        pipeHouseMesh,
+        pipeFloorMesh,
+        pipeLineSig: "",
         solarMesh,
         solarLive,
         lampMesh,
@@ -2238,6 +2495,9 @@ export class FloorplanViewer {
         fridgeMesh,
         pipeMesh,
         pipeSig: "",
+        patchMesh,
+        patchGlowMesh,
+        patchSig: "",
         lampTris: [],
         coneTris: [],
         lampFurnTris: [],
@@ -2265,6 +2525,7 @@ export class FloorplanViewer {
         ty: 0,
         to: 1,
         appliedO: -1,
+        lightAt: 0,
         label,
       });
     }
@@ -2272,6 +2533,7 @@ export class FloorplanViewer {
     for (const fv of this.floors) {
       this.buildFridges(fv);
       this.buildPipes(fv);
+      this.buildPatches(fv);
     }
     this.labelsDirty = true;
     if (this.floorId && !b.floors.some((f) => f.id === this.floorId)) this.floorId = null;
@@ -2578,6 +2840,7 @@ export class FloorplanViewer {
     const k = 1 - Math.exp(-dt / OPENING_TAU);
     for (const fv of this.floors) {
       let changed = false;
+      let floorBusy = false;
       for (const [id, cur] of fv.openings) {
         const target = this.openingTargets.get(id) ?? CLOSED;
         // nothing to do for an opening that rests at its target (the usual case)
@@ -2609,11 +2872,18 @@ export class FloorplanViewer {
           changed = true;
         }
         moving ||= busy;
+        floorBusy ||= busy;
       }
       if (changed) {
         this.buildOpenings(fv);
-        this.buildGlow(fv);
-        this.buildSun(fv);
+        // the light through doors and the sun through blinds follow every frame; on the tablet level about
+        // 5 times a second while something moves, and once more where it stops
+        const now = performance.now();
+        if (!this.lowQuality || !floorBusy || now - fv.lightAt >= LOW_LIGHT_MS) {
+          fv.lightAt = now;
+          this.buildGlow(fv);
+          this.buildSun(fv);
+        }
       }
     }
     return moving;
@@ -3085,6 +3355,27 @@ export class FloorplanViewer {
             }
             continue;
           }
+          if (face.part === "strata") {
+            // layers: light round the item from its foot (colour) up to its top (top) – a tank warm above, cool below
+            const top = face.top ?? face.color;
+            const k = 0.22 + 0.4 * face.level;
+            const lo = new Color(...face.color.map((v) => Math.min(1, v * k)) as [number, number, number]);
+            const hi = new Color(...top.map((v) => Math.min(1, v * k)) as [number, number, number]);
+            const y0 = base + h * 0.06;
+            const y1 = base + h * 0.94;
+            const rx = Math.abs(w) / 2 + 0.012;
+            const rz = d / 2 + 0.012;
+            const n = 20;
+            for (let i = 0; i < n; i++) {
+              const a0 = (i / n) * Math.PI * 2;
+              const a1 = ((i + 1) / n) * Math.PI * 2;
+              const q0 = [Math.cos(a0) * rx, Math.sin(a0) * rz];
+              const q1 = [Math.cos(a1) * rx, Math.sin(a1) * rz];
+              buf.tri(P(q0[0], y0, q0[1]), P(q1[0], y0, q1[1]), P(q1[0], y1, q1[1]), lo, lo, hi);
+              buf.tri(P(q0[0], y0, q0[1]), P(q1[0], y1, q1[1]), P(q0[0], y1, q0[1]), lo, hi, hi);
+            }
+            continue;
+          }
           if (face.part === "apring") {
             // an access point's LED ring: under the disc (ceiling) or on the plate's front (wall), with a soft halo
             const wall = f.variant === "wall";
@@ -3310,8 +3601,9 @@ export class FloorplanViewer {
 
   /** Energy cables of a floor as flat glowing ribbons (vertical pieces as two crossed ribbons). */
   private buildFlows(fv: FloorView): void {
+    this.buildPipeLines(fv);
     const layout = this.flows
-      .filter((f) => f.floorId === fv.floor.id)
+      .filter((f) => f.floorId === fv.floor.id && !f.pipe)
       .map(flowKey)
       .join(";");
     const p: number[] = [];
@@ -3320,7 +3612,7 @@ export class FloorplanViewer {
     const sp: number[] = [];
     const off: number[] = [];
     for (const f of this.flows) {
-      if (f.floorId !== fv.floor.id) continue;
+      if (f.floorId !== fv.floor.id || f.pipe) continue;
       const phase = this.flowPhase.get(flowKey(f)) ?? { speed: flowSpeed(f.power), offset: 0 };
       const level = f.power > 0.5 ? Math.min(1, 0.5 + f.power / 2500) : 0.22;
       const col = f.color.map((v) => v * level);
@@ -3342,7 +3634,7 @@ export class FloorplanViewer {
           ];
       for (const [width, strength] of layers) {
         for (const n of sides) {
-          const h = width / 2;
+          const h = (width * (f.width ?? 1)) / 2;
           const v = (q: number[], k: number) => [q[0] + n[0] * h * k, q[1] + n[1] * h * k, q[2] + n[2] * h * k];
           const quad = [
             [v(f.a, -1), f.dist, 0],
@@ -3388,6 +3680,86 @@ export class FloorplanViewer {
     fv.flowMesh.visible = p.length > 0;
   }
 
+  /**
+   * A module's pipes: a dark edge under a solid core in the pipe's colour (normal blending, so a bright floor does not
+   * wash them out); the light running along them is a soft brightening of the core. Pipes shown only in the house
+   * view go into a mesh of their own, hidden while a floor is opened; those shown only on an opened floor into another.
+   */
+  private buildPipeLines(fv: FloorView): void {
+    const mine = this.flows.filter((f) => f.floorId === fv.floor.id && f.pipe);
+    const sig = JSON.stringify(mine.map((f) => [f.a, f.b, f.dist, f.color, f.width, f.house, f.floor, Math.round(f.power / 50), this.flowPhase.get(flowKey(f))?.speed ?? 0]));
+    if (sig === fv.pipeLineSig) return;
+    fv.pipeLineSig = sig;
+    for (const view of ["all", "house", "floor"] as const) {
+      const p: number[] = [];
+      const c: number[] = [];
+      const uv: number[] = [];
+      const sp: number[] = [];
+      const off: number[] = [];
+      for (const f of mine) {
+        if ((f.house ? "house" : f.floor ? "floor" : "all") !== view) continue;
+        const len = Math.hypot(f.b[0] - f.a[0], f.b[1] - f.a[1], f.b[2] - f.a[2]);
+        if (len < 1e-4) continue;
+        const phase = this.flowPhase.get(flowKey(f)) ?? { speed: flowSpeed(f.power), offset: 0 };
+        const dir = [(f.b[0] - f.a[0]) / len, (f.b[1] - f.a[1]) / len, (f.b[2] - f.a[2]) / len];
+        const sides: number[][] = [];
+        if (Math.abs(dir[1]) < 0.5) {
+          const l = Math.hypot(dir[0], dir[2]) || 1;
+          sides.push([-dir[2] / l, 0, dir[0] / l]);
+        } else sides.push([1, 0, 0], [0, 0, 1]);
+        const core = PIPE_CORE * (f.width ?? 1);
+        // resting: the pipe stays in its colour, a little darker
+        const level = f.power > 0.5 ? 1 : 0.62;
+        const layers: [number, number[], number, number][] = [
+          // the dark edge (uv.y 2..3 marks it: no light runs on it)
+          [core + PIPE_EDGE * 2, [0.02, 0.025, 0.05], 0.78, 2],
+          [core, f.color.map((v) => v * level), 1, 0],
+        ];
+        for (const [width, col, alpha, v0] of layers) {
+          for (const n of sides) {
+            const h = width / 2;
+            const lift = v0 === 0 ? 0.002 : 0;
+            const v = (q: number[], k: number) => [q[0] + n[0] * h * k, q[1] + n[1] * h * k + lift, q[2] + n[2] * h * k];
+            const quad = [
+              [v(f.a, -1), f.dist, v0],
+              [v(f.b, -1), f.dist + len, v0],
+              [v(f.b, 1), f.dist + len, v0 + 1],
+              [v(f.a, 1), f.dist, v0 + 1],
+            ] as const;
+            for (const i of [0, 1, 2, 0, 2, 3]) {
+              const [pos, u, w] = quad[i];
+              p.push(pos[0], pos[1], pos[2]);
+              c.push(col[0], col[1], col[2], alpha);
+              uv.push(u, w);
+              sp.push(phase.speed);
+              off.push(phase.offset);
+            }
+          }
+        }
+      }
+      const mesh = view === "house" ? fv.pipeHouseMesh : view === "floor" ? fv.pipeFloorMesh : fv.pipeLineMesh;
+      const g = new Geometry();
+      g.setAttribute("position", new Float32BufferAttribute(p, 3));
+      g.setAttribute("color", new Float32BufferAttribute(c, 4));
+      g.setAttribute("uv", new Float32BufferAttribute(uv, 2));
+      g.setAttribute("flowSpeed", new Float32BufferAttribute(sp, 1));
+      g.setAttribute("flowOffset", new Float32BufferAttribute(off, 1));
+      mesh.geometry.dispose();
+      mesh.geometry = g;
+      mesh.userData.filled = p.length > 0;
+    }
+    this.applyHouseLines(fv);
+  }
+
+  /** Pipes shown only in the house view: hidden while a floor is opened; those only on an opened floor the other way round. */
+  private applyHouseLines(only?: FloorView): void {
+    for (const fv of only ? [only] : this.floors) {
+      fv.pipeLineMesh.visible = !!fv.pipeLineMesh.userData.filled;
+      fv.pipeHouseMesh.visible = !!fv.pipeHouseMesh.userData.filled && this.floorId === null;
+      fv.pipeFloorMesh.visible = !!fv.pipeFloorMesh.userData.filled && this.floorId !== null;
+    }
+  }
+
   private buildOpenings(fv: FloorView): void {
     const parts = buildOpeningParts(fv.geo.openings, fv.openings, Math.min(fv.floor.cut_height, fv.floor.height));
     fv.frameTris = parts.frameTris;
@@ -3412,6 +3784,10 @@ export class FloorplanViewer {
   private applyHighlight(): void {
     for (const fv of this.floors) {
       const colors = fv.geo.floor.getAttribute("color");
+      // a pulsing warning recolours its rooms only: floors whose tints and selection stay are left alone
+      const sig = fv.geo.roomTris.map((r) => `${this.roomTint?.get(r.roomId)?.join(",") ?? ""}${r.roomId === this.roomId ? "*" : ""}`).join(";");
+      if (this.highlighted.get(colors) === sig) continue;
+      this.highlighted.set(colors, sig);
       for (const r of fv.geo.roomTris) {
         const c = new Color(r.color);
         const tint = this.roomTint?.get(r.roomId);
@@ -4359,9 +4735,14 @@ export class FloorplanViewer {
     // everything that keeps drawing (also the energy flow, effects, robots) shows in the frame rate
     this.reportStats(now, busy);
     if (moving) this.invalidate();
-    if (this.effectFloors.size && !this.effectTimer && !document.hidden) {
-      // colour effects: a few steps per second are enough and keep the tablet idle in between
-      const ms = this.lowQuality ? 2 * EFFECT_MS : EFFECT_MS;
+    // tablet level: something new began to move (music, a robot, the energy flow …) – it shows for a while
+    const decorNow = this.flowActive || this.solarActive || this.soundActive || this.poolActive || robotsMoving || fansTurning || this.effectFloors.size > 0;
+    if (decorNow && !this.decorWas) this.lastWake = now;
+    this.decorWas = decorNow;
+    // colour effects: a few steps per second are enough and keep the tablet idle in between
+    const effectMs = this.effectFloors.size ? this.decor(this.lowQuality ? 2 * EFFECT_MS : EFFECT_MS) : null;
+    if (effectMs !== null && !this.effectTimer && !document.hidden) {
+      const ms = effectMs;
       this.effectTimer = setTimeout(() => {
         this.effectTimer = undefined;
         this.effectTime += ms / 1000;
@@ -4371,7 +4752,8 @@ export class FloorplanViewer {
           this.buildLamps(fv);
           this.buildGlow(fv);
         }
-        this.invalidate();
+        // tablet level: a decorative frame that comes anyway shows the step as well
+        if (!this.decorTimer) this.invalidate();
       }, ms);
     }
     if (!moving && orbiting && !this.orbitTimer) {
@@ -4388,26 +4770,39 @@ export class FloorplanViewer {
         this.invalidate();
       }, 33);
     }
+    const flowing = this.flowActive || this.solarActive || this.soundActive || this.poolActive;
+    if (this.lowQuality) {
+      // tablet level: every decorative animation shares one frame about 5 times a second (12 while fan blades turn,
+      // fewer would make them seem to stand or turn back) and rests 30 s after the last touch
+      const ms = robotsMoving || flowing || fansTurning ? this.decor(fansTurning ? 83 : 0, fansTurning ? 83 : undefined) : null;
+      if (!moving && ms !== null && !this.decorTimer) {
+        this.decorTimer = setTimeout(() => {
+          this.decorTimer = undefined;
+          this.invalidate();
+        }, ms);
+      }
+      return;
+    }
     if (!moving && robotsMoving && !this.robotTimer) {
-      // a driving robot: about 30 frames per second, 15 on the tablet level
+      // a driving robot: about 30 frames per second
       this.robotTimer = setTimeout(() => {
         this.robotTimer = undefined;
         this.invalidate();
-      }, this.lowQuality ? 66 : 33);
+      }, 33);
     }
     if (!moving && fansTurning && !this.fanTimer) {
-      // turning blades: about 20 frames per second are enough (they blur anyway), 12 on the tablet level
+      // turning blades: about 20 frames per second are enough (they blur anyway)
       this.fanTimer = setTimeout(() => {
         this.fanTimer = undefined;
         this.invalidate();
-      }, this.lowQuality ? 83 : 50);
+      }, 50);
     }
-    if (!moving && (this.flowActive || this.solarActive || this.soundActive || this.poolActive) && !this.flowTimer) {
+    if (!moving && flowing && !this.flowTimer) {
       // only the energy flow (or the living modules) moves: about 30 frames per second are enough
       this.flowTimer = setTimeout(() => {
         this.flowTimer = undefined;
         this.invalidate();
-      }, this.lowQuality ? 2 * FLOW_FRAME_MS : FLOW_FRAME_MS);
+      }, FLOW_FRAME_MS);
     }
   }
 
@@ -4565,12 +4960,42 @@ export class FloorplanViewer {
     for (const p of this.persons) {
       const pin = this.personPins.get(p.id);
       const fv = this.floorMap.get(p.floorId);
+      const fig = this.figures.get(p.id);
       if (!pin) continue;
       if (!fv || house || fv.to < 0.99 || fv.o < 0.9 || this.otherFloor(fv)) {
         this.place(pin, null);
+        if (fig?.visible) {
+          fig.visible = false;
+          this.invalidate();
+        }
         continue;
       }
-      v.set(p.x, fv.floor.elevation + fv.y + 0.9, p.z).project(this.camera);
+      // glide to the room (about a second), jump when the floor changes
+      let at = this.personAt.get(p.id);
+      if (!at || at.floorId !== p.floorId) at = { floorId: p.floorId, x: p.x, z: p.z };
+      else {
+        const dx = p.x - at.x;
+        const dz = p.z - at.z;
+        if (Math.hypot(dx, dz) > 0.02) {
+          at = { floorId: p.floorId, x: at.x + dx * 0.12, z: at.z + dz * 0.12 };
+          this.labelsDirty = true;
+          this.invalidate();
+        } else at = { floorId: p.floorId, x: p.x, z: p.z };
+      }
+      this.personAt.set(p.id, at);
+      const base = fv.floor.elevation + fv.y;
+      if (fig) {
+        // the figure faces the camera (turns around its own vertical axis only); labels are placed after a frame,
+        // so a figure that appears or moves asks for one more
+        const turn = Math.atan2(this.camera.position.x - at.x, this.camera.position.z - at.z);
+        if (!fig.visible || fig.position.x !== at.x || fig.position.y !== base || fig.position.z !== at.z || fig.rotation.y !== turn) {
+          fig.visible = true;
+          fig.position.set(at.x, base, at.z);
+          fig.rotation.y = turn;
+          this.invalidate();
+        }
+      }
+      v.set(at.x, base + (fig ? 1.85 : 0.9), at.z).project(this.camera);
       const off = v.z > 1 || Math.abs(v.x) > 1.05 || Math.abs(v.y) > 1.05;
       this.place(pin, off ? null : `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -50%)`);
     }
@@ -4766,12 +5191,42 @@ function makeBlindTexture(): CanvasTexture {
 
 function flowKey(f: FlowPiece): string {
   const r = (n: number) => Math.round(n * 100);
-  return `${f.floorId}:${f.a.map(r).join(",")}>${f.b.map(r).join(",")}`;
+  return `${f.floorId}:${f.a.map(r).join(",")}>${f.b.map(r).join(",")}${f.width ? `~${f.width}` : ""}`;
 }
 
 /** Stripe speed (m/s): still at 0 W, faster with more power (square root, so 2 kW is not 20 × 100 W). */
 function flowSpeed(power: number): number {
   return power > 0.5 ? Math.min(2.4, 0.3 + Math.sqrt(power) / 28) : 0;
+}
+
+/**
+ * A module's solid pipe (uv.x = metres along it, uv.y = across: 0..1 the core, 2..3 its dark edge): shaded like a
+ * tube, a soft brightening running along the core while it flows (the direction from a to b).
+ */
+function pipeLineMaterial(time: { value: number }): MeshBasicMaterial {
+  const m = new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uFlowTime = time;
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nattribute float flowSpeed;\nattribute float flowOffset;\nvarying float vFlowSpeed;\nvarying float vFlowOffset;\nvarying vec2 vFlowUv;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\nvFlowSpeed = flowSpeed;\nvFlowOffset = flowOffset;\nvFlowUv = uv;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform float uFlowTime;\nvarying float vFlowSpeed;\nvarying float vFlowOffset;\nvarying vec2 vFlowUv;")
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+        float fp3dCore = step(vFlowUv.y, 1.5);
+        float fp3dAcross = 1.0 - abs(fract(vFlowUv.y) * 2.0 - 1.0);
+        float fp3dMoving = step(0.001, abs(vFlowSpeed));
+        // one soft swell of light every 0.8 m, rising slowly and falling fast: the way the water goes
+        float fp3dPhase = fract((vFlowUv.x - uFlowTime * abs(vFlowSpeed) - vFlowOffset) * 1.25);
+        float fp3dSwell = pow(fp3dPhase, 3.0) * fp3dMoving * fp3dCore;
+        diffuseColor.rgb *= mix(1.0, 0.72 + 0.4 * fp3dAcross, fp3dCore);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0, 0.97, 0.9), 0.38 * fp3dSwell * fp3dAcross);`,
+      );
+  };
+  m.customProgramCacheKey = () => "fp3d-pipe-line";
+  return m;
 }
 
 /** Glowing cable with stripes running along it (uv.x = metres along the cable, uv.y = across). */

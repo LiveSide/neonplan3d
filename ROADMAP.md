@@ -6,7 +6,9 @@ What comes next. The order follows your wishes (issues, Discord and 👍 in [Dis
 
 **Principle:** everything you need to draw and control your home stays free. Safety (smoke, water, alarm, rain warning, power outage) is always free. What costs money are extra furniture packs and Pro add-ons with special live effects – paid once, no subscription, and whatever is installed keeps working forever.
 
-## ✅ Recently done (1.13 – 1.25)
+## ✅ Recently done (1.13 – 2.0)
+
+- **Locating** (2.0, free): who and what is where – from the Shelly plugs and ESPHome proxies you already have, learned in 90 seconds per room, without Bermuda; people as glowing figures, a sensor per device, "Where is my iPhone?".
 
 - **Issue round** (1.25): roofs meeting at right angles and overlapping sections, a hip at one end only, sill per window, windows across open room transitions, faster editor with 3D beside, more contrast in the day look.
 - **Modules with admin approval** (1.24): module code and every update run only after an admin read and approved them; Assist sentence files only on request.
@@ -28,21 +30,19 @@ What comes next. The order follows your wishes (issues, Discord and 👍 in [Dis
 - **Pools** in free shapes and above-ground pools, a balcony type, rain from your own weather station, power outage warning.
 - **Awnings** (five kinds), **waste bins and mailboxes**, **air conditioner**, glowing cooktops, ceiling height per room, free L/U sofas and U-stairs, lamps under roof slopes, feet and inches.
 - **Motorised curtains and roll-down screens** that move with their cover, **garage doors via a switch**.
-- **Household Pro** (beta, supporters first): bins with pickup tags, post in the mailbox, thirsty plants, washer and dryer time left.
+- **Household Pro** (1.26, out of beta): readable bin tags, next pickup only, "put out" per bin, post in the mailbox, thirsty plants, washer and dryer time left.
+- **Faster on wall tablets** (1.26): decorations rest when nobody touches the tablet, measured values every 2 s.
 - **Import page** (beta): Sweet Home 3D, iPhone LiDAR scans, DXF and more into a NeonPlan plan.
 - **Fun packs** Pets and Halloween, free with a customer account; taster packs for newsletter subscribers.
 - A tidied-up editor, furniture blocks and multi-select, 18 languages.
 
-## 🔨 Next up (1.26)
+## 🔨 Next up (2.1)
 
 | Topic | What it is about | Wish |
 |---|---|---|
-| Furniture wave 2 | Kids, garden & terrace (with an outdoor staircase under a roof), garage, home cinema, utility, fitness, smart home and architecture grow; then new packs: dining & hall, balcony, decoration & plants | – |
 | Modules, round 2 | Pro add-ons move into modules; the voice module leaves its beta | your feedback on Discord |
 | Roofs | Rotated roof sections, two roofs meeting at 90°, the floor edge under the roof | discussions #634, #605, #632 |
-| Even faster on old tablets | Fewer redraws, calmer warning pulses, a lower resolution on weak devices by itself | – |
 | Desk with height | A standing desk whose top moves with its height from Home Assistant (IKEA Idasen and others) | discussion #610 |
-| Underfloor heating | Heating zones on the floor that glow while they heat | discussion #607 |
 | Air quality | VOC, CO₂ and particulate values in the room card and as a colour in the room | discussion #485 |
 | Buttons per room | Own buttons (a scene, a script) in a room or on a floor | discussion #603 |
 
@@ -76,7 +76,7 @@ What comes next. The order follows your wishes (issues, Discord and 👍 in [Dis
 
 ## Pro add-ons
 
-Available: **Camera Cockpit**, **Weather outside**, **Live screens**, **Energy Pro**, **Sound & Cinema**, **Car Pro**, **Time travel** and **Household Pro** (beta, supporters first – for everyone after the beta). Owners get improvements of their add-ons for free.
+Available: **Camera Cockpit**, **Weather outside**, **Live screens**, **Energy Pro**, **Sound & Cinema**, **Car Pro**, **Time travel** and **Household Pro**. **Heat Pro** (heat pump as a system in 3D) is in beta for supporters first. Owners get improvements of their add-ons for free.
 
 **Planned:**
 
@@ -94,7 +94,7 @@ Available: **Camera Cockpit**, **Weather outside**, **Live screens**, **Energy P
 - **Car Pro:** opening doors and hatches, departure time, charging cable to the wallbox.
 - **Camera Cockpit:** pan/tilt from 3D, talk at the doorbell.
 - **Sound & Cinema:** favourites per speaker.
-- **Household Pro:** after the beta for everyone in the shop; holographic plant card.
+- **Household Pro:** holographic plant card; one bin that changes colour with the next pickup.
 
 ## Furniture packs – planned
 
@@ -118,7 +118,9 @@ Was als Nächstes kommt. Die Reihenfolge richtet sich nach euren Wünschen (Issu
 
 **Grundsatz:** Alles, was du brauchst, um dein Zuhause abzubilden und zu bedienen, bleibt kostenlos. Sicherheit (Rauch, Wasser, Alarm, Regenwarnung, Stromausfall) ist immer kostenlos. Bezahlt werden zusätzliche Möbel-Packs und Pro-Erweiterungen mit besonderen Live-Effekten – einmal, ohne Abo, und was installiert ist, läuft für immer.
 
-## ✅ Zuletzt erledigt (1.13 – 1.25)
+## ✅ Zuletzt erledigt (1.13 – 2.0)
+
+- **Ortung** (2.0, kostenlos): Wer und was ist wo – über die Shelly-Steckdosen und ESPHome-Proxys, die du schon hast, in 90 Sekunden pro Raum eingelernt, ohne Bermuda; Personen als leuchtende Figuren, ein Sensor pro Gerät, „Wo ist mein iPhone?“.
 
 - **Fehler-Runde** (1.25): Dächer im rechten Winkel und überlappende Dachflächen, Walm nur an einem Ende, Fensterbank pro Fenster, Fenster über offene Raumübergänge, schnellerer Editor mit 3D daneben, mehr Kontrast im Tag-Look.
 - **Module mit Freigabe** (1.24): Modul-Code und jedes Update laufen erst, wenn ein Admin sie angesehen und freigegeben hat; Assist-Satzdateien nur auf Wunsch.
@@ -140,21 +142,19 @@ Was als Nächstes kommt. Die Reihenfolge richtet sich nach euren Wünschen (Issu
 - **Pools** in freier Form und Aufstellpools, Balkon als eigener Typ, Regen von der eigenen Wetterstation, Stromausfall-Warnung.
 - **Markisen** (fünf Arten), **Mülltonnen und Briefkästen**, **Klimagerät**, glühende Kochfelder, Deckenhöhe je Raum, L-/U-Sofa und U-Treppe kostenlos, Lampen unter Dachschrägen, Zoll und Fuß.
 - **Motorisierte Vorhänge und ausrollbare Leinwände**, die mit ihrem Cover fahren, **Garagentore per Schalter**.
-- **Haushalt Pro** (Beta, zuerst für Supporter): Mülltonnen mit Abhol-Schildchen, Post im Briefkasten, durstige Pflanzen, Restzeit von Waschmaschine und Trockner.
+- **Haushalt Pro** (1.26, Beta beendet): lesbare Tonnen-Schilder, nur nächste Abholung, „Rausgestellt“ pro Tonne, Post im Briefkasten, durstige Pflanzen, Restzeit von Waschmaschine und Trockner.
+- **Flüssiger auf Wandtablets** (1.26): Deko ruht, wenn niemand das Tablet berührt, Messwerte alle 2 s.
 - **Import-Seite** (Beta): Sweet Home 3D, iPhone-LiDAR-Scans, DXF und mehr werden zum NeonPlan-Plan.
 - **Fun-Packs** Haustiere und Halloween, gratis mit Kundenkonto; Schnupper-Packs für Newsletter-Abonnenten.
 - Ein aufgeräumter Editor, Möbel-Blöcke und Mehrfachauswahl, 18 Sprachen.
 
-## 🔨 Als Nächstes (1.26)
+## 🔨 Als Nächstes (2.1)
 
 | Thema | Worum es geht | Wunsch |
 |---|---|---|
-| Möbel-Welle 2 | Kinder, Garten & Terrasse (mit Außentreppe unter einem Dach), Garage, Heimkino, Hauswirtschaft, Fitness, Smart Home und Architektur wachsen; danach neue Packs: Esszimmer & Flur, Balkon, Deko & Pflanzen | – |
 | Module, Runde 2 | Die Pro-Erweiterungen ziehen in Module um; das Sprach-Modul verlässt die Beta | euer Feedback im Discord |
 | Dächer | Gedrehte Dachabschnitte, zwei Dächer im 90°-Winkel, die Etagenkante unterm Dach | Diskussionen #634, #605, #632 |
-| Noch schneller auf alten Tablets | Weniger Neuberechnungen, ruhigeres Pulsieren der Warnungen, auf schwachen Geräten von selbst eine niedrigere Auflösung | – |
 | Schreibtisch mit Höhe | Ein Steh-Schreibtisch, dessen Platte mit der Höhe aus Home Assistant hoch- und runterfährt (IKEA Idasen u. a.) | Diskussion #610 |
-| Fußbodenheizung | Heizzonen im Boden, die leuchten, solange sie heizen | Diskussion #607 |
 | Luftqualität | VOC-, CO₂- und Feinstaubwerte in der Raumkarte und als Farbe im Raum | Diskussion #485 |
 | Knöpfe pro Raum | Eigene Knöpfe (eine Szene, ein Skript) in einem Raum oder auf einer Etage | Diskussion #603 |
 
@@ -188,7 +188,7 @@ Was als Nächstes kommt. Die Reihenfolge richtet sich nach euren Wünschen (Issu
 
 ## Pro-Erweiterungen
 
-Erhältlich: **Kamera-Cockpit**, **Wetter draußen**, **Bildschirme live**, **Energie Pro**, **Klang & Kino**, **Auto Pro**, **Zeitreise** und **Haushalt Pro** (Beta, zuerst für Supporter – nach der Beta für alle). Käufer bekommen Verbesserungen ihrer Erweiterungen kostenlos.
+Erhältlich: **Kamera-Cockpit**, **Wetter draußen**, **Bildschirme live**, **Energie Pro**, **Klang & Kino**, **Auto Pro**, **Zeitreise** und **Haushalt Pro**. **Wärme Pro** (die Wärmepumpe als System in 3D) ist in der Beta, zuerst für Supporter. Käufer bekommen Verbesserungen ihrer Erweiterungen kostenlos.
 
 **Geplant:**
 
@@ -206,7 +206,7 @@ Erhältlich: **Kamera-Cockpit**, **Wetter draußen**, **Bildschirme live**, **En
 - **Auto Pro:** bewegliche Türen und Klappen, Abfahrtszeit, Ladekabel zur Wallbox.
 - **Kamera-Cockpit:** Schwenken/Neigen aus 3D, an der Türklingel sprechen.
 - **Klang & Kino:** Favoriten je Lautsprecher.
-- **Haushalt Pro:** nach der Beta für alle im Shop; holografische Pflanzenkarte.
+- **Haushalt Pro:** holografische Pflanzenkarte; eine Tonne, die je nach nächster Abholung die Farbe wechselt.
 
 ## Möbel-Packs – geplant
 

@@ -83,6 +83,8 @@ def test_length_units_follow_home_assistant_unless_set() -> None:
     base = {"wall_exterior": 0.3, "wall_interior": 0.12, "grid": 0.05}
     assert SETTINGS_SCHEMA(base)["units"] is None
     assert SETTINGS_SCHEMA({**base, "units": "imperial"})["units"] == "imperial"
+    assert SETTINGS_SCHEMA(base)["person_look"] is None
+    assert SETTINGS_SCHEMA({**base, "person_look": "pin"})["person_look"] == "pin"
 
 
 def test_furniture_block() -> None:
@@ -147,9 +149,24 @@ def test_household_fields_are_kept_and_checked() -> None:
         5,
         3,
     )
-    for bad in ({"bin_kind": "nuclear"}, {"bin_color": "blue"}, {"moisture_min": 150}, {"door_alarm": 0}):
+    out_bin = FURNITURE_SCHEMA({**base, "bin_out": "input_boolean.bin_out"})
+    assert out_bin["bin_out"] == "input_boolean.bin_out" and "bin_out" not in FURNITURE_SCHEMA(base)
+    robot = FURNITURE_SCHEMA({**base, "type": "robot", "service2": "sensor.dock_bag", "service2_min": 0})
+    assert (robot["service2"], robot["service2_min"]) == ("sensor.dock_bag", 0)
+    bads = ({"bin_kind": "nuclear"}, {"bin_color": "blue"}, {"moisture_min": 150}, {"door_alarm": 0})
+    for bad in (*bads, {"service2_min": -1}):
         with pytest.raises(vol.Invalid):
             FURNITURE_SCHEMA({**base, **bad})
+
+
+def test_household_tag_settings_are_optional() -> None:
+    """The bins' tag settings: missing in old plans, kept when set, a day count out of range is refused."""
+    base = {"wall_exterior": 0.3, "wall_interior": 0.12, "grid": 0.05}
+    assert SETTINGS_SCHEMA({**base, "household": {"bin_from": 14}})["household"] == {"bin_from": 14}
+    out = SETTINGS_SCHEMA({**base, "household": {"bin_next_only": True, "bin_days": 2}})["household"]
+    assert out["bin_next_only"] is True and out["bin_days"] == 2
+    with pytest.raises(vol.Invalid):
+        SETTINGS_SCHEMA({**base, "household": {"bin_days": 100}})
 
 
 def test_outdoor_area_keeps_its_name_and_area() -> None:
@@ -313,3 +330,16 @@ def test_rain_warning_entity() -> None:
     assert SETTINGS_SCHEMA(base)["rain_warning_entity"] is None
     warn = SETTINGS_SCHEMA({**base, "rain_warning_entity": "binary_sensor.regenwarnung"})
     assert warn["rain_warning_entity"] == "binary_sensor.regenwarnung"
+
+
+def test_module_data_on_furniture_and_areas() -> None:
+    """A module keeps its own data on an item of the plan, by its id; anything else is refused."""
+    item = {"id": "f1", "type": "radiator", "x": 0, "z": 0, "rotation": 0, "w": 1, "d": 0.1, "h": 0.6, "variant": None}
+    assert "mods" not in FURNITURE_SCHEMA(item)
+    data = {"mastershort.example": {"source": "ground", "links": {"supply": "sensor.flow"}}}
+    assert FURNITURE_SCHEMA({**item, "mods": data})["mods"] == data
+    with pytest.raises(vol.Invalid):
+        FURNITURE_SCHEMA({**item, "mods": {"mastershort.example": 3}})
+    lawn = {"id": "a1", "type": "lawn", "points": [[0, 0], [4, 0], [4, 4]]}
+    mods = {"mastershort.example": {"collector": "loop"}}
+    assert OUTDOOR_SCHEMA({**lawn, "mods": mods})["mods"] == mods

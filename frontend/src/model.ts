@@ -226,6 +226,8 @@ export interface Furniture {
   bin_source?: EntityRef;
   /** Haushalt Pro: own words that find this bin's entries in the calendar (comma separated; null = by its kind). */
   bin_match?: string | null;
+  /** Haushalt Pro: an entity that is on while the bin is out (input_boolean, switch, binary_sensor; null = none). */
+  bin_out?: EntityRef;
   /** Haushalt Pro, mailbox: the sensor of the door it is emptied through (post counts until it opens). */
   mailbox_door?: EntityRef;
   /** Haushalt Pro, plant: a plant.* entity or a soil moisture sensor; thirsty below `moisture_min`. */
@@ -240,6 +242,9 @@ export interface Furniture {
   service?: EntityRef;
   /** Haushalt Pro: the number (percent or days left) at or below which the service is due (null = 10). */
   service_min?: number | null;
+  /** Haushalt Pro: a second service (a robot vacuum's dock), like `service` with its own threshold `service2_min`. */
+  service2?: EntityRef;
+  service2_min?: number | null;
   /** Haushalt Pro, fridge: minutes a door may stand open before it warns (null = 2). */
   door_alarm?: number | null;
   /** An own symbol for the marker: a Material Design icon name without "mdi:" (null = by kind). */
@@ -308,12 +313,17 @@ export interface Furniture {
   car?: CarLinks | null;
   /** Parking spots: size factor of the vehicle (1 = the pack item's size). */
   scale?: number;
+  /** What a module keeps for this item (its settings, the entities it found), by the module's id. */
+  mods?: ModuleData | null;
   /** Parking spots: a sensor naming the kind of vehicle, and which vehicle each state means. */
   type_entity?: string | null;
   types?: { state: string; vehicle: string }[];
 }
 
 export type LampMount = "ceiling" | "floor" | "table" | "wall";
+
+/** A module's own data on an item of the plan, by the module's id ("mastershort.window_watch": {…}); plain JSON. */
+export type ModuleData = Record<string, Record<string, unknown>>;
 
 /** How a device's marker shows in 3D (null = automatic by the marker mode). */
 export const MARKER_SHOWS = ["always", "no_power", "never"] as const;
@@ -753,10 +763,15 @@ export interface BuildingSettings {
   sun_patches?: boolean;
   /** The ground around the house: its height and the earth around cellars. */
   terrain?: Terrain | null;
-  /** Haushalt Pro: from which hour the day before a bin glows (null = 14) and until which hour on the day (null = 12). */
-  household?: { bin_from?: number | null; bin_until?: number | null; notes?: EntityRef } | null;
+  /**
+   * Haushalt Pro: from which hour the day before a bin glows (null = 14) and until which hour on the day (null = 12);
+   * only the bins of the next pickup wear a tag (`bin_next_only`), tags only from `bin_days` days before (null = always).
+   */
+  household?: { bin_from?: number | null; bin_until?: number | null; notes?: EntityRef; bin_next_only?: boolean | null; bin_days?: number | null } | null;
   /** The floor the editor opens with (null: the first of the list) (D418). */
   editor_floor?: string | null;
+  /** Located people in 3D: a neon figure (null = default), a pin, or not shown. */
+  person_look?: "figure" | "pin" | "off" | null;
   /** Fun pack "Halloween": the ghost that floats through the house now and then (on unless switched off). */
   halloween?: { ghost?: boolean } | null;
   /** Plan lock: rooms, walls, doors, windows and outdoor areas cannot be moved by accident. */
@@ -953,6 +968,8 @@ export interface OutdoorArea {
   rim?: number | null;
   /** Pool Pro: the pool's entities (water temperature, heat pump, filter pump, light, pH, chlorine, cover). */
   pool?: PoolLinks | null;
+  /** What a module keeps for this area, by the module's id. */
+  mods?: ModuleData | null;
   /** Outdoor areas like rooms (#100): a name and a Home Assistant area – a tap opens it with its devices like a room. */
   name?: string | null;
   area_id?: string | null;
