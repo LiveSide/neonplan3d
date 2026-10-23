@@ -344,6 +344,12 @@ nichts prüfen.
 Die Farbe wird in `setTerrain()` (model.ts) gemerkt, also an denselben Stellen wie der Boden gesetzt; `radiator()` in
 `viewer/furniture.ts` liest sie über `radiatorColor()`.
 
+## Mond an seiner echten Position (2.0.0.4)
+
+Nachts stand die Mondscheibe bisher gegenüber der Sonne (Azimut + 180°, Höhe = Sonnentiefe, mindestens 10°).
+Jetzt rechnet `frontend/src/moon.ts` (Näherung nach SunCalc, etwa 1° genau) Azimut und Höhe aus Breite und Länge
+von Home Assistant (`hass.config`); unter dem Horizont gibt es keine Scheibe. Ohne Standort bleibt das alte Verhalten.
+
 ## Updates des Originals einpflegen
 
 Der Fork hat zwei Remotes: `origin` (dieses Repo) und `upstream` (das Original).

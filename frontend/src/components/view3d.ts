@@ -1,5 +1,6 @@
 // Lit wrapper around the lazily loaded 3D viewer.
 
+import { moonPosition } from "../moon.ts";
 import { css, html, LitElement, nothing, svg, type PropertyValues } from "lit";
 import { carState, type CarState, heatSensorOn, roomClimateValue,
   appColor,
@@ -1470,7 +1471,10 @@ export class Fp3dView3d extends LitElement {
     // daylight: sun through the windows and a lighter sky
     const sun = hass.states["sun.sun"]?.attributes;
     const elevation = typeof sun?.elevation === "number" ? sun.elevation : null;
-    v.setSun(elevation !== null && typeof sun?.azimuth === "number" ? { elevation, azimuth: sun.azimuth } : null);
+    // FORK d14tk: the moon's own position from the home location (see FORK.md)
+    const home = hass.config;
+    const moon = typeof home?.latitude === "number" && typeof home?.longitude === "number" ? moonPosition(new Date(), home.latitude, home.longitude) : null;
+    v.setSun(elevation !== null && typeof sun?.azimuth === "number" ? { elevation, azimuth: sun.azimuth, moon } : null);
     // the automatic look follows the sun (setTheme ignores a look it already shows)
     if (this.theme === "auto") v.setTheme(this.effectiveTheme());
     // the weather outside: clouds darken the sky, rain, snow and fog fall over the plot

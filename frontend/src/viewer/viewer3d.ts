@@ -287,6 +287,8 @@ export interface ScreenState {
 export interface SunState {
   elevation: number;
   azimuth: number;
+  /** FORK d14tk: where the moon really stands (degrees, like the sun); without it the night disc sits opposite the sun. */
+  moon?: { elevation: number; azimuth: number } | null;
 }
 
 /** Weather outside (each 0…1) and the sky colour behind the house (for fog). */
@@ -1557,8 +1559,14 @@ export class FloorplanViewer {
       return;
     }
     const north = (this.building?.settings.north ?? 0) * DEG;
-    const az = (night ? sun.azimuth + 180 : sun.azimuth) * DEG;
-    const el = Math.max(10, Math.abs(sun.elevation)) * DEG;
+    // FORK d14tk: the moon at its own place (see FORK.md); below the horizon there is no disc
+    const moon = night ? sun.moon : null;
+    if (moon && moon.elevation < 0) {
+      this.skyDisc.visible = false;
+      return;
+    }
+    const az = (moon ? moon.azimuth : night ? sun.azimuth + 180 : sun.azimuth) * DEG;
+    const el = (moon ? Math.max(3, moon.elevation) : Math.max(10, Math.abs(sun.elevation))) * DEG;
     const b = this.weatherBox;
     const center = new Vector3((b.x0 + b.x1) / 2, b.y0, (b.z0 + b.z1) / 2);
     const r = Math.min(300, Math.max(80, this.houseRadius * 5));
