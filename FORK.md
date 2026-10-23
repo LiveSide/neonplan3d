@@ -401,6 +401,25 @@ Dann ist dieser Fork überflüssig. Den Block in `packs.py` entfernen, zurück a
 das Original wechseln, die eigenen Packs mit dem Studio-Schlüssel neu
 unterschreiben lassen.
 
+## Automatisch dem Original folgen
+
+Der Workflow `.github/workflows/fork-sync.yml` läuft alle drei Stunden (und von Hand unter
+*Actions → Fork sync → Run workflow*). `tools/fork_sync.py` holt die Tags des Originals und führt
+dessen neuestes Release (`vX.Y.Z`) in `main` zusammen:
+
+- Gebaute Dateien (Bundles, `site/import`) und die Workflows des Originals kommen bei einem Konflikt
+  vom Original und werden neu gebaut; die Sprachdateien behalten die zusätzlichen Schlüssel des Forks.
+- Version `X.Y.Z.1`, die eigenen Manifest-Felder (codeowners, documentation, issue_tracker), dann
+  `npm ci`, Tests, Typprüfung und Build.
+- Commit, Tag `vX.Y.Z.1`, Push und ein Release mit `neonplan3d.zip`. HACS zeigt das als Update.
+
+Ein Konflikt in Quelltext oder ein roter Build bricht ab, ohne etwas zu veröffentlichen, und öffnet ein
+Issue im Fork. HACS bietet dann einfach kein Update an und bleibt beim letzten guten Fork-Release.
+Lokal testen: `python tools/fork_sync.py --dry-run` oder `--local` (zusammenführen ohne Build und Push).
+
+Die Workflows des Originals (Discord, Pages, Shop-Check, Release) sind im Fork unter *Actions*
+deaktiviert; sie würden hier nur scheitern.
+
 ## Version und Release
 
 HACS installiert hier aus dem Release-Asset (`hacs.json`, `zip_release`).

@@ -6,7 +6,7 @@
     "recorder"
   ],
   "codeowners": [
-    "@Mastershort"
+    "@LiveSide"
   ],
   "config_flow": true,
   "dependencies": [
@@ -15,10 +15,10 @@
     "panel_custom",
     "websocket_api"
   ],
-  "documentation": "https://mastershort.de/en/neonplan3d/manual/",
+  "documentation": "https://github.com/LiveSide/neonplan3d#readme",
   "integration_type": "service",
   "iot_class": "calculated",
-  "issue_tracker": "https://github.com/mastershort/neonplan3d/issues",
+  "issue_tracker": "https://github.com/LiveSide/neonplan3d/issues",
   "requirements": [],
   "single_config_entry": true,
   "version": "2.0.0.1"
