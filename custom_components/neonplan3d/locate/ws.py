@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 import voluptuous as vol
 
+from .answers import async_locate
 from .service import DATA_LOCATE, SIGNAL_LOCATE, LocateService, quality
 
 _ID = vol.All(str, vol.Length(min=1, max=64))
@@ -34,6 +35,7 @@ def ws_locate_config(hass: HomeAssistant, connection: websocket_api.ActiveConnec
         vol.Required("type"): "neonplan3d/locate/configure",
         vol.Optional("enabled"): bool,
         vol.Optional("admins_only"): bool,
+        vol.Optional("fly"): bool,
         vol.Optional("devices"): [dict],
         vol.Optional("scanner_rooms"): {str: vol.Any(None, str)},
         vol.Optional("rooms"): [dict],
@@ -131,7 +133,35 @@ def ws_locate_subscribe(hass: HomeAssistant, connection: websocket_api.ActiveCon
     forward()
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "neonplan3d/locate/ask",
+        vol.Required("text"): vol.All(str, vol.Length(max=300)),
+        vol.Optional("language"): vol.All(str, vol.Length(max=10)),
+    }
+)
+@websocket_api.async_response
+async def ws_locate_ask(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """A sentence said at a NeonPlan view: the locating answer ("Wer ist zu Hause?") with the rooms to fly to, or
+    null when it is no locating question (the view's own answers come next). The same answer Assist gets."""
+    service: LocateService | None = hass.data.get(DATA_LOCATE)
+    language = (msg.get("language") or hass.config.language or "en").split("-")[0]
+    located = await async_locate(hass, service, msg["text"], language, connection.user.id)
+    if located is None or service is None:
+        connection.send_result(msg["id"], None)
+        return
+    connection.send_result(
+        msg["id"],
+        {
+            "text": located.text,
+            "rooms": located.rooms if service.fly else [],
+            "admins_only": located.persons and service.admins_only,
+        },
+    )
+
+
 COMMANDS = (
+    ws_locate_ask,
     ws_locate_config,
     ws_locate_configure,
     ws_locate_nearby,

@@ -2071,6 +2071,7 @@
   "persons_pin": "Merkki",
   "persons_off": "pois",
   "locate": "Paikannus",
+  "diag_menu": "Auta parantamaan",
   "frame_pos": "Karmi seinässä",
   "frame_pos_hint": "Missä ikkunan karmi on seinän paksuudessa: keskellä, ulkopinnan tasossa (esim. ikkuna eristekerroksessa, syvä smyygi sisällä) tai sisäpinnan tasossa.",
   "frame_pos_middle": "keskellä",

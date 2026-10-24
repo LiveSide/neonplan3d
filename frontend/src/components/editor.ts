@@ -206,7 +206,7 @@ const EDIT_DRAGS = new Set(["vertex", "room", "device", "opening", "furniture", 
 const HISTORY = 100;
 
 /** Topics of the ⚙ settings menu (everything that belongs to the whole plan). */
-type SettingsTopic = "house" | "weather" | "director" | "voice" | "locate" | "favorites" | "backdrop" | "terrain" | "backup" | "modules";
+type SettingsTopic = "house" | "weather" | "director" | "voice" | "locate" | "favorites" | "backdrop" | "terrain" | "backup" | "modules" | "diagnostics";
 
 /** Wall view side bar: what stands or hangs at a wall, by kind. */
 const WALL_CATS: Record<string, string[]> = {
@@ -5495,6 +5495,7 @@ export class Fp3dEditor extends LitElement {
       { key: "terrain", icon: "⛰", label: this.t("terrain"), admin: true },
       { key: "backup", icon: "💾", label: this.t("backup"), admin: true },
       { key: "modules", icon: "🧩", label: this.t("settings_modules"), admin: true },
+      ...(released("diagnostics") ? [{ key: "diagnostics" as const, icon: "🛟", label: this.t("diag_menu"), admin: true }] : []),
     ];
     const topics = all.filter((t) => admin || !t.admin);
     const toggle = () => {
@@ -5521,6 +5522,7 @@ export class Fp3dEditor extends LitElement {
                         return;
                       }
                       this._settingsDialog = t.key;
+                      if (t.key === "diagnostics") void this.loadDiagnostics();
                       // the modules' sentences for the voice list: loaded here as well (the editor is its own bundle), once per opening
                       if (t.key === "voice" && this.hass) void syncModules(this.hass, this.packs ?? []).then(() => this.requestUpdate());
                     }}
@@ -5550,6 +5552,7 @@ export class Fp3dEditor extends LitElement {
       terrain: this.t("terrain"),
       backup: this.t("backup"),
       modules: this.t("settings_modules"),
+      diagnostics: this.t("diag_title"),
     };
     const body =
       topic === "house"
@@ -5568,7 +5571,9 @@ export class Fp3dEditor extends LitElement {
                     ? this.renderTerrain()
                     : topic === "backup"
                       ? this.renderBackup()
-                      : this.renderModuleSettings();
+                      : topic === "diagnostics"
+                        ? this.renderDiagnostics(true)
+                        : this.renderModuleSettings();
     return html`<div class="fp3d-dialog-veil" @click=${(e: Event) => e.target === e.currentTarget && close()}>
       <div class="fp3d-dialog" role="dialog" aria-label=${titles[topic]} tabindex="-1" @keydown=${(e: KeyboardEvent) => e.key === "Escape" && close()}>
         <div class="fp3d-dialog-head">
@@ -10336,7 +10341,6 @@ export class Fp3dEditor extends LitElement {
       ${this.renderHelpLinks()}
       ${admin && SHOW_PRESENCE ? this.renderPresenceSettings() : nothing}
       ${floor && admin ? this.renderBackgroundForm(floor) : nothing}
-      ${admin && released("diagnostics") ? this.renderDiagnostics() : nothing}
     `;
   }
 
@@ -12787,11 +12791,13 @@ export class Fp3dEditor extends LitElement {
     this._diagBusy = false;
   }
 
-  private renderDiagnostics() {
+  /** `open`: shown in its own settings dialog (open from the start). */
+  private renderDiagnostics(open = false) {
     const d = this._diag;
     const on = d !== null && d !== "error" && d.enabled;
     return html`<details
       class="fp3d-section"
+      ?open=${open}
       @toggle=${(e: Event) => {
         if ((e.target as HTMLDetailsElement).open) void this.loadDiagnostics();
       }}

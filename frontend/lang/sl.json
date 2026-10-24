@@ -2071,6 +2071,7 @@
   "persons_pin": "Žebljiček",
   "persons_off": "izklop",
   "locate": "Lociranje",
+  "diag_menu": "Pomagaj",
   "frame_pos": "Okvir v steni",
   "frame_pos_hint": "Kje je okenski okvir v debelini stene: na sredini, poravnan z zunanjo stranjo (npr. okno v izolaciji, globoka špaleta znotraj) ali poravnan z notranjo stranjo.",
   "frame_pos_middle": "sredina",

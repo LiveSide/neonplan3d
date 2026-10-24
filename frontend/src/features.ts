@@ -22,7 +22,7 @@ export type Gated = Feature | FreeFeature;
  * unlocked (the tester has the pack) or the lab switch is on (localStorage "neonplan3d.lab" = "1").
  * A release takes a feature off this list.
  */
-export const UNRELEASED: readonly Gated[] = ["diagnostics", "pool"];
+export const UNRELEASED: readonly Gated[] = ["pool"];
 
 export function labOn(): boolean {
   try {

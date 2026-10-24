@@ -133,6 +133,8 @@ def main() -> int:
         git("merge", "--abort", check=False)
         report(f"Original {tag}: Merge fehlgeschlagen", f"```\n{merged.stdout}\n{merged.stderr}\n```")
         return 1
+    # the fork releases a zip (fork_release.py): its hacs.json stays, even when the original changes its own
+    git("checkout", "HEAD", "--", "hacs.json")
     if left:
         git("merge", "--abort", check=False)
         files = "\n".join(f"- `{p}`" for p in left)

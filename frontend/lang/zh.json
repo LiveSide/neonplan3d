@@ -2071,6 +2071,7 @@
   "persons_pin": "图钉",
   "persons_off": "关",
   "locate": "定位",
+  "diag_menu": "帮助改进",
   "frame_pos": "墙中窗框位置",
   "frame_pos_hint": "窗框在墙厚中的位置：居中、与外墙面齐平（例如窗位于保温层，室内窗洞较深）或与内墙面齐平。",
   "frame_pos_middle": "居中",

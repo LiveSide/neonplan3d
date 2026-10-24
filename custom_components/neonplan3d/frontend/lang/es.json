@@ -2071,6 +2071,7 @@
   "persons_pin": "Pin",
   "persons_off": "no",
   "locate": "Localización",
+  "diag_menu": "Ayuda a mejorar",
   "frame_pos": "Marco en el muro",
   "frame_pos_hint": "Dónde se sitúa el marco de la ventana en el grosor del muro: en el centro, enrasado con la cara exterior (p. ej. ventana en el aislamiento, mocheta profunda dentro) o enrasado con la cara interior.",
   "frame_pos_middle": "centro",

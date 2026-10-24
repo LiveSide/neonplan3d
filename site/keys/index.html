@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>NeonPlan Key Helper</title>
-    <meta name="description" content="Read the Bluetooth key (IRK) of an iPhone, Apple Watch or Android phone with an ESP32 – for NeonPlan 3D's locating. Flashed right from the browser, no Mac needed." />
+    <meta name="description" content="Read the Bluetooth key (IRK) of an iPhone or Apple Watch with an ESP32 – for NeonPlan 3D's locating. Flashed right from the browser, no Mac needed." />
     <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
     <style>
       :root { color-scheme: dark; --ink: #e6f7ff; --muted: #9fb8c8; --neon: #37e0ff; --card: #0f1a2e; --warn: #ffb86b; }
@@ -49,7 +49,7 @@
           <b>Brauche ich das?</b>
           <ul>
             <li><b>iPhone, Apple Watch:</b> ja – außer du hast den Schlüssel schon; dann trägst du ihn in NeonPlan unter „Eigenen Schlüssel einfügen“ ein.</li>
-            <li><b>Android-Handy:</b> nein. Schalte in der Home-Assistant-App <b>Einstellungen → Companion-App → Sensoren verwalten → BLE-Sender</b> ein – NeonPlan findet das Handy dann unter „Gerät in der Nähe suchen“.</li>
+            <li><b>Android-Handy oder -Tablet:</b> nein – und Koppeln hilft hier auch nicht, Android sendet den Schlüssel im Hintergrund nicht. Schalte in der Home-Assistant-App <b>Einstellungen → Companion-App → Sensoren verwalten → BLE-Sender</b> ein, mit Sendeleistung <b>Hoch</b> und Sendemodus <b>Niedrige Latenz</b>. NeonPlan findet das Handy dann von selbst.</li>
             <li><b>Schlüsselanhänger</b> (Nut, Tile, iBeacon): nein. AirTags gehen leider gar nicht.</li>
           </ul>
         </div>
@@ -82,7 +82,7 @@
         <div class="step"><div class="num">4</div><div>
           <b>In NeonPlan öffnen.</b> Editor → <b>⚙ Einstellungen → 📡 Ortung</b> → <b>2 · Geräte</b>. Unter <b>🔑 Schlüssel-Helfer</b> steht jetzt „Schlüssel-Helfer gefunden: NeonPlan Key …“.
           <ul>
-            <li>Wähle <b>⌚ Für Apple Watch</b> oder <b>📱 Für iPhone / Android</b> (der Helfer startet dabei kurz neu).</li>
+            <li>Wähle <b>⌚ Für Apple Watch</b> oder <b>📱 Für iPhone</b> (der Helfer startet dabei kurz neu).</li>
             <li>Trag einen <b>Namen</b> ein (z. B. „Torstens Watch“) und wähle die <b>Person</b>.</li>
           </ul>
         </div></div>
@@ -157,7 +157,7 @@
           <b>Do I need it?</b>
           <ul>
             <li><b>iPhone, Apple Watch:</b> yes – unless you have the key already; then enter it in NeonPlan under "Paste a key you already have".</li>
-            <li><b>Android phone:</b> no. Switch on <b>Settings → Companion app → Manage sensors → BLE Transmitter</b> in the Home Assistant app – NeonPlan then finds the phone under "Find a device nearby".</li>
+            <li><b>Android phone or tablet:</b> no – and pairing does not help here, Android does not send the key in the background. Switch on <b>Settings → Companion app → Manage sensors → BLE Transmitter</b> in the Home Assistant app, with transmit power <b>High</b> and advertise mode <b>Low latency</b>. NeonPlan then finds the phone by itself.</li>
             <li><b>Key tags</b> (Nut, Tile, iBeacon): no. AirTags do not work at all, sadly.</li>
           </ul>
         </div>
@@ -190,7 +190,7 @@
         <div class="step"><div class="num">4</div><div>
           <b>Open it in NeonPlan.</b> Editor → <b>⚙ Settings → 📡 Locating</b> → <b>2 · Devices</b>. Under <b>🔑 Key helper</b> it now says "Key helper found: NeonPlan Key …".
           <ul>
-            <li>Pick <b>⌚ For an Apple Watch</b> or <b>📱 For an iPhone / Android</b> (the helper restarts briefly).</li>
+            <li>Pick <b>⌚ For an Apple Watch</b> or <b>📱 For an iPhone</b> (the helper restarts briefly).</li>
             <li>Enter a <b>name</b> (e.g. "Torsten's watch") and pick the <b>person</b>.</li>
           </ul>
         </div></div>
@@ -264,7 +264,7 @@
         <span data-lang="en">by Derek Seaman (MIT licence), based on KyleTeal/irk-capture and ESPresense – thank you! Part of</span>
         <span data-lang="de">von Derek Seaman auf (MIT-Lizenz), das auf KyleTeal/irk-capture und ESPresense beruht – danke! Teil von</span>
         <a href="https://github.com/Mastershort/neonplan3d">NeonPlan 3D</a> ·
-        <a href="https://mastershort.de/neonplan3d/anleitung/?lang=de#511-ortung-neu"><span data-lang="de">Anleitung</span><span data-lang="en">Manual</span></a>
+        <a href="https://mastershort.de/neonplan3d/anleitung/3d-ansicht/#511-ortung-neu"><span data-lang="de">Anleitung</span><span data-lang="en">Manual</span></a>
       </footer>
     </main>
     <script>

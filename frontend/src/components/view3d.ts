@@ -4207,6 +4207,11 @@ export class Fp3dView3d extends LitElement {
     // a sentence for one screen: only the view with that name (a view without a name stays out of it)
     const mine = (this.screen ?? "").trim().toLowerCase();
     if (ask.screen && ask.screen.trim().toLowerCase() !== mine) return;
+    // a locating answer: fly into its room, or tour the rooms of everyone at home (nobody waits for an answer)
+    if (ask.show_rooms) {
+      if (!ask.admins_only || hass.user?.is_admin) void this.showRooms(b, ask.show_rooms);
+      return;
+    }
     let answer: string | null = null;
     try {
       const v = await loadVoice();
@@ -4294,6 +4299,16 @@ export class Fp3dView3d extends LitElement {
           setTimeout(() => this.fire("room-tap", { floorId: place.floorId, roomId: place.roomId }), 60);
         }
         return translate(hass, "voice_showing", { name });
+      }
+      // who and what is where: locating answers first (the same answer Assist gets) and flies there
+      const located = await hass
+        .callWS<{ text: string; rooms: string[]; admins_only: boolean } | null>({ type: "neonplan3d/locate/ask", text, language: hass.language })
+        .catch(() => null);
+      if (located) {
+        say("done", `“${text}” – ${located.text}`);
+        if (located.rooms.length && (!located.admins_only || hass.user?.is_admin)) void this.showRooms(b, located.rooms);
+        if (speak) void v.speak(hass, located.text, voicePipeline());
+        return located.text;
       }
       // a module of the house answers (installed from the shop): what to say and what to show
       const host = this.moduleHost(hass, b, v.SYNONYMS, (s) => v.showTarget(s, b, devices, (r) => (r.area_id ? hass.areas?.[r.area_id]?.name : null)));
@@ -4441,6 +4456,38 @@ export class Fp3dView3d extends LitElement {
    * A tour (a module's answer): the view flies to each stop – an open window, a running appliance – and stays
    * there a moment before the next. A tap on the house, or the next spoken sentence, ends it.
    */
+  /** Flies into the given plan rooms one after another (one room: just there); a touch stops the tour. */
+  private async showRooms(b: Building, roomIds: string[]): Promise<void> {
+    const stops = roomIds
+      .map((roomId) => ({ roomId, floorId: b.floors.find((f) => f.rooms.some((r) => r.id === roomId))?.id }))
+      .filter((s): s is { roomId: string; floorId: string } => !!s.floorId)
+      .slice(0, 8);
+    if (!stops.length) return;
+    const token = ++this.tourToken;
+    clearTimeout(this.tourTimer);
+    this.directing.touch(Date.now());
+    const stage = this.renderRoot.querySelector(".fp3d-stage");
+    const stop = () => {
+      this.tourToken++;
+      clearTimeout(this.tourTimer);
+    };
+    stage?.addEventListener("pointerdown", stop, { once: true });
+    const wait = (ms: number) => new Promise<void>((r) => (this.tourTimer = setTimeout(r, ms)));
+    for (const [i, s] of stops.entries()) {
+      if (token !== this.tourToken) break;
+      if (this.floorId !== s.floorId) {
+        this.fire("floor-tap", { floorId: s.floorId });
+        await wait(150);
+      }
+      if (token !== this.tourToken) break;
+      // a tap on the open room would close it
+      if (this.roomId !== s.roomId) this.fire("room-tap", { floorId: s.floorId, roomId: s.roomId });
+      this.directing.touch(Date.now());
+      if (i < stops.length - 1) await wait(4000);
+    }
+    stage?.removeEventListener("pointerdown", stop);
+  }
+
   private async runTour(stops: NonNullable<VoiceAnswer["tour"]>, b: Building, items: Map<string, SearchItem>, speak: ((text: string) => Promise<boolean>) | null): Promise<void> {
     const token = ++this.tourToken;
     clearTimeout(this.tourTimer);

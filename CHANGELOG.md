@@ -4,6 +4,42 @@ All notable changes to NeonPlan 3D. The full notes in German and English are on 
 [releases page](https://github.com/Mastershort/neonplan3d/releases). Ideas and votes:
 [Discussions → Ideas](https://github.com/Mastershort/neonplan3d/discussions/categories/ideas).
 
+## 2.0.2
+
+### Live Presence on Android
+
+- **Android phones are found by themselves:** the assistant lists every phone whose Home Assistant app has the BLE Transmitter switched on, with its name and person – no need to hold it next to a receiver (#726). Thanks to @frops83!
+- **Hints for weak settings:** out of the box the app sends at the lowest power in power-saving mode, so the receivers barely hear it. The assistant now says when to set the transmit power to "High", the advertise mode to "Low latency", or to switch the transmitter on.
+- **"⚠ not heard"** next to a device that no receiver hears, in the device list and while learning – such as an Android tablet paired through the key helper, which does not send that key in the background (#727). The key helper button is now "For an iPhone", with a note to use the app's transmitter for Android. Thanks to @rolandarends!
+- Weak beacons now show among the devices nearby (from -90 dBm), each only once although its address changes.
+
+### Live Presence
+
+- **Watch and phone disagree about the room:** when both are heard at the same time in different rooms (a shared wall fools the watch), the phone now wins when it is clearly surer – and no extra phone symbol appears next to the person. A phone left lying while you walked on with the watch still shows where it lies, and a watch taken off (lying in one room for ten minutes while the phone walked on) no longer holds the person there – the phone decides, the watch stands as a symbol. The 3D figure and the spoken answers follow the same rule.
+- **Voice questions fly the view there:** "Where is Torsten?" flies the open NeonPlan views into his room, "Who is home?" tours every room with someone in it. On by default, switch in the locating assistant under Live; while people are shown to admins only, only admins' views fly to them.
+- **"Where is Anna?" with an AI agent:** the Assist sentences now carry the names locating knows (people, first names, devices, "Annas iPhone"), so Assist answers them locally even when an AI agent such as Gemini handles everything else – before, the agent only said "Anna is at home". "Who is home?" works the same way.
+- **The NeonPlan panel's own microphone asks locating first:** "Who is home?" there gave the rooms-free answer of the voice answers module; now it is the locating answer with the room tour.
+- **Old Assist sentence files are updated again:** a file an older NeonPlan wrote with fewer sentences was taken for the user's own and never replaced, so newer questions like "Who is home?" went unanswered.
+
+### Fixed
+
+- **The 3D view no longer jumps after a freeze:** turning or zooming while the view was still busy just after opening was replayed seconds later, and the view landed somewhere else in the house. Moves that waited out such a freeze are now dropped (#712). Thanks to @frops83!
+
+## 2.0.1
+
+### New
+
+- **Help make NeonPlan better (opt-in, off by default):** under ⚙ Settings → 🛟 Help improve, anonymous usage counts and scrubbed error messages can be switched on – at most one report a day. No names, entities, areas, floor plan shapes, IP addresses or licence keys, nothing from locating; "View report" shows the exact next report, "Delete data" removes what was sent.
+
+### Live Presence
+
+- **Spoken names are matched tolerantly:** "Where is Thorsten's Apple Watch?" finds "Torsten Apple Watch"; "my iPhone" is the iPhone of the person who asks; a first name alone means the person.
+- The manual link of the assistant opens the locating chapter directly.
+
+### Installing
+
+- **HACS can install and update NeonPlan again.** Since 23 October, GitHub's release downloads carry a header that HACS cannot read, so HACS failed on every release zip, for all integrations (hacs/integration#5643). NeonPlan now lets HACS fetch its files one by one, which is not affected. The Home Assistant log may show one "Failed to download zipball" error during the update; it is harmless.
+
 ## 2.0.0
 
 ### Live Presence – who and what is where (new, free)

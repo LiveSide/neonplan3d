@@ -28,6 +28,8 @@ interface Device {
 interface Config {
   enabled: boolean;
   admins_only: boolean;
+  /** spoken questions fly the open views into the room (default on) */
+  fly?: boolean;
   devices: Device[];
   scanner_rooms: Record<string, string>;
   scanners: Scanner[];
@@ -83,11 +85,10 @@ const DE = {
   key_value: "Schlüssel (IRK, 32 Zeichen)",
   key_bad: "Das ist kein gültiger Schlüssel (32 Hex-Zeichen oder Base64).",
   helper_title: "🔑 Schlüssel-Helfer",
-  helper_none: "Noch kein Schlüssel? Mit einem ESP32 (ca. 5 €) liest NeonPlan ihn in drei Minuten aus – iPhone, Apple Watch und Android, ohne Mac.",
   helper_build: "Schlüssel-Helfer einrichten",
   helper_found: "Schlüssel-Helfer gefunden: {name}",
   helper_watch: "Für Apple Watch",
-  helper_phone: "Für iPhone / Android",
+  helper_phone: "Für iPhone",
   helper_watch_steps: "Auf der Uhr: Einstellungen → Bluetooth → unter „Gesundheitsgeräte“ auf „NeonPlan Key“ tippen und koppeln.",
   helper_phone_steps: "Am Handy: Einstellungen → Bluetooth → „NeonPlan Key“ (erscheint als Tastatur) koppeln.",
   helper_key: "Gelesener Schlüssel:",
@@ -130,6 +131,16 @@ const DE = {
   not_heard: "nicht gehört",
   next: "Weiter",
   need_device: "Erst ein Gerät hinzufügen.",
+  app_title: "Android mit der Home-Assistant-App",
+  app_none: "Android-Handy? In der Home-Assistant-App: Einstellungen → Companion-App → Sensoren verwalten → „BLE-Sender“ einschalten. Dann erscheint es hier von selbst.",
+  app_off: "Sender ist aus – in der App einschalten",
+  app_power: "Sendeleistung zu niedrig – in der App auf „Hoch“ (High) stellen",
+  app_mode: "Sendemodus in der App auf „Niedrige Latenz“ (Low latency) stellen",
+  helper_android: "Android-Handys und -Tablets hier nicht koppeln: Sie senden diesen Schlüssel im Hintergrund nicht. Für Android den BLE-Sender der Home-Assistant-App nehmen (unten).",
+  unheard: "⚠ nicht gehört",
+  unheard_hint: "Gerade hört kein Empfänger dieses Gerät. Ist es an und sendet es? Android: BLE-Sender der Home-Assistant-App.",
+  fly: "Bei „Wo ist …?“ und „Wer ist zu Hause?“ in die Räume fliegen",
+  fly_hint: "Die offenen NeonPlan-Ansichten fliegen in den Raum der Antwort, bei „Wer ist zu Hause?“ nacheinander in alle Räume. Antippen stoppt. Personen nicht, wenn sie nur Admins gezeigt werden.",
 };
 const EN: typeof DE = {
   title: "Set up locating",
@@ -163,11 +174,10 @@ const EN: typeof DE = {
   key_value: "Key (IRK, 32 characters)",
   key_bad: "That is not a valid key (32 hex characters or Base64).",
   helper_title: "🔑 Key helper",
-  helper_none: "No key yet? With an ESP32 (about 5 €) NeonPlan reads it in three minutes – iPhone, Apple Watch and Android, no Mac needed.",
   helper_build: "Set up the key helper",
   helper_found: "Key helper found: {name}",
   helper_watch: "For an Apple Watch",
-  helper_phone: "For an iPhone / Android",
+  helper_phone: "For an iPhone",
   helper_watch_steps: "On the watch: Settings → Bluetooth → under \"Health devices\" tap \"NeonPlan Key\" and pair.",
   helper_phone_steps: "On the phone: Settings → Bluetooth → pair \"NeonPlan Key\" (it shows as a keyboard).",
   helper_key: "Key read:",
@@ -210,6 +220,16 @@ const EN: typeof DE = {
   not_heard: "not heard",
   next: "Next",
   need_device: "Add a device first.",
+  app_title: "Android with the Home Assistant app",
+  app_none: "Android phone? In the Home Assistant app: Settings → Companion app → Manage sensors → turn on “BLE Transmitter”. It then shows up here by itself.",
+  app_off: "Transmitter is off – turn it on in the app",
+  app_power: "Transmit power too low – set it to “High” in the app",
+  app_mode: "Set the advertise mode to “Low latency” in the app",
+  helper_android: "Don't pair Android phones or tablets here: they don't send this key in the background. For Android use the Home Assistant app's BLE Transmitter (below).",
+  unheard: "⚠ not heard",
+  unheard_hint: "No receiver hears this device right now. Is it on and sending? Android: the Home Assistant app's BLE Transmitter.",
+  fly: "Fly into the rooms on “Where is …?” and “Who is home?”",
+  fly_hint: "The open NeonPlan views fly into the room of the answer, on “Who is home?” into every room in turn. A tap stops it. Not for people while they are shown to admins only.",
 };
 
 const CS: typeof DE = {
@@ -244,11 +264,10 @@ const CS: typeof DE = {
   key_value: "Klíč (IRK, 32 znaků)",
   key_bad: "Toto není platný klíč (32 hex znaků nebo Base64).",
   helper_title: "🔑 Pomocník pro klíč",
-  helper_none: "Ještě nemáte klíč? S ESP32 (asi 5 €) ho NeonPlan přečte za tři minuty – iPhone, Apple Watch i Android, bez počítače Mac.",
   helper_build: "Nastavit pomocníka pro klíč",
   helper_found: "Pomocník pro klíč nalezen: {name}",
   helper_watch: "Pro Apple Watch",
-  helper_phone: "Pro iPhone / Android",
+  helper_phone: "Pro iPhone",
   helper_watch_steps: "Na hodinkách: Nastavení → Bluetooth → v části „Zdravotní zařízení“ klepněte na „NeonPlan Key“ a spárujte.",
   helper_phone_steps: "V telefonu: Nastavení → Bluetooth → spárujte „NeonPlan Key“ (zobrazí se jako klávesnice).",
   helper_key: "Přečtený klíč:",
@@ -291,6 +310,16 @@ const CS: typeof DE = {
   not_heard: "neslyšeno",
   next: "Další",
   need_device: "Nejdřív přidej zařízení.",
+  app_title: "Android s aplikací Home Assistant",
+  app_none: "Telefon s Androidem? V aplikaci Home Assistant: Nastavení → Companion app → Spravovat senzory → zapnout „BLE Transmitter“. Pak se tu objeví sám.",
+  app_off: "Vysílač je vypnutý – zapněte ho v aplikaci",
+  app_power: "Vysílací výkon je příliš nízký – v aplikaci nastavte „High“",
+  app_mode: "V aplikaci nastavte režim vysílání „Low latency“",
+  helper_android: "Telefony a tablety s Androidem zde nepárujte: tento klíč na pozadí nevysílají. Pro Android použijte BLE Transmitter aplikace Home Assistant (níže).",
+  unheard: "⚠ neslyšeno",
+  unheard_hint: "Žádný přijímač toto zařízení právě neslyší. Je zapnuté a vysílá? Android: BLE Transmitter aplikace Home Assistant.",
+  fly: "Při „Kde je …?“ a „Kdo je doma?“ přeletět do místností",
+  fly_hint: "Otevřená zobrazení NeonPlan přeletí do místnosti z odpovědi, u „Kdo je doma?“ postupně do všech. Klepnutí to zastaví. U osob ne, pokud se zobrazují jen správcům.",
 };
 const DA: typeof DE = {
   title: "Opsæt lokalisering",
@@ -324,11 +353,10 @@ const DA: typeof DE = {
   key_value: "Nøgle (IRK, 32 tegn)",
   key_bad: "Det er ikke en gyldig nøgle (32 hex-tegn eller Base64).",
   helper_title: "🔑 Nøglehjælper",
-  helper_none: "Ingen nøgle endnu? Med en ESP32 (ca. 5 €) læser NeonPlan den på tre minutter – iPhone, Apple Watch og Android, uden Mac.",
   helper_build: "Konfigurer nøglehjælperen",
   helper_found: "Nøglehjælper fundet: {name}",
   helper_watch: "Til Apple Watch",
-  helper_phone: "Til iPhone / Android",
+  helper_phone: "Til iPhone",
   helper_watch_steps: "På uret: Indstillinger → Bluetooth → under »Sundhedsenheder« tryk på »NeonPlan Key«, og par.",
   helper_phone_steps: "På telefonen: Indstillinger → Bluetooth → par »NeonPlan Key« (vises som tastatur).",
   helper_key: "Aflæst nøgle:",
@@ -371,6 +399,16 @@ const DA: typeof DE = {
   not_heard: "ikke hørt",
   next: "Næste",
   need_device: "Tilføj først en enhed.",
+  app_title: "Android med Home Assistant-appen",
+  app_none: "Android-telefon? I Home Assistant-appen: Indstillinger → Companion app → Administrer sensorer → slå „BLE Transmitter“ til. Så dukker den op her af sig selv.",
+  app_off: "Senderen er slået fra – slå den til i appen",
+  app_power: "Sendestyrken er for lav – sæt den til „High“ i appen",
+  app_mode: "Sæt sendetilstanden til „Low latency“ i appen",
+  helper_android: "Par ikke Android-telefoner eller -tablets her: de sender ikke denne nøgle i baggrunden. Brug Home Assistant-appens BLE Transmitter til Android (nedenfor).",
+  unheard: "⚠ ikke hørt",
+  unheard_hint: "Ingen modtager hører enheden lige nu. Er den tændt og sender? Android: Home Assistant-appens BLE Transmitter.",
+  fly: "Flyv ind i rummene ved „Hvor er …?“ og „Hvem er hjemme?“",
+  fly_hint: "De åbne NeonPlan-visninger flyver ind i svarets rum, ved „Hvem er hjemme?“ ind i alle rum efter tur. Et tryk stopper det. Ikke for personer, når de kun vises for administratorer.",
 };
 const ES: typeof DE = {
   title: "Configurar localización",
@@ -404,11 +442,10 @@ const ES: typeof DE = {
   key_value: "Clave (IRK, 32 caracteres)",
   key_bad: "No es una clave válida (32 caracteres hex o Base64).",
   helper_title: "🔑 Asistente de clave",
-  helper_none: "¿Aún no tienes clave? Con un ESP32 (unos 5 €) NeonPlan la lee en tres minutos: iPhone, Apple Watch y Android, sin Mac.",
   helper_build: "Configurar el asistente de clave",
   helper_found: "Asistente de clave encontrado: {name}",
   helper_watch: "Para un Apple Watch",
-  helper_phone: "Para un iPhone / Android",
+  helper_phone: "Para un iPhone",
   helper_watch_steps: "En el reloj: Ajustes → Bluetooth → en «Dispositivos de salud» toca «NeonPlan Key» y enlázalo.",
   helper_phone_steps: "En el móvil: Ajustes → Bluetooth → enlaza «NeonPlan Key» (aparece como teclado).",
   helper_key: "Clave leída:",
@@ -451,6 +488,16 @@ const ES: typeof DE = {
   not_heard: "sin señal",
   next: "Siguiente",
   need_device: "Primero añade un dispositivo.",
+  app_title: "Android con la app de Home Assistant",
+  app_none: "¿Móvil Android? En la app de Home Assistant: Ajustes → Companion app → Gestionar sensores → activa «BLE Transmitter». Luego aparece aquí solo.",
+  app_off: "El transmisor está apagado: actívalo en la app",
+  app_power: "Potencia de emisión demasiado baja: ponla en «High» en la app",
+  app_mode: "Pon el modo de emisión en «Low latency» en la app",
+  helper_android: "No emparejes aquí móviles ni tabletas Android: no envían esta clave en segundo plano. Para Android usa el BLE Transmitter de la app de Home Assistant (abajo).",
+  unheard: "⚠ sin señal",
+  unheard_hint: "Ahora mismo ningún receptor oye este dispositivo. ¿Está encendido y emitiendo? Android: el BLE Transmitter de la app de Home Assistant.",
+  fly: "Volar a las habitaciones con «¿Dónde está …?» y «¿Quién está en casa?»",
+  fly_hint: "Las vistas abiertas de NeonPlan vuelan a la habitación de la respuesta y, con «¿Quién está en casa?», a todas por turno. Un toque lo detiene. No para personas mientras solo se muestren a administradores.",
 };
 const FI: typeof DE = {
   title: "Paikannuksen määritys",
@@ -484,11 +531,10 @@ const FI: typeof DE = {
   key_value: "Avain (IRK, 32 merkkiä)",
   key_bad: "Tämä ei ole kelvollinen avain (32 heksamerkkiä tai Base64).",
   helper_title: "🔑 Avainapuri",
-  helper_none: "Eikö avainta vielä ole? ESP32:n (noin 5 €) avulla NeonPlan lukee sen kolmessa minuutissa – iPhone, Apple Watch ja Android, ilman Mac-tietokonetta.",
   helper_build: "Ota avainapuri käyttöön",
   helper_found: "Avainapuri löytyi: {name}",
   helper_watch: "Apple Watch -kellolle",
-  helper_phone: "iPhone- / Android-puhelimelle",
+  helper_phone: "iPhonelle",
   helper_watch_steps: "Kellossa: Asetukset → Bluetooth → valitse kohdassa ”Terveyslaitteet” ”NeonPlan Key” ja muodosta pari.",
   helper_phone_steps: "Puhelimessa: Asetukset → Bluetooth → muodosta pari laitteen ”NeonPlan Key” kanssa (näkyy näppäimistönä).",
   helper_key: "Luettu avain:",
@@ -531,6 +577,16 @@ const FI: typeof DE = {
   not_heard: "ei kuultu",
   next: "Seuraava",
   need_device: "Lisää ensin laite.",
+  app_title: "Android ja Home Assistant -sovellus",
+  app_none: "Android-puhelin? Home Assistant -sovelluksessa: Asetukset → Companion app → Hallitse antureita → kytke ”BLE Transmitter” päälle. Sitten se näkyy täällä itsestään.",
+  app_off: "Lähetin on pois päältä – kytke se päälle sovelluksessa",
+  app_power: "Lähetysteho liian pieni – aseta sovelluksessa ”High”",
+  app_mode: "Aseta sovelluksessa lähetystilaksi ”Low latency”",
+  helper_android: "Älä yhdistä Android-puhelimia tai -tabletteja tässä: ne eivät lähetä tätä avainta taustalla. Käytä Androidille Home Assistant -sovelluksen BLE Transmitteria (alla).",
+  unheard: "⚠ ei kuultu",
+  unheard_hint: "Mikään vastaanotin ei kuule laitetta juuri nyt. Onko se päällä ja lähettääkö se? Android: Home Assistant -sovelluksen BLE Transmitter.",
+  fly: "Lennä huoneisiin kysymyksillä ”Missä on …?” ja ”Kuka on kotona?”",
+  fly_hint: "Avoimet NeonPlan-näkymät lentävät vastauksen huoneeseen, kysymyksellä ”Kuka on kotona?” vuorotellen kaikkiin. Napautus pysäyttää. Ei henkilöille, jos ne näytetään vain ylläpitäjille.",
 };
 const FR: typeof DE = {
   title: "Configurer la localisation",
@@ -564,11 +620,10 @@ const FR: typeof DE = {
   key_value: "Clé (IRK, 32 caractères)",
   key_bad: "Ce n'est pas une clé valide (32 caractères hex ou Base64).",
   helper_title: "🔑 Assistant de clé",
-  helper_none: "Pas encore de clé ? Avec un ESP32 (environ 5 €), NeonPlan la lit en trois minutes – iPhone, Apple Watch et Android, sans Mac.",
   helper_build: "Configurer l’assistant de clé",
   helper_found: "Assistant de clé trouvé : {name}",
   helper_watch: "Pour une Apple Watch",
-  helper_phone: "Pour un iPhone / Android",
+  helper_phone: "Pour un iPhone",
   helper_watch_steps: "Sur la montre : Réglages → Bluetooth → sous « Appareils de santé », touchez « NeonPlan Key » et jumelez.",
   helper_phone_steps: "Sur le téléphone : Réglages → Bluetooth → jumelez « NeonPlan Key » (il apparaît comme clavier).",
   helper_key: "Clé lue :",
@@ -611,6 +666,16 @@ const FR: typeof DE = {
   not_heard: "non capté",
   next: "Suivant",
   need_device: "Ajoutez d’abord un appareil.",
+  app_title: "Android avec l'app Home Assistant",
+  app_none: "Téléphone Android ? Dans l'app Home Assistant : Paramètres → Companion app → Gérer les capteurs → activer « BLE Transmitter ». Il apparaît alors ici tout seul.",
+  app_off: "L'émetteur est éteint – activez-le dans l'app",
+  app_power: "Puissance d'émission trop faible – réglez-la sur « High » dans l'app",
+  app_mode: "Réglez le mode d'émission sur « Low latency » dans l'app",
+  helper_android: "N'associez pas ici de téléphones ou tablettes Android : ils n'envoient pas cette clé en arrière-plan. Pour Android, utilisez le BLE Transmitter de l'app Home Assistant (ci-dessous).",
+  unheard: "⚠ non capté",
+  unheard_hint: "Aucun récepteur n'entend cet appareil en ce moment. Est-il allumé et émet-il ? Android : le BLE Transmitter de l'app Home Assistant.",
+  fly: "Voler dans les pièces avec « Où est … ? » et « Qui est à la maison ? »",
+  fly_hint: "Les vues NeonPlan ouvertes volent dans la pièce de la réponse et, avec « Qui est à la maison ? », dans chaque pièce tour à tour. Un toucher arrête. Pas pour les personnes tant qu'elles ne sont montrées qu'aux admins.",
 };
 const HU: typeof DE = {
   title: "Helymeghatározás beállítása",
@@ -644,11 +709,10 @@ const HU: typeof DE = {
   key_value: "Kulcs (IRK, 32 karakter)",
   key_bad: "Ez nem érvényes kulcs (32 hex karakter vagy Base64).",
   helper_title: "🔑 Kulcssegéd",
-  helper_none: "Még nincs kulcs? Egy ESP32-vel (kb. 5 €) a NeonPlan három perc alatt kiolvassa – iPhone, Apple Watch és Android, Mac nélkül.",
   helper_build: "Kulcssegéd beállítása",
   helper_found: "Kulcssegéd megtalálva: {name}",
   helper_watch: "Apple Watch esetén",
-  helper_phone: "iPhone / Android esetén",
+  helper_phone: "iPhone esetén",
   helper_watch_steps: "Az órán: Beállítások → Bluetooth → az „Egészségügyi eszközök” alatt koppintson a „NeonPlan Key” elemre, és párosítsa.",
   helper_phone_steps: "A telefonon: Beállítások → Bluetooth → párosítsa a „NeonPlan Key” eszközt (billentyűzetként jelenik meg).",
   helper_key: "Kiolvasott kulcs:",
@@ -691,6 +755,16 @@ const HU: typeof DE = {
   not_heard: "nem hallható",
   next: "Tovább",
   need_device: "Előbb adj hozzá egy eszközt.",
+  app_title: "Android a Home Assistant alkalmazással",
+  app_none: "Androidos telefon? A Home Assistant alkalmazásban: Beállítások → Companion app → Érzékelők kezelése → kapcsold be a „BLE Transmitter”-t. Utána magától megjelenik itt.",
+  app_off: "Az adó ki van kapcsolva – kapcsold be az alkalmazásban",
+  app_power: "Túl kicsi az adóteljesítmény – állítsd „High”-ra az alkalmazásban",
+  app_mode: "Állítsd az adási módot „Low latency”-re az alkalmazásban",
+  helper_android: "Androidos telefont vagy táblagépet ne itt párosíts: a háttérben nem küldik ezt a kulcsot. Androidhoz a Home Assistant alkalmazás BLE Transmitterét használd (lent).",
+  unheard: "⚠ nem hallható",
+  unheard_hint: "Most egyik vevő sem hallja ezt az eszközt. Be van kapcsolva és sugároz? Android: a Home Assistant alkalmazás BLE Transmittere.",
+  fly: "Repülés a szobákba a „Hol van …?” és „Ki van otthon?” kérdésekre",
+  fly_hint: "A nyitott NeonPlan-nézetek a válasz szobájába repülnek, „Ki van otthon?” esetén sorban minden szobába. Koppintás leállítja. Személyeknél nem, ha csak adminoknak látszanak.",
 };
 const IT: typeof DE = {
   title: "Configura localizzazione",
@@ -724,11 +798,10 @@ const IT: typeof DE = {
   key_value: "Chiave (IRK, 32 caratteri)",
   key_bad: "Non è una chiave valida (32 caratteri hex o Base64).",
   helper_title: "🔑 Assistente chiave",
-  helper_none: "Nessuna chiave ancora? Con un ESP32 (circa 5 €) NeonPlan la legge in tre minuti – iPhone, Apple Watch e Android, senza Mac.",
   helper_build: "Configura l’assistente chiave",
   helper_found: "Assistente chiave trovato: {name}",
   helper_watch: "Per Apple Watch",
-  helper_phone: "Per iPhone / Android",
+  helper_phone: "Per iPhone",
   helper_watch_steps: "Sull’orologio: Impostazioni → Bluetooth → in «Dispositivi per la salute» tocca «NeonPlan Key» e abbina.",
   helper_phone_steps: "Sul telefono: Impostazioni → Bluetooth → abbina «NeonPlan Key» (appare come tastiera).",
   helper_key: "Chiave letta:",
@@ -771,6 +844,16 @@ const IT: typeof DE = {
   not_heard: "non rilevato",
   next: "Avanti",
   need_device: "Prima aggiungi un dispositivo.",
+  app_title: "Android con l'app Home Assistant",
+  app_none: "Telefono Android? Nell'app Home Assistant: Impostazioni → Companion app → Gestisci sensori → attiva «BLE Transmitter». Poi compare qui da solo.",
+  app_off: "Il trasmettitore è spento – attivalo nell'app",
+  app_power: "Potenza di trasmissione troppo bassa – impostala su «High» nell'app",
+  app_mode: "Imposta la modalità di trasmissione su «Low latency» nell'app",
+  helper_android: "Non associare qui telefoni o tablet Android: non inviano questa chiave in background. Per Android usa il BLE Transmitter dell'app Home Assistant (sotto).",
+  unheard: "⚠ non rilevato",
+  unheard_hint: "Nessun ricevitore sente questo dispositivo in questo momento. È acceso e trasmette? Android: il BLE Transmitter dell'app Home Assistant.",
+  fly: "Volare nelle stanze con «Dov'è …?» e «Chi è a casa?»",
+  fly_hint: "Le viste NeonPlan aperte volano nella stanza della risposta e, con «Chi è a casa?», in tutte a turno. Un tocco ferma. Non per le persone finché sono mostrate solo agli admin.",
 };
 const NB: typeof DE = {
   title: "Sett opp lokalisering",
@@ -804,11 +887,10 @@ const NB: typeof DE = {
   key_value: "Nøkkel (IRK, 32 tegn)",
   key_bad: "Dette er ikke en gyldig nøkkel (32 hex-tegn eller Base64).",
   helper_title: "🔑 Nøkkelhjelper",
-  helper_none: "Ingen nøkkel ennå? Med en ESP32 (ca. 5 €) leser NeonPlan den på tre minutter – iPhone, Apple Watch og Android, uten Mac.",
   helper_build: "Konfigurer nøkkelhjelperen",
   helper_found: "Nøkkelhjelper funnet: {name}",
   helper_watch: "For Apple Watch",
-  helper_phone: "For iPhone / Android",
+  helper_phone: "For iPhone",
   helper_watch_steps: "På klokken: Innstillinger → Bluetooth → under «Helseenheter» trykker du på «NeonPlan Key» og parer.",
   helper_phone_steps: "På telefonen: Innstillinger → Bluetooth → par «NeonPlan Key» (vises som tastatur).",
   helper_key: "Lest nøkkel:",
@@ -851,6 +933,16 @@ const NB: typeof DE = {
   not_heard: "ikke hørt",
   next: "Neste",
   need_device: "Legg til en enhet først.",
+  app_title: "Android med Home Assistant-appen",
+  app_none: "Android-telefon? I Home Assistant-appen: Innstillinger → Companion app → Administrer sensorer → slå på «BLE Transmitter». Da dukker den opp her av seg selv.",
+  app_off: "Senderen er av – slå den på i appen",
+  app_power: "Sendestyrken er for lav – sett den til «High» i appen",
+  app_mode: "Sett sendemodus til «Low latency» i appen",
+  helper_android: "Ikke par Android-telefoner eller -nettbrett her: de sender ikke denne nøkkelen i bakgrunnen. Bruk Home Assistant-appens BLE Transmitter for Android (nedenfor).",
+  unheard: "⚠ ikke hørt",
+  unheard_hint: "Ingen mottaker hører enheten akkurat nå. Er den på og sender? Android: Home Assistant-appens BLE Transmitter.",
+  fly: "Fly inn i rommene ved «Hvor er …?» og «Hvem er hjemme?»",
+  fly_hint: "De åpne NeonPlan-visningene flyr inn i rommet i svaret, ved «Hvem er hjemme?» inn i alle rom etter tur. Et trykk stopper. Ikke for personer når de bare vises for administratorer.",
 };
 const NL: typeof DE = {
   title: "Locatiebepaling instellen",
@@ -884,11 +976,10 @@ const NL: typeof DE = {
   key_value: "Sleutel (IRK, 32 tekens)",
   key_bad: "Dat is geen geldige sleutel (32 hex-tekens of Base64).",
   helper_title: "🔑 Sleutelhulp",
-  helper_none: "Nog geen sleutel? Met een ESP32 (ca. 5 €) leest NeonPlan hem in drie minuten uit – iPhone, Apple Watch en Android, zonder Mac.",
   helper_build: "Sleutelhulp instellen",
   helper_found: "Sleutelhulp gevonden: {name}",
   helper_watch: "Voor een Apple Watch",
-  helper_phone: "Voor een iPhone / Android",
+  helper_phone: "Voor een iPhone",
   helper_watch_steps: "Op de watch: Instellingen → Bluetooth → onder ‘Gezondheidsapparaten’ op ‘NeonPlan Key’ tikken en koppelen.",
   helper_phone_steps: "Op de telefoon: Instellingen → Bluetooth → ‘NeonPlan Key’ koppelen (verschijnt als toetsenbord).",
   helper_key: "Uitgelezen sleutel:",
@@ -931,6 +1022,16 @@ const NL: typeof DE = {
   not_heard: "niet gehoord",
   next: "Volgende",
   need_device: "Voeg eerst een apparaat toe.",
+  app_title: "Android met de Home Assistant-app",
+  app_none: "Android-telefoon? In de Home Assistant-app: Instellingen → Companion app → Sensoren beheren → zet „BLE Transmitter” aan. Dan verschijnt hij hier vanzelf.",
+  app_off: "Zender staat uit – zet hem aan in de app",
+  app_power: "Zendvermogen te laag – zet het in de app op „High”",
+  app_mode: "Zet de zendmodus in de app op „Low latency”",
+  helper_android: "Koppel hier geen Android-telefoons of -tablets: ze sturen deze sleutel niet op de achtergrond. Gebruik voor Android de BLE Transmitter van de Home Assistant-app (hieronder).",
+  unheard: "⚠ niet gehoord",
+  unheard_hint: "Geen ontvanger hoort dit apparaat nu. Staat het aan en zendt het? Android: de BLE Transmitter van de Home Assistant-app.",
+  fly: "Bij „Waar is …?” en „Wie is er thuis?” de kamers in vliegen",
+  fly_hint: "De open NeonPlan-weergaven vliegen naar de kamer uit het antwoord, bij „Wie is er thuis?” om de beurt naar alle kamers. Tikken stopt het. Niet voor personen zolang ze alleen aan admins worden getoond.",
 };
 const NN: typeof DE = {
   title: "Set opp lokalisering",
@@ -964,11 +1065,10 @@ const NN: typeof DE = {
   key_value: "Nøkkel (IRK, 32 teikn)",
   key_bad: "Dette er ikkje ein gyldig nøkkel (32 hex-teikn eller Base64).",
   helper_title: "🔑 Nøkkelhjelpar",
-  helper_none: "Ingen nøkkel enno? Med ein ESP32 (ca. 5 €) les NeonPlan han av på tre minutt – iPhone, Apple Watch og Android, utan Mac.",
   helper_build: "Set opp nøkkelhjelparen",
   helper_found: "Nøkkelhjelpar funnen: {name}",
   helper_watch: "For Apple Watch",
-  helper_phone: "For iPhone / Android",
+  helper_phone: "For iPhone",
   helper_watch_steps: "På klokka: Innstillingar → Bluetooth → under «Helseeiningar» trykkjer du på «NeonPlan Key» og parar.",
   helper_phone_steps: "På telefonen: Innstillingar → Bluetooth → par «NeonPlan Key» (blir vist som tastatur).",
   helper_key: "Lesen nøkkel:",
@@ -1011,6 +1111,16 @@ const NN: typeof DE = {
   not_heard: "ikkje høyrt",
   next: "Neste",
   need_device: "Legg til ei eining først.",
+  app_title: "Android med Home Assistant-appen",
+  app_none: "Android-telefon? I Home Assistant-appen: Innstillingar → Companion app → Administrer sensorar → slå på «BLE Transmitter». Då dukkar han opp her av seg sjølv.",
+  app_off: "Sendaren er av – slå han på i appen",
+  app_power: "Sendestyrken er for låg – set han til «High» i appen",
+  app_mode: "Set sendemodus til «Low latency» i appen",
+  helper_android: "Ikkje par Android-telefonar eller -nettbrett her: dei sender ikkje denne nøkkelen i bakgrunnen. Bruk BLE Transmitter i Home Assistant-appen for Android (nedanfor).",
+  unheard: "⚠ ikkje høyrt",
+  unheard_hint: "Ingen mottakar høyrer eininga akkurat no. Er ho på og sender? Android: BLE Transmitter i Home Assistant-appen.",
+  fly: "Fly inn i romma ved «Kvar er …?» og «Kven er heime?»",
+  fly_hint: "Dei opne NeonPlan-visingane flyg inn i rommet i svaret, ved «Kven er heime?» inn i alle rom etter tur. Eit trykk stoppar. Ikkje for personar når dei berre blir viste for administratorar.",
 };
 const PL: typeof DE = {
   title: "Konfiguracja lokalizacji",
@@ -1044,11 +1154,10 @@ const PL: typeof DE = {
   key_value: "Klucz (IRK, 32 znaki)",
   key_bad: "To nie jest prawidłowy klucz (32 znaki hex lub Base64).",
   helper_title: "🔑 Pomocnik klucza",
-  helper_none: "Nie masz jeszcze klucza? Z ESP32 (ok. 5 €) NeonPlan odczyta go w trzy minuty – iPhone, Apple Watch i Android, bez komputera Mac.",
   helper_build: "Skonfiguruj pomocnika klucza",
   helper_found: "Znaleziono pomocnika klucza: {name}",
   helper_watch: "Dla Apple Watch",
-  helper_phone: "Dla telefonu iPhone / Android",
+  helper_phone: "Dla telefonu iPhone",
   helper_watch_steps: "Na zegarku: Ustawienia → Bluetooth → w sekcji „Urządzenia zdrowotne” stuknij „NeonPlan Key” i sparuj.",
   helper_phone_steps: "Na telefonie: Ustawienia → Bluetooth → sparuj „NeonPlan Key” (pojawia się jako klawiatura).",
   helper_key: "Odczytany klucz:",
@@ -1091,6 +1200,16 @@ const PL: typeof DE = {
   not_heard: "brak sygnału",
   next: "Dalej",
   need_device: "Najpierw dodaj urządzenie.",
+  app_title: "Android z aplikacją Home Assistant",
+  app_none: "Telefon z Androidem? W aplikacji Home Assistant: Ustawienia → Companion app → Zarządzaj czujnikami → włącz „BLE Transmitter”. Wtedy pojawi się tu sam.",
+  app_off: "Nadajnik jest wyłączony – włącz go w aplikacji",
+  app_power: "Za mała moc nadawania – ustaw w aplikacji „High”",
+  app_mode: "Ustaw w aplikacji tryb nadawania „Low latency”",
+  helper_android: "Nie paruj tu telefonów ani tabletów z Androidem: nie wysyłają tego klucza w tle. Dla Androida użyj BLE Transmitter aplikacji Home Assistant (poniżej).",
+  unheard: "⚠ brak sygnału",
+  unheard_hint: "Żaden odbiornik nie słyszy teraz tego urządzenia. Czy jest włączone i nadaje? Android: BLE Transmitter aplikacji Home Assistant.",
+  fly: "Wlatuj do pomieszczeń przy „Gdzie jest …?” i „Kto jest w domu?”",
+  fly_hint: "Otwarte widoki NeonPlan wlatują do pomieszczenia z odpowiedzi, a przy „Kto jest w domu?” po kolei do wszystkich. Dotknięcie zatrzymuje. Nie dla osób, gdy są pokazywane tylko adminom.",
 };
 const PT: typeof DE = {
   title: "Configurar localização",
@@ -1124,11 +1243,10 @@ const PT: typeof DE = {
   key_value: "Chave (IRK, 32 caracteres)",
   key_bad: "Esta não é uma chave válida (32 caracteres hex ou Base64).",
   helper_title: "🔑 Assistente de chave",
-  helper_none: "Ainda sem chave? Com um ESP32 (cerca de 5 €), o NeonPlan lê-a em três minutos – iPhone, Apple Watch e Android, sem Mac.",
   helper_build: "Configurar o assistente de chave",
   helper_found: "Assistente de chave encontrado: {name}",
   helper_watch: "Para um Apple Watch",
-  helper_phone: "Para um iPhone / Android",
+  helper_phone: "Para um iPhone",
   helper_watch_steps: "No relógio: Definições → Bluetooth → em «Dispositivos de saúde», toque em «NeonPlan Key» e emparelhe.",
   helper_phone_steps: "No telemóvel: Definições → Bluetooth → emparelhe «NeonPlan Key» (aparece como teclado).",
   helper_key: "Chave lida:",
@@ -1171,6 +1289,16 @@ const PT: typeof DE = {
   not_heard: "não detetado",
   next: "Seguinte",
   need_device: "Adicione primeiro um dispositivo.",
+  app_title: "Android com a app Home Assistant",
+  app_none: "Telemóvel Android? Na app Home Assistant: Definições → Companion app → Gerir sensores → ativa «BLE Transmitter». Depois aparece aqui sozinho.",
+  app_off: "O transmissor está desligado – liga-o na app",
+  app_power: "Potência de emissão demasiado baixa – define «High» na app",
+  app_mode: "Define o modo de emissão como «Low latency» na app",
+  helper_android: "Não emparelhes aqui telemóveis ou tablets Android: não enviam esta chave em segundo plano. Para Android usa o BLE Transmitter da app Home Assistant (abaixo).",
+  unheard: "⚠ não detetado",
+  unheard_hint: "Nenhum recetor ouve este dispositivo agora. Está ligado e a emitir? Android: o BLE Transmitter da app Home Assistant.",
+  fly: "Voar para as divisões com «Onde está …?» e «Quem está em casa?»",
+  fly_hint: "As vistas NeonPlan abertas voam para a divisão da resposta e, com «Quem está em casa?», para todas à vez. Um toque para. Não para pessoas enquanto só são mostradas a administradores.",
 };
 const RO: typeof DE = {
   title: "Configurează localizarea",
@@ -1204,11 +1332,10 @@ const RO: typeof DE = {
   key_value: "Cheie (IRK, 32 de caractere)",
   key_bad: "Aceasta nu este o cheie validă (32 de caractere hex sau Base64).",
   helper_title: "🔑 Asistent pentru cheie",
-  helper_none: "Încă nu ai cheia? Cu un ESP32 (circa 5 €), NeonPlan o citește în trei minute – iPhone, Apple Watch și Android, fără Mac.",
   helper_build: "Configurează asistentul pentru cheie",
   helper_found: "Asistent pentru cheie găsit: {name}",
   helper_watch: "Pentru Apple Watch",
-  helper_phone: "Pentru iPhone / Android",
+  helper_phone: "Pentru iPhone",
   helper_watch_steps: "Pe ceas: Configurări → Bluetooth → la „Dispozitive de sănătate” atinge „NeonPlan Key” și asociază.",
   helper_phone_steps: "Pe telefon: Configurări → Bluetooth → asociază „NeonPlan Key” (apare ca tastatură).",
   helper_key: "Cheie citită:",
@@ -1251,6 +1378,16 @@ const RO: typeof DE = {
   not_heard: "neauzit",
   next: "Înainte",
   need_device: "Adaugă mai întâi un dispozitiv.",
+  app_title: "Android cu aplicația Home Assistant",
+  app_none: "Telefon Android? În aplicația Home Assistant: Setări → Companion app → Gestionează senzorii → pornește „BLE Transmitter”. Apoi apare aici singur.",
+  app_off: "Emițătorul este oprit – pornește-l în aplicație",
+  app_power: "Puterea de emisie e prea mică – setează „High” în aplicație",
+  app_mode: "Setează modul de emisie la „Low latency” în aplicație",
+  helper_android: "Nu împerechea aici telefoane sau tablete Android: nu trimit această cheie în fundal. Pentru Android folosește BLE Transmitter din aplicația Home Assistant (mai jos).",
+  unheard: "⚠ neauzit",
+  unheard_hint: "Niciun receptor nu aude acum acest dispozitiv. Este pornit și emite? Android: BLE Transmitter din aplicația Home Assistant.",
+  fly: "Zbor în camere la „Unde este …?” și „Cine e acasă?”",
+  fly_hint: "Vederile NeonPlan deschise zboară în camera din răspuns, iar la „Cine e acasă?” pe rând în toate. O atingere oprește. Nu pentru persoane cât timp sunt arătate doar administratorilor.",
 };
 const SL: typeof DE = {
   title: "Nastavi lociranje",
@@ -1284,11 +1421,10 @@ const SL: typeof DE = {
   key_value: "Ključ (IRK, 32 znakov)",
   key_bad: "To ni veljaven ključ (32 šestnajstiških znakov ali Base64).",
   helper_title: "🔑 Pomočnik za ključ",
-  helper_none: "Še nimate ključa? Z ESP32 (pribl. 5 €) ga NeonPlan prebere v treh minutah – iPhone, Apple Watch in Android, brez računalnika Mac.",
   helper_build: "Nastavi pomočnika za ključ",
   helper_found: "Najden pomočnik za ključ: {name}",
   helper_watch: "Za Apple Watch",
-  helper_phone: "Za iPhone / Android",
+  helper_phone: "Za iPhone",
   helper_watch_steps: "Na uri: Nastavitve → Bluetooth → pod »Zdravstvene naprave« tapnite »NeonPlan Key« in seznanite.",
   helper_phone_steps: "Na telefonu: Nastavitve → Bluetooth → seznanite »NeonPlan Key« (prikaže se kot tipkovnica).",
   helper_key: "Prebrani ključ:",
@@ -1331,6 +1467,16 @@ const SL: typeof DE = {
   not_heard: "ni slišano",
   next: "Naprej",
   need_device: "Najprej dodaj napravo.",
+  app_title: "Android z aplikacijo Home Assistant",
+  app_none: "Telefon Android? V aplikaciji Home Assistant: Nastavitve → Companion app → Upravljanje senzorjev → vklopi »BLE Transmitter«. Potem se tu pojavi sam.",
+  app_off: "Oddajnik je izklopljen – vklopi ga v aplikaciji",
+  app_power: "Oddajna moč je prenizka – v aplikaciji nastavi »High«",
+  app_mode: "V aplikaciji nastavi način oddajanja na »Low latency«",
+  helper_android: "Telefonov in tablic z Androidom tu ne seznanjaj: tega ključa v ozadju ne pošiljajo. Za Android uporabi BLE Transmitter aplikacije Home Assistant (spodaj).",
+  unheard: "⚠ ni slišano",
+  unheard_hint: "Trenutno te naprave ne sliši noben sprejemnik. Je vklopljena in oddaja? Android: BLE Transmitter aplikacije Home Assistant.",
+  fly: "Pri »Kje je …?« in »Kdo je doma?« poleti v prostore",
+  fly_hint: "Odprti pogledi NeonPlan poletijo v prostor iz odgovora, pri »Kdo je doma?« po vrsti v vse. Dotik ustavi. Ne za osebe, dokler so prikazane samo skrbnikom.",
 };
 const SV: typeof DE = {
   title: "Ställ in positionering",
@@ -1364,11 +1510,10 @@ const SV: typeof DE = {
   key_value: "Nyckel (IRK, 32 tecken)",
   key_bad: "Det är ingen giltig nyckel (32 hex-tecken eller Base64).",
   helper_title: "🔑 Nyckelhjälpare",
-  helper_none: "Ingen nyckel än? Med en ESP32 (ca 5 €) läser NeonPlan av den på tre minuter – iPhone, Apple Watch och Android, utan Mac.",
   helper_build: "Konfigurera nyckelhjälparen",
   helper_found: "Nyckelhjälpare hittad: {name}",
   helper_watch: "För Apple Watch",
-  helper_phone: "För iPhone / Android",
+  helper_phone: "För iPhone",
   helper_watch_steps: "På klockan: Inställningar → Bluetooth → under ”Hälsoenheter” trycker du på ”NeonPlan Key” och parkopplar.",
   helper_phone_steps: "På telefonen: Inställningar → Bluetooth → parkoppla ”NeonPlan Key” (visas som tangentbord).",
   helper_key: "Avläst nyckel:",
@@ -1411,6 +1556,16 @@ const SV: typeof DE = {
   not_heard: "inte hörd",
   next: "Nästa",
   need_device: "Lägg till en enhet först.",
+  app_title: "Android med Home Assistant-appen",
+  app_none: "Android-telefon? I Home Assistant-appen: Inställningar → Companion app → Hantera sensorer → slå på ”BLE Transmitter”. Då dyker den upp här av sig själv.",
+  app_off: "Sändaren är av – slå på den i appen",
+  app_power: "Sändeffekten är för låg – ställ in ”High” i appen",
+  app_mode: "Ställ in sändläget ”Low latency” i appen",
+  helper_android: "Para inte Android-telefoner eller -surfplattor här: de skickar inte den här nyckeln i bakgrunden. Använd Home Assistant-appens BLE Transmitter för Android (nedan).",
+  unheard: "⚠ inte hörd",
+  unheard_hint: "Ingen mottagare hör enheten just nu. Är den på och sänder? Android: Home Assistant-appens BLE Transmitter.",
+  fly: "Flyg in i rummen vid ”Var är …?” och ”Vem är hemma?”",
+  fly_hint: "De öppna NeonPlan-vyerna flyger in i rummet i svaret, vid ”Vem är hemma?” in i alla rum i tur och ordning. Ett tryck stoppar. Inte för personer medan de bara visas för administratörer.",
 };
 const ZH: typeof DE = {
   title: "设置定位",
@@ -1444,11 +1599,10 @@ const ZH: typeof DE = {
   key_value: "密钥（IRK，32 个字符）",
   key_bad: "这不是有效的密钥（32 个十六进制字符或 Base64）。",
   helper_title: "🔑 密钥助手",
-  helper_none: "还没有密钥？借助一块 ESP32（约 5 €），NeonPlan 三分钟即可读取——支持 iPhone、Apple Watch 和 Android，无需 Mac。",
   helper_build: "设置密钥助手",
   helper_found: "已找到密钥助手：{name}",
   helper_watch: "用于 Apple Watch",
-  helper_phone: "用于 iPhone / Android",
+  helper_phone: "用于 iPhone",
   helper_watch_steps: "在手表上：设置 → Bluetooth → 在“健康设备”下轻点“NeonPlan Key”并配对。",
   helper_phone_steps: "在手机上：设置 → Bluetooth → 配对“NeonPlan Key”（显示为键盘）。",
   helper_key: "读取到的密钥：",
@@ -1491,6 +1645,16 @@ const ZH: typeof DE = {
   not_heard: "未检测到",
   next: "下一步",
   need_device: "请先添加设备。",
+  app_title: "使用 Home Assistant 应用的安卓设备",
+  app_none: "安卓手机？在 Home Assistant 应用中：设置 → Companion app → 管理传感器 → 打开“BLE Transmitter”。之后它会自动出现在这里。",
+  app_off: "发射器已关闭——请在应用中打开",
+  app_power: "发射功率太低——请在应用中设为“High”",
+  app_mode: "请在应用中把广播模式设为“Low latency”",
+  helper_android: "不要在这里配对安卓手机或平板：它们不会在后台发送这个密钥。安卓请使用 Home Assistant 应用的 BLE Transmitter（见下方）。",
+  unheard: "⚠ 未检测到",
+  unheard_hint: "目前没有接收器能听到这个设备。它是否开着并在发送？安卓：Home Assistant 应用的 BLE Transmitter。",
+  fly: "问“…在哪里？”和“谁在家？”时飞进房间",
+  fly_hint: "打开的 NeonPlan 视图会飞进答案所在的房间；问“谁在家？”时依次飞过所有房间。轻点即可停止。若人员仅对管理员显示，则不会飞向人员。",
 };
 
 /** An IRK as 32 hex characters: pasted as hex (with or without separators) or as Base64 (as the Mac keychain shows it). */
@@ -1505,6 +1669,59 @@ export function irkHex(raw: string): string | null {
     // not Base64
   }
   return null;
+}
+
+/** An Android phone's BLE Transmitter as the Home Assistant app reports it (a sensor of the phone's device). */
+export interface AppTransmitter {
+  entity: string;
+  name: string;
+  /** uuid + major + minor as hex, the way the backend keys iBeacons */
+  key: string;
+  state: string;
+  power: string;
+  mode: string;
+  person: string | null;
+}
+
+// the app's sensor attribute "id": "<uuid>_<major>_<minor>"
+const BEACON_ID = /^([0-9a-f]{8})-?([0-9a-f]{4})-?([0-9a-f]{4})-?([0-9a-f]{4})-?([0-9a-f]{12})_(\d{1,5})_(\d{1,5})$/i;
+
+/** The BLE Transmitters of the Home Assistant Android app, found by their sensor: no need to hold the phone near a receiver. */
+export function appTransmitters(hass: HomeAssistant): AppTransmitter[] {
+  const out: AppTransmitter[] = [];
+  const hex4 = (n: number) => n.toString(16).padStart(4, "0");
+  for (const [entity, st] of Object.entries(hass.states)) {
+    if (!entity.startsWith("sensor.")) continue;
+    const a = st.attributes ?? {};
+    if (!("Transmitting power" in a)) continue;
+    const m = BEACON_ID.exec(String(a.id ?? ""));
+    if (!m) continue;
+    const major = Number(m[6]);
+    const minor = Number(m[7]);
+    if (major > 0xffff || minor > 0xffff) continue;
+    const deviceId = hass.entities?.[entity]?.device_id ?? null;
+    const device = deviceId ? hass.devices?.[deviceId] : undefined;
+    const fallback = String(a.friendly_name ?? entity).replace(/\s*BLE[\s_-]*Transmitter\s*$/i, "");
+    // the person whose device tracker sits on the same phone
+    const person =
+      (deviceId &&
+        Object.entries(hass.states).find(
+          ([id, p]) =>
+            id.startsWith("person.") &&
+            ((p.attributes?.device_trackers as string[] | undefined) ?? []).some((tr) => hass.entities?.[tr]?.device_id === deviceId),
+        )?.[0]) ||
+      null;
+    out.push({
+      entity,
+      name: device?.name_by_user || device?.name || fallback,
+      key: (m.slice(1, 6).join("") + hex4(major) + hex4(minor)).toLowerCase(),
+      state: String(st.state),
+      power: String(a["Transmitting power"] ?? ""),
+      mode: String(a["Advertise mode"] ?? ""),
+      person,
+    });
+  }
+  return out.sort((x, y) => x.name.localeCompare(y.name));
 }
 
 const TEXTS: Record<string, typeof DE> = { de: DE, en: EN, cs: CS, da: DA, es: ES, fi: FI, fr: FR, hu: HU, it: IT, nb: NB, no: NB, nl: NL, nn: NN, pl: PL, pt: PT, ro: RO, sl: SL, sv: SV, zh: ZH };
@@ -1709,7 +1926,7 @@ export class LocateSetup extends LitElement {
 
   private manualLink(): string {
     const de = this.hass?.language?.startsWith("de");
-    return de ? "https://mastershort.de/neonplan3d/anleitung/?lang=de#511-ortung-neu" : "https://mastershort.de/en/neonplan3d/manual/?lang=en#511-locating-new";
+    return de ? "https://mastershort.de/neonplan3d/anleitung/3d-ansicht/#511-ortung-neu" : "https://mastershort.de/en/neonplan3d/manual/3d-view/#511-locating-new";
   }
 
   private renderStep(cfg: Config) {
@@ -1809,7 +2026,8 @@ export class LocateSetup extends LitElement {
         <h4>${t.helper_title}</h4>
         <a class="install" href="https://neonplan3d.mastershort.de/keys/" target="_blank" rel="noopener">⚡ ${t.helper_install} ↗</a>
       </div>
-      <p class="hint">${t.helper_pitch}</p>`;
+      <p class="hint">${t.helper_pitch}</p>
+      <p class="hint">${t.helper_android}</p>`;
     if (!helper) return head;
     const watch = helper.option === "Heart Sensor";
     const pick = (option: string) => void this.hass.callService("select", "select_option", { entity_id: helper.select, option });
@@ -1892,6 +2110,16 @@ export class LocateSetup extends LitElement {
     </select>`;
   }
 
+  /** "not heard" next to a device while locating runs and no receiver hears it (an Android phone added by key, a
+   * switched-off transmitter): learning with it would collect nothing. */
+  private unheardBadge(id: string) {
+    const live = this._live;
+    if (!live?.running) return nothing;
+    const d = live.devices.find((x) => x.id === id);
+    if (!d || d.room || (d.last_seen && Date.now() / 1000 - d.last_seen < 120)) return nothing;
+    return html`<small class="warn" title=${this.t.unheard_hint}>${this.t.unheard}</small>`;
+  }
+
   private addDevice(cfg: Config, device: Omit<Device, "id" | "person" | "icon">, person: string | null = null): void {
     const id = `${device.kind}_${device.key.replace(/[^a-z0-9]/gi, "").slice(-10).toLowerCase()}`;
     if (cfg.devices.some((d) => d.id === id)) return;
@@ -1902,6 +2130,7 @@ export class LocateSetup extends LitElement {
     const t = this.t;
     const has = (key: string) => cfg.devices.some((d) => d.key.toLowerCase() === key.toLowerCase());
     const setDevice = (id: string, patch: Partial<Device>) => void this.save({ devices: cfg.devices.map((d) => (d.id === id ? { ...d, ...patch } : d)) });
+    const apps = appTransmitters(this.hass);
     return html`<p>${t.devices_intro}</p>
       ${cfg.devices.length
         ? html`<ul class="list">
@@ -1914,10 +2143,31 @@ export class LocateSetup extends LitElement {
                   ><input type="checkbox" .checked=${!!d.wearable} @change=${(e: Event) => setDevice(d.id, { wearable: (e.target as HTMLInputElement).checked })} />⌚
                   ${t.worn}</label
                 >
+                ${this.unheardBadge(d.id)}
                 <button @click=${() => void this.save({ devices: cfg.devices.filter((x) => x.id !== d.id) })}>${t.remove}</button>
               </li>`,
             )}
           </ul>`
+        : nothing}
+      ${apps.length
+        ? html`<h4>📱 ${t.app_title}</h4>
+            <ul class="list">
+              ${apps.map((a) => {
+                const warnings = [
+                  a.state !== "Transmitting" ? t.app_off : null,
+                  a.power === "ultraLow" || a.power === "low" ? t.app_power : null,
+                  a.mode === "lowPower" ? t.app_mode : null,
+                ].filter((w): w is string => !!w);
+                return html`<li>
+                  <span
+                    ><b>${a.name}</b>${warnings.map((w) => html`<small class="warn">⚠ ${w}</small>`)}</span
+                  >
+                  ${has(a.key)
+                    ? html`<small>${t.added}</small>`
+                    : html`<button @click=${() => this.addDevice(cfg, { name: a.name, kind: "ibeacon", key: a.key }, a.person)}>${t.add}</button>`}
+                </li>`;
+              })}
+            </ul>`
         : nothing}
       ${this.renderKeyHelper(cfg)}
       <details
@@ -1928,12 +2178,16 @@ export class LocateSetup extends LitElement {
       >
         <summary>📱 ${t.near_summary}</summary>
         <p class="hint">${t.near_intro}</p>
+        ${apps.length ? nothing : html`<p class="hint">${t.app_none}</p>`}
         <ul class="list">
           ${(() => {
-            // only what is held close to a scanner: beacons first (the Android app), then the strongest
+            // beacons first (the Android app sends weakly by default, so they count from -90 dBm), then what is held
+            // close to a scanner; one row per beacon although its address rotates
+            const seen = new Set<string>();
             const close = this._near
-              .filter((n) => (n.ibeacon || !n.random) && n.rssi >= -68)
+              .filter((n) => (n.ibeacon ? n.rssi >= -90 : !n.random && n.rssi >= -68))
               .sort((x, y) => Number(!!y.ibeacon) - Number(!!x.ibeacon) || y.rssi - x.rssi)
+              .filter((n) => !n.ibeacon || (!seen.has(n.ibeacon) && !!seen.add(n.ibeacon)))
               .slice(0, 5);
             return close.length
               ? close.map(
@@ -1996,7 +2250,7 @@ export class LocateSetup extends LitElement {
                     this.requestUpdate();
                   }}
                 />
-                ${d.name}</label
+                ${d.name} ${this.unheardBadge(d.id)}</label
               >`,
             )}
           </div>`
@@ -2053,6 +2307,9 @@ export class LocateSetup extends LitElement {
       ${this.voiceLanguage ? html`<p class="hint">${t.voice_hint}</p>` : nothing}
       <label class="row"><input type="checkbox" .checked=${cfg.enabled} @change=${(e: Event) => void this.save({ enabled: (e.target as HTMLInputElement).checked })} /> ${t.enabled}</label>
       <label class="row"><input type="checkbox" .checked=${cfg.admins_only} @change=${(e: Event) => void this.save({ admins_only: (e.target as HTMLInputElement).checked })} /> ${t.admins_only}</label>
+      <label class="row" title=${t.fly_hint}
+        ><input type="checkbox" .checked=${cfg.fly !== false} @change=${(e: Event) => void this.save({ fly: (e.target as HTMLInputElement).checked })} /> ${t.fly}</label
+      >
       ${this.setLook
         ? html`<div class="row">
             <b>${t.look_title}</b>
@@ -2212,6 +2469,11 @@ export class LocateSetup extends LitElement {
     .hint {
       opacity: 0.8;
       font-size: 13px;
+    }
+    .warn {
+      display: block;
+      color: #ffb74d;
+      font-size: 12px;
     }
     .end {
       display: flex;

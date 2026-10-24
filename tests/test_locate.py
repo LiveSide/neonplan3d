@@ -168,3 +168,160 @@ async def test_a_device_without_learning_uses_the_others(hass: HomeAssistant) ->
     await service.async_configure({"scanner_rooms": {"AA:BB:CC:DD:EE:09": "hall"}})
     rows = service.config()["scanners"]
     assert any(r["source"] == "AA:BB:CC:DD:EE:09" and r.get("offline") for r in rows)
+
+
+async def test_spoken_names_are_matched_tolerantly(hass: HomeAssistant) -> None:
+    await _setup(hass)
+    service: LocateService = hass.data[DATA_LOCATE]
+    hass.states.async_set("person.torsten", "home", {"friendly_name": "Admin", "user_id": "u1"})
+    hass.states.async_set("person.frauke", "home", {"friendly_name": "Frauke", "user_id": "u2"})
+    devices = [
+        {**WATCH, "id": "w1", "name": "Torsten Apple Watch", "person": "person.torsten"},
+        {**WATCH, "id": "p1", "name": "Torsten Iphone", "person": "person.torsten", "key": "11" * 16},
+        {**WATCH, "id": "p2", "name": "Frauke Iphone", "person": "person.frauke", "key": "22" * 16},
+    ]
+    await service.async_configure({"devices": devices, "rooms": ROOMS})
+    now = time.time()
+    service.state["w1"] = {"room": "kitchen", "room_name": "Kitchen", "since": now, "last_seen": now}
+    service.state["p1"] = {"room": "hall", "room_name": "Hall", "since": now, "last_seen": now}
+    service.state["p2"] = {"room": "living", "room_name": "Living", "since": now, "last_seen": now}
+    from custom_components.neonplan3d.locate.answers import async_answer
+
+    async def ask(text: str, user: str | None = None) -> str | None:
+        return await async_answer(hass, service, text, "de", user)
+
+    # speech recognition writes "Thorstens" for "Torsten"
+    assert await ask("Wo ist Thorstens Apple Watch?") == "Torsten Apple Watch ist im Raum Kitchen."
+    # "my iPhone" is the iPhone of the person who asks
+    assert await ask("Wo ist mein iPhone?", "u2") == "Frauke Iphone ist im Raum Living."
+    assert await ask("Wo ist mein iPhone?", "u1") == "Torsten Iphone ist im Raum Hall."
+    # a first name alone means the person: the watch tells where
+    assert await ask("Wo ist Torsten?") == "Torsten ist im Raum Kitchen."
+    assert await ask("Wo ist Frauke?") == "Frauke Iphone ist im Raum Living."
+    assert await ask("Wo ist der Fernseher?") is None
+
+
+async def test_weak_beacons_show_among_nearby_devices(hass: HomeAssistant) -> None:
+    """The Android app sends its iBeacon at the lowest power by default: it is listed although weak, and first."""
+    from types import SimpleNamespace
+
+    from custom_components.neonplan3d.locate.scanners import Reading
+
+    await _setup(hass)
+    service: LocateService = hass.data[DATA_LOCATE]
+    beacon = bytes.fromhex("0215" + "280fa872f5254bccb7b42c2843e023e0" + "0064" + "9c44" + "c5")
+    phone = SimpleNamespace(local_name=None, manufacturer_data={0x004C: beacon})
+    now = time.time()
+    readings = [
+        Reading("shelly", "AA:00:00:00:00:01", -60, now, SimpleNamespace(local_name="Lamp", manufacturer_data={})),
+        Reading("shelly", "AA:00:00:00:00:02", -82, now, SimpleNamespace(local_name=None, manufacturer_data={})),
+        Reading("shelly", "5B:00:00:00:00:03", -84, now, phone),
+    ]
+    service._reader = SimpleNamespace(read=lambda _hass: readings)
+    service._nearby_until = now + 60
+    service._tick(None)
+    rows = service.watch_nearby()
+    service.stop()
+    assert [r["address"] for r in rows] == ["5B:00:00:00:00:03", "AA:00:00:00:00:01"]
+    assert rows[0]["ibeacon"] == "280fa872f5254bccb7b42c2843e023e000649c44"
+
+
+def test_a_person_is_where_the_surer_device_says() -> None:
+    """Watch and phone heard together but in different rooms: the watch wins unless the phone is clearly surer;
+    a phone that stayed put while the watch walked on was left lying there."""
+    from types import SimpleNamespace
+
+    from custom_components.neonplan3d.locate.answers import person_state
+
+    now = 10_000.0
+    watch = {"id": "w", "wearable": True}
+    phone = {"id": "p"}
+
+    def state(w_room, w_p, w_since, p_room, p_p, p_since, p_seen=now - 5):
+        return SimpleNamespace(
+            state={
+                "w": {"room": w_room, "probability": w_p, "since": w_since, "last_seen": now - 5},
+                "p": {"room": p_room, "probability": p_p, "since": p_since, "last_seen": p_seen},
+            }
+        )
+
+    # sitting in the kitchen, the living-room plug behind the seat fools the watch: the surer phone wins
+    assert (
+        person_state(state("living", 0.6, now - 600, "kitchen", 0.85, now - 610), [watch, phone], now)["room"]
+        == "kitchen"
+    )
+    # only a little surer: the watch keeps it
+    assert (
+        person_state(state("living", 0.7, now - 600, "kitchen", 0.8, now - 610), [watch, phone], now)["room"]
+        == "living"
+    )
+    # the phone has lain in the kitchen for 20 minutes, the watch walked into the living room 2 minutes ago
+    assert (
+        person_state(state("living", 0.6, now - 120, "kitchen", 0.95, now - 1200), [watch, phone], now)["room"]
+        == "living"
+    )
+    # the watch has lain in the bathroom for an hour, the phone walked into the kitchen a minute ago: taken off
+    assert (
+        person_state(state("bath", 0.9, now - 3600, "kitchen", 0.5, now - 60), [watch, phone], now)["room"] == "kitchen"
+    )
+    # just put down five minutes ago: not yet
+    assert person_state(state("bath", 0.9, now - 300, "kitchen", 0.5, now - 60), [watch, phone], now)["room"] == "bath"
+    # the phone not heard lately: the watch as before
+    assert (
+        person_state(state("living", 0.6, now - 600, "kitchen", 0.95, now - 610, now - 300), [watch, phone], now)[
+            "room"
+        ]
+        == "living"
+    )
+
+
+async def test_located_answers_fly_the_views_into_the_room(hass: HomeAssistant) -> None:
+    from homeassistant.core import callback
+    from homeassistant.helpers.dispatcher import async_dispatcher_connect
+
+    from custom_components.neonplan3d.const import SIGNAL_ASK
+    from custom_components.neonplan3d.locate.answers import Located
+    from custom_components.neonplan3d.voice import show_located
+
+    await _setup(hass)
+    service: LocateService = hass.data[DATA_LOCATE]
+    sent: list[dict] = []
+
+    @callback
+    def collect(msg: dict) -> None:
+        sent.append(msg)
+
+    async_dispatcher_connect(hass, SIGNAL_ASK, collect)
+    show_located(hass, Located("Torsten is in the Kitchen.", ["kitchen"], True))
+    show_located(hass, Located("I can't hear Torsten right now.", [], True))
+    # people shown to admins only: the views of others stay where they are (the message says so)
+    service.admins_only = True
+    show_located(hass, Located("Torsten is in the Kitchen.", ["kitchen"], True))
+    show_located(hass, Located("The keys are in the Hall.", ["hall"], False))
+    service.fly = False
+    show_located(hass, Located("The keys are in the Hall.", ["hall"], False))
+    await hass.async_block_till_done()
+    assert [(m["show_rooms"], m["admins_only"]) for m in sent] == [
+        (["kitchen"], False),
+        (["kitchen"], True),
+        (["hall"], False),
+    ]
+
+
+async def test_a_view_asks_locating_first(hass: HomeAssistant, hass_ws_client) -> None:
+    """The NeonPlan panel's own microphone gets the locating answer and its rooms (not the modules' guess)."""
+    await _setup(hass)
+    service: LocateService = hass.data[DATA_LOCATE]
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "neonplan3d/locate/ask", "text": "Wer ist zu Hause?", "language": "de"})
+    assert (await client.receive_json())["result"] is None
+    service.devices = [dict(WATCH, name="Torsten Apple Watch")]
+    service.rooms = ROOMS
+    service.state = {
+        "irk_watch": {"room": "kitchen", "room_name": "Kitchen", "probability": 0.9, "last_seen": time.time()}
+    }
+    await client.send_json_auto_id({"type": "neonplan3d/locate/ask", "text": "Wer ist zu Hause?", "language": "de"})
+    res = (await client.receive_json())["result"]
+    assert res == {"text": "Zu Hause: Torsten Apple Watch (Kitchen).", "rooms": ["kitchen"], "admins_only": False}
+    await client.send_json_auto_id({"type": "neonplan3d/locate/ask", "text": "Zeig die Küche", "language": "de"})
+    assert (await client.receive_json())["result"] is None

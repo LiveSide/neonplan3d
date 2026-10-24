@@ -38,7 +38,7 @@ const editorConfig = (viewerHash, locateHash) => ({
 });
 // the time travel (Pro) only loads when it starts; its texts come from the main bundle
 const timeTravelConfig = { ...common, entryPoints: ["src/timetravel/entry.ts"], outfile: `${out}/neonplan3d-timetravel.js` };
-// the fun packs (pets …) only load when one is unlocked and switched on; three.js is lent by the 3D bundle
+// the fun packs (pets â€¦) only load when one is unlocked and switched on; three.js is lent by the 3D bundle
 const funConfig = { ...common, entryPoints: ["src/fun/entry.ts"], outfile: `${out}/neonplan3d-fun.js` };
 // voice (the microphone probe for now) only loads when it is asked for
 const voiceConfig = { ...common, entryPoints: ["src/voice/entry.ts"], outfile: `${out}/neonplan3d-voice.js` };
@@ -100,13 +100,13 @@ function copyFonts() {
 // main 620 KB and card editor 250 KB on 2026-10-17 for the live director (Kamera-Cockpit) and its texts; the microphone probe has its own bundle
 // raised 2026-10-06 for the 1.12 round (outdoor round, hip-end solar, marker names): still small enough for old wall tablets;
 // main raised to 440 KB on 2026-10-08 for the time travel's switch, texts and read-only guards (its own code loads lazily), to 450 KB the same day for room to fix things;; card editor 180 KB the same day (it carries the German and English texts)
-// the time travel bundle raised to 120 KB on 2026-10-08 for phases 2/3 (the week, live edge, events sheet, summaries – loaded only when travelling)
+// the time travel bundle raised to 120 KB on 2026-10-08 for phases 2/3 (the week, live edge, events sheet, summaries â€“ loaded only when travelling)
 // main 480 KB, editor 570 KB, card editor 185 KB on 2026-10-09 for Pool Pro (pool state, glass card, alerts and its texts in German and English);
 // main 495 KB, editor 600 KB, card editor 190 KB the same day for the pool tool, its pipes, devices and texts
 // editor 620 KB on 2026-10-10 for the wall view (furniture on a wall from the front; later pipes and cables on walls)
 // editor 640 KB on 2026-10-10: the wall view grew (3D in the room, lift, turn, lock, tap into a room); the next wall update (doors, windows, runs) needs room too
 // main 510 KB, 3D 760 KB, editor 680 KB, card editor 196 KB on 2026-10-10 for pipes on walls (Pool Pro: runs with a height per point,
-// T-pieces, ball valves, real tubes in 3D) and their texts – the doors and windows of the wall view come next
+// T-pieces, ball valves, real tubes in 3D) and their texts â€“ the doors and windows of the wall view come next
 // editor 730 KB, card editor 205 KB on 2026-10-10 for the parts' cards (connections, drawings, joining) and their texts
 // editor 760 KB, card editor 210 KB on 2026-10-12 for furniture blocks, the wall view side bar and "Technik zeichnen"
 // main 530 KB on 2026-10-11 for the walk through the house (its controls and texts; the walking itself lives in the 3D bundle)
@@ -121,10 +121,10 @@ function copyFonts() {
 // editor 800 KB on 2026-10-14 for the awning (form, sensors) and the 1.18.2 fixes
 // main 570 KB, 3D 770 KB and card editor 230 KB on 2026-10-14 for the awnings (five kinds) and their texts
 // main 590 KB, editor 820 KB, card editor 235 KB on 2026-10-15 for the household (bins, mailboxes, Haushalt Pro) and its texts
-// editor 930 KB on 2026-10-23 for the locating section and the people setting in ⚙ House
-// locate 140 KB on 2026-10-23: the locating setup carries its texts in 18 languages and the key helper (it only loads when an admin opens it)
-// FORK d14tk: the fork's own fields need a little more room than upstream's budget allows (see FORK.md).
-const BUDGET = { "neonplan3d.js": 704 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-locate.js": 140 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 828 * 1024, "neonplan3d-editor.js": 946 * 1024, "neonplan3d-card-editor.js": 275 * 1024 };
+// editor 930 KB on 2026-10-23 for the locating section and the people setting in âš™ House
+// main 690 KB on 2026-10-24 (was 688): the panel microphone asks locating first and flies into the rooms of the answer
+// locate 160 KB on 2026-10-24 (was 140): the locating setup carries its texts in 18 languages, the key helper, the Android transmitter hints and the fly switch (it only loads when an admin opens it)
+const BUDGET = { "neonplan3d.js": 690 * 1024, "neonplan3d-fun.js": 40 * 1024, "neonplan3d-voice.js": 60 * 1024, "neonplan3d-locate.js": 160 * 1024, "neonplan3d-timetravel.js": 120 * 1024, "neonplan3d-3d.js": 812 * 1024, "neonplan3d-editor.js": 930 * 1024, "neonplan3d-card-editor.js": 267 * 1024 };
 
 copyFonts();
 if (watch) {
@@ -143,16 +143,16 @@ if (watch) {
   await build(mainConfig(hashOf(viewerConfig.outfile), hashOf(editor.outfile), hashOf(cardEditorConfig.outfile), hashOf(timeTravelConfig.outfile), hashOf(funConfig.outfile), hashOf(voiceConfig.outfile), hashOf(locateConfig.outfile)));
   let over = false;
   // old Fire-tablet WebViews (Chrome before 91, e.g. Fully Kiosk on a Fire 7) throw on an optional call with spread
-  // arguments, `a?.b(...x)` – the roof failed there; lowering the target for it would cost ~11 KB, so it is banned
+  // arguments, `a?.b(...x)` â€“ the roof failed there; lowering the target for it would cost ~11 KB, so it is banned
   for (const file of Object.keys(BUDGET)) {
     const hit = readFileSync(`${out}/${file}`, "utf8").match(/\?\.(?:[\w$]+)?\(\.\.\./);
     if (hit) {
       over = true;
-      console.log(`OLD-WEBVIEW ${file}: "${hit[0]}" breaks Chrome < 91 – write it as "if (a.b) a.b(...x)"`);
+      console.log(`OLD-WEBVIEW ${file}: "${hit[0]}" breaks Chrome < 91 â€“ write it as "if (a.b) a.b(...x)"`);
     }
   }
   // the same WebViews lack newer functions (Object.hasOwn and findLast from Chrome 93/97, the toSorted family from 110)
-  // and dvh (108): our own sources may not use them, and dvh only inside @supports – a dvh line with var() is not
+  // and dvh (108): our own sources may not use them, and dvh only inside @supports â€“ a dvh line with var() is not
   // dropped by an old browser, it loses the whole height (the Fire 7 showed an empty panel; idea: CasaNeon)
   const NEWER = /\bObject\.hasOwn\(|\.findLast(?:Index)?\(|\.to(?:Sorted|Reversed|Spliced)\(/;
   const sources = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? sources(`${dir}/${e.name}`) : e.name.endsWith(".ts") && !e.name.endsWith(".test.ts") ? [`${dir}/${e.name}`] : []));
@@ -167,7 +167,11 @@ if (watch) {
       }
     });
   }
-  for (const [file, limit] of Object.entries(BUDGET)) {
+  // FORK d14tk: the fork's own fields need a little more room than upstream's budget allows (see FORK.md);
+  // added here instead of in BUDGET, so that upstream's budget changes merge without conflicts
+  const FORK_EXTRA = { "neonplan3d.js": 16, "neonplan3d-3d.js": 16, "neonplan3d-editor.js": 16, "neonplan3d-card-editor.js": 8 };
+  for (const [file, base] of Object.entries(BUDGET)) {
+    const limit = base + (FORK_EXTRA[file] ?? 0) * 1024;
     const size = statSync(`${out}/${file}`).size;
     const ok = size <= limit;
     over ||= !ok;

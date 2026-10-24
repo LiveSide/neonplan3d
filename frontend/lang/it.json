@@ -2071,6 +2071,7 @@
   "persons_pin": "Segnaposto",
   "persons_off": "no",
   "locate": "Localizzazione",
+  "diag_menu": "Aiuta a migliorare",
   "frame_pos": "Telaio nel muro",
   "frame_pos_hint": "Dove si trova il telaio della finestra nello spessore del muro: al centro, a filo con l'esterno (es. finestra nel cappotto, spalletta profonda all'interno) o a filo con l'interno.",
   "frame_pos_middle": "centro",

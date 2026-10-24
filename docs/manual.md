@@ -779,19 +779,20 @@ NeonPlan shows which room you are in right now – and where your iPhone or your
   About one scanner per room is ideal. Rooms without a scanner of their own (hall, guest toilet) are still recognised: learning remembers how they look to the scanners in the rooms next door.
 - **Something you carry:**
   - **Apple Watch and iPhone** with their key (IRK) – the key helper reads it in three minutes (see below). The watch on the wrist is ideal: an iPhone in a pocket goes quiet about a minute after its screen turns off.
-  - **Android phones:** in the Home Assistant app switch on **Settings → Companion app → Manage sensors → BLE Transmitter**. No key needed.
+  - **Android phones:** in the Home Assistant app switch on **Settings → Companion app → Manage sensors → BLE Transmitter**. No key needed. Set the **transmit power to "High"** and the **advertise mode to "Low latency"** there: out of the box the app sends so weakly that the scanners barely hear it. NeonPlan then finds the phone by itself and shows a hint when a setting is too weak.
+  - **Pairing Android through the key helper does not help:** Android does not send this key in the background, so the device stays "not heard".
   - **Key tags** with a fixed address or as an iBeacon (e.g. Nut, Tile, iBeacon tags). **AirTags do not work** – they change their address, and Apple gives no key.
 
 **Setting up** (editor → **⚙ Settings → 📡 Locating**, admins only):
 
 1. **Scanners:** NeonPlan lists all Bluetooth scanners of Home Assistant and suggests their room – from the device's Home Assistant area, a pin or a piece of furniture in the plan (the washing machine with the Shelly plug's power sensor) or the name ("PC office plug"). After learning NeonPlan knows from the signals where each scanner stands and offers **"Signals say: … – use it"** when they disagree.
-2. **Devices:** the watch and the iPhone through the **🔑 Key helper**, Android phones and key tags through **📱 Add an Android phone or a key tag** (hold the device right next to a scanner); a key you already have goes in under **🔑 Paste a key you already have**. Give every device a name, a person and – for "ring my iPhone" – the phone's Home Assistant app.
+2. **Devices:** the watch and the iPhone through the **🔑 Key helper**, Android phones appear by themselves under **📱 Android with the Home Assistant app**, key tags through **📱 Add an Android phone or a key tag** (hold the device right next to a scanner). When no scanner hears a device right now, it says **⚠ not heard**; a key you already have goes in under **🔑 Paste a key you already have**. Give every device a name, a person and – for "ring my iPhone" – the phone's Home Assistant app.
 3. **Learning:** tick the devices you are **carrying**. Go into every room, tap it and walk around slowly for **90 seconds**, into the corners and along the walls. Keep a phone in your **pocket** (screen off), as in everyday life – best tap with another tablet or phone. **Learning once is enough:** devices without learning of their own use the others'. The countdown runs; at 0 the room is done (✓). **Check accuracy** then shows how surely each room is recognised. Simply learn a weak room again.
 4. **Live:** switch locating on and walk through the house – the list shows at once where NeonPlan sees you.
 
 **In the 3D view:**
 
-- **A person's watch and phone:** what is worn on the body (watch, band – tick **⌚ worn**, already set for "watch" in the name) tells where the person stands while it was heard in the last two minutes; otherwise the device heard last. A phone lying in another room shows there as a small symbol of its own.
+- **A person's watch and phone:** what is worn on the body (watch, band – tick **⌚ worn**, already set for "watch" in the name) tells where the person stands while it was heard in the last two minutes; otherwise the device heard last. When the watch and the phone are heard at the same time in different rooms (typically at a shared wall), the phone only wins when it is clearly surer (by more than 15 percentage points). A phone left lying in another room while you walked on with the watch shows there as a small symbol of its own. The other way round too: a watch that has lain in one room for ten minutes while the phone changed rooms after it counts as taken off – the phone then tells where the person is, and the watch stands as a symbol where it lies.
 - People stand as a **glowing figure** in their colour in the room, with the name above. Things (keys, an iPhone without a person) are small round symbols. A tap shows the room, the certainty and since when.
 - In the assistant under **4 · Live → People in 3D**: **figure, pin or off** – once for the whole house.
 - The **room panel** shows under its name who is here now, and the floors count the people.
@@ -799,7 +800,7 @@ NeonPlan shows which room you are in right now – and where your iPhone or your
 
 **Faster with presence sensors:** motion and presence sensors (radar like the Aqara FP2 too) that belong to an area in Home Assistant speed locating up by themselves: Bluetooth tells **who** it is, the sensor tells **when** someone enters the room. Without sensors a room change takes two to five seconds – with one often just a moment.
 
-**Voice** (with the Assist sentences under **⚙ Settings → Voice control**): "Where is my iPhone?", "Where is Torsten?", "Who is home?", "Ring my iPhone". The answer comes straight from Home Assistant – even without an open NeonPlan screen. Ringing sends a loud notification to the Home Assistant app (on an iPhone a critical alert that rings in silent mode too).
+**Voice** (with the Assist sentences under **⚙ Settings → Voice control**): "Where is my iPhone?", "Where is Torsten?", "Who is home?", "Ring my iPhone". The answer comes straight from Home Assistant – even without an open NeonPlan screen. Open NeonPlan views fly into the room of the answer, on "Who is home?" into every room with someone in it, one after another (a tap stops it). Switch it off in the locating assistant under **Live**; while people are shown to admins only, only admins' views fly to them. "Where is Anna?" with the names locating knows is understood by Assist even when an AI agent (such as Gemini) answers everything else. Ringing sends a loud notification to the Home Assistant app (on an iPhone a critical alert that rings in silent mode too).
 
 **For automations:** every device has a sensor, e.g. `sensor.torstens_watch_room`. Its state is the room name; the attributes are `room_id`, `area_id` (the room's Home Assistant area), `floor`, `probability` (certainty 0–1), `since` and `last_seen`. Example – the light follows you:
 
@@ -835,7 +836,7 @@ actions:
 
 1. Plug an **ESP32** (ESP32, ESP32-C3 or ESP32-S3, about 5 €) into the computer and click **Install** on [neonplan3d.mastershort.de/keys](https://neonplan3d.mastershort.de/keys/) with Chrome or Edge. Then enter your Wi-Fi.
 2. Home Assistant finds **NeonPlan Key** as an ESPHome device: **Settings → Devices & services → Discovered → Add**.
-3. In the assistant under **Devices → 🔑 Key helper** pick "For an Apple Watch" or "For an iPhone / Android" and pair: on the watch tap "NeonPlan Key" under **Settings → Bluetooth → Health devices**, on the phone under **Settings → Bluetooth**. The key appears at once – tap **Add**. Afterwards remove "NeonPlan Key" from the Bluetooth settings again.
+3. In the assistant under **Devices → 🔑 Key helper** pick "For an Apple Watch" or "For an iPhone" and pair: on the watch tap "NeonPlan Key" under **Settings → Bluetooth → Health devices**, on the phone under **Settings → Bluetooth**. The key appears at once – tap **Add**. Afterwards remove "NeonPlan Key" from the Bluetooth settings again.
 4. **More devices:** tap **🔄 Next device** first – the helper gets a new Bluetooth identity, so the device paired before does not connect in between.
 
 You can reuse the ESP32 afterwards, best as an ESPHome Bluetooth proxy – it then even makes locating faster. The helper is built on [irk-capture](https://github.com/DerekSeaman/irk-capture) by Derek Seaman (MIT licence) – thank you! Another way: with a **Mac** through Keychain Access (the Mac must be on the same iCloud account). Then paste the key in the assistant under **Devices → Paste a key** (as 32 characters or the way the Mac shows it).
@@ -1312,6 +1313,11 @@ Home Assistant's own backup includes NeonPlan 3D completely as well.
 - NeonPlan 3D only connects to the internet if you enter a licence key. Then it asks mastershort.de once a day for updates and sends the key and the anonymous installation id.
 - Camera pictures, history and states stay in Home Assistant and are only shown in the browser.
 - Time travel reads the history from Home Assistant's recorder, only for the devices of the plan. It never reads people or their trackers.
+- **Locating** evaluates the Bluetooth signals only in Home Assistant. Nothing about who is where leaves your house.
+- **Help make NeonPlan better (voluntary, off by default):** under **⚙ Settings → 🛟 Help improve** you can switch on anonymous usage and error reports. Then at most one report a day (and at most one batch of error messages an hour) goes to api.mastershort.de.
+  - **Sent:** a random id (not Home Assistant's, made when you switch it on), the versions of NeonPlan, Home Assistant and Python, the language, the installed packs and Pro add-ons, counts from the plan (floors, rooms, furniture, linked devices, cameras), device type, browser and system of the screens with frame rate and graphics class, how often each view was opened, and NeonPlan's error messages without names and addresses.
+  - **Never sent:** names, entities, areas, the shape of your floor plan, IP addresses, your Home Assistant installation's id, user names, your licence key – and nothing from locating.
+  - **"View report"** shows exactly the next report before it is sent. **"Delete data"** removes everything already sent. Switching off forgets the id.
 
 ---
 

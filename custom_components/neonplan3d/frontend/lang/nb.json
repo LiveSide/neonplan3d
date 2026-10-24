@@ -2071,6 +2071,7 @@
   "persons_pin": "Nål",
   "persons_off": "av",
   "locate": "Lokalisering",
+  "diag_menu": "Hjelp til",
   "frame_pos": "Karm i veggen",
   "frame_pos_hint": "Hvor vinduskarmen sitter i veggtykkelsen: i midten, i flukt med yttersiden (f.eks. vindu i isolasjonssjiktet, dyp smyg innvendig) eller i flukt med innersiden.",
   "frame_pos_middle": "midten",

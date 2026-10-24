@@ -2071,6 +2071,7 @@
   "persons_pin": "Nål",
   "persons_off": "av",
   "locate": "Lokalisering",
+  "diag_menu": "Hjälp till",
   "frame_pos": "Karm i väggen",
   "frame_pos_hint": "Var fönsterkarmen sitter i väggtjockleken: i mitten, i liv med utsidan (t.ex. fönster i isoleringsskiktet, djup smyg invändigt) eller i liv med insidan.",
   "frame_pos_middle": "mitten",

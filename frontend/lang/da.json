@@ -2071,6 +2071,7 @@
   "persons_pin": "Nål",
   "persons_off": "fra",
   "locate": "Lokalisering",
+  "diag_menu": "Hjælp med",
   "frame_pos": "Karm i væggen",
   "frame_pos_hint": "Hvor vindueskarmen sidder i vægtykkelsen: i midten, flugter med ydersiden (f.eks. vindue i isoleringslaget, dyb lysning indvendig) eller flugter med indersiden.",
   "frame_pos_middle": "midten",

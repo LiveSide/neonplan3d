@@ -2071,6 +2071,7 @@
   "persons_pin": "Reper",
   "persons_off": "oprit",
   "locate": "Localizare",
+  "diag_menu": "Ajută",
   "frame_pos": "Toc în perete",
   "frame_pos_hint": "Unde stă tocul ferestrei în grosimea peretelui: la mijloc, la fața exterioară (de ex. fereastră în stratul de izolație, glaf adânc în interior) sau la fața interioară.",
   "frame_pos_middle": "mijloc",

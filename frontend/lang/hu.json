@@ -2071,6 +2071,7 @@
   "persons_pin": "Jelölő",
   "persons_off": "ki",
   "locate": "Helymeghatározás",
+  "diag_menu": "Segíts",
   "frame_pos": "Keret a falban",
   "frame_pos_hint": "Hol ül az ablakkeret a fal vastagságában: középen, a külső síkkal egyvonalban (pl. ablak a hőszigetelés síkjában, mély belső káva) vagy a belső síkkal egyvonalban.",
   "frame_pos_middle": "közép",

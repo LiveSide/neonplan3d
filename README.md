@@ -156,7 +156,7 @@ More: `start_view`, `explode`, `floor_stack`, `controls`, `controls_hidden`, `fl
 
 ## Privacy
 
-NeonPlan 3D stores the plan, its pictures and the packs in Home Assistant's `.storage`. It talks to the internet only when you enter a licence key in **Extensions**: then it asks mastershort.de once a day for updates of your packs, sending the key and an anonymous installation fingerprint (a hash). Voice control sends your speech only to your own Home Assistant's Assist pipeline, and the microphone is open only while you speak. Locating evaluates the Bluetooth signals only in Home Assistant; nothing about who is where leaves the house.
+NeonPlan 3D stores the plan, its pictures and the packs in Home Assistant's `.storage`. It talks to the internet only when you enter a licence key in **Extensions**: then it asks mastershort.de once a day for updates of your packs, sending the key and an anonymous installation fingerprint (a hash). Voice control sends your speech only to your own Home Assistant's Assist pipeline, and the microphone is open only while you speak. Locating evaluates the Bluetooth signals only in Home Assistant; nothing about who is where leaves the house. Anonymous usage and error reports are opt-in (off by default) under ⚙ Settings → 🛟 Help improve; you can view every report before it is sent and delete the data at any time.
 
 ## Ideas, questions and bugs
 

@@ -2071,6 +2071,7 @@
   "persons_pin": "Speld",
   "persons_off": "uit",
   "locate": "Locatie",
+  "diag_menu": "Help mee",
   "frame_pos": "Kozijn in de muur",
   "frame_pos_hint": "Waar het raamkozijn in de muurdikte zit: in het midden, gelijk met de buitenkant (bijv. raam in de isolatielaag, diepe dagkant binnen) of gelijk met de binnenkant.",
   "frame_pos_middle": "midden",

@@ -110,6 +110,8 @@ export function locatedPersons(hass: HomeAssistant, building: Building, skip: Re
     floorId: string;
     room: Room;
     seen: number;
+    since: number;
+    probability: number;
     worn: boolean;
   }
   const found: Found[] = [];
@@ -123,6 +125,7 @@ export function locatedPersons(hass: HomeAssistant, building: Building, skip: Re
     }
     if (!hit) continue;
     const seen = typeof a.last_seen === "string" ? Date.parse(a.last_seen) : NaN;
+    const since = typeof a.since === "string" ? Date.parse(a.since) : NaN;
     found.push({
       entityId,
       name: typeof a.device_name === "string" ? a.device_name : entityId,
@@ -130,6 +133,8 @@ export function locatedPersons(hass: HomeAssistant, building: Building, skip: Re
       floorId: hit.floorId,
       room: hit.room,
       seen: Number.isFinite(seen) ? seen : 0,
+      since: Number.isFinite(since) ? since : 0,
+      probability: typeof a.probability === "number" ? a.probability : 0,
       worn: a.wearable === true,
     });
   }
@@ -154,9 +159,24 @@ export function locatedPersons(hass: HomeAssistant, building: Building, skip: Re
     const person = hass.states[personId];
     // away: neither the person nor a device left at home is shown as the person
     if (person && person.state !== "home" && person.state !== "on") continue;
-    // a worn device (watch) heard in the last two minutes tells where the person is; else the freshest device
-    const fresh = list.filter((f) => f.worn && now - f.seen < 120_000);
-    const main = (fresh.length ? fresh : list).reduce((a, b) => (b.seen > a.seen ? b : a));
+    // the same rule as the spoken answers (person_state in locate/answers.py): the worn device (watch) heard in the
+    // last two minutes, unless a phone heard at the same time is clearly surer about another room (a shared wall
+    // fools the watch) – a phone that stayed put while the watch walked on was left lying, a watch that lay still for
+    // ten minutes while the phone walked on was taken off; else the freshest device
+    const freshest = (l: Found[]) => l.reduce((a, b) => (b.seen > a.seen ? b : a));
+    const worn = list.filter((f) => f.worn && now - f.seen < 120_000);
+    let main = freshest(worn.length ? worn : list);
+    const together = (f: Found) => now - f.seen < 30_000 && now - main.seen < 30_000 && f.since >= main.since - 120_000;
+    let off: Found | null = null;
+    if (main.worn) {
+      const others = list.filter((f) => !f.worn && f.room.id !== main.room.id && together(f));
+      const other = others.length ? others.reduce((a, b) => (b.probability > a.probability ? b : a)) : null;
+      // the watch lay still for ten minutes while the phone changed rooms after it: taken off, it stands as a thing
+      if (other && now - main.since >= 600_000 && other.since > main.since + 120_000) {
+        off = main;
+        main = other;
+      } else if (other && other.probability > main.probability + 0.15) main = other;
+    }
     const name = (person?.attributes.friendly_name as string | undefined) ?? main.name;
     place(main, {
       id: personId,
@@ -167,8 +187,13 @@ export function locatedPersons(hass: HomeAssistant, building: Building, skip: Re
       entity: main.entityId,
       tag: name.split(/\s+/)[0],
     });
-    // a phone left in another room stands there as a thing ("where is my iPhone")
-    for (const f of list) if (f !== main && f.room.id !== main.room.id) thing(f, personColor(personId));
+    // a phone left in another room stands there as a thing ("where is my iPhone"); a device that only disagrees
+    // about the room (heard together with the chosen one) and a worn one heard lately are with the person
+    for (const f of list) {
+      if (f === main || f.room.id === main.room.id) continue;
+      if (f !== off && ((f.worn && now - f.seen < 120_000) || together(f))) continue;
+      thing(f, personColor(personId));
+    }
   }
   return out;
 }

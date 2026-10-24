@@ -2071,6 +2071,7 @@
   "persons_pin": "Repère",
   "persons_off": "non",
   "locate": "Localisation",
+  "diag_menu": "Aider à améliorer",
   "frame_pos": "Cadre dans le mur",
   "frame_pos_hint": "Position du cadre de la fenêtre dans l'épaisseur du mur : au milieu, affleurant à l'extérieur (p. ex. fenêtre dans l'isolation, tableau profond à l'intérieur) ou affleurant à l'intérieur.",
   "frame_pos_middle": "milieu",

@@ -73,11 +73,11 @@ test("located people: a worn device places the person, a phone left elsewhere st
   const { hass, building } = setup();
   const now = Date.parse("2026-10-23T12:00:00Z");
   const iso = (agoS: number) => new Date(now - agoS * 1000).toISOString();
-  const loc = (room: string, person: string | null, name: string, worn: boolean, agoS: number): HassEntity =>
-    st(`sensor.${name.toLowerCase().replace(/\s+/g, "_")}_raum`, "x", { neonplan_locate: true, room_id: room, person, device_name: name, wearable: worn, last_seen: iso(agoS) });
+  const loc = (room: string, person: string | null, name: string, worn: boolean, agoS: number, sinceS = 60, probability = 0.8): HassEntity =>
+    st(`sensor.${name.toLowerCase().replace(/\s+/g, "_")}_raum`, "x", { neonplan_locate: true, room_id: room, person, device_name: name, wearable: worn, last_seen: iso(agoS), since: iso(sinceS), probability });
   for (const s of [
-    loc("r2", "person.mia", "Mia iPhone", false, 5), // fresher, but left in the kitchen
-    loc("r1", "person.mia", "Mia Watch", true, 20), // worn: Mia is in the living room
+    loc("r2", "person.mia", "Mia iPhone", false, 5, 1200, 0.99), // fresher and sure, but lying in the kitchen for 20 minutes
+    loc("r1", "person.mia", "Mia Watch", true, 20), // worn, walked into the living room a minute ago: Mia is there
     loc("r2", "person.lea", "Leas Uhr", true, 3), // Lea is away
     loc("r2", null, "Schlüssel", false, 60),
     loc("nowhere", null, "Tag", false, 1),
@@ -100,4 +100,37 @@ test("located people: a worn device places the person, a phone left elsewhere st
   assert.equal(locatedPersons(hass, building, new Set(), now).find((p) => p.id === "person.mia")?.roomId, "r2");
   // the ones already shown by the room sensors are skipped
   assert.equal(locatedPersons(hass, building, new Set(["person.mia"]), now).filter((p) => !p.thing).length, 0);
+});
+
+test("located people: watch and phone heard together disagree about the room – the clearly surer one wins, no extra thing", () => {
+  const { hass, building } = setup();
+  const now = Date.parse("2026-10-23T12:00:00Z");
+  const iso = (agoS: number) => new Date(now - agoS * 1000).toISOString();
+  const put = (name: string, room: string, worn: boolean, probability: number) =>
+    (hass.states[`sensor.${name}_raum`] = st(`sensor.${name}_raum`, "x", { neonplan_locate: true, room_id: room, person: "person.tom", device_name: name, wearable: worn, last_seen: iso(5), since: iso(600), probability }));
+  // sitting in the kitchen, the living-room plug behind the seat fools the watch
+  put("watch", "r1", true, 0.6);
+  put("iphone", "r2", false, 0.85);
+  let people = locatedPersons(hass, building, new Set(), now);
+  assert.deepEqual(people.map((p) => [p.id, p.roomId, p.thing ?? false]), [["person.tom", "r2", false]]);
+  // the phone only a little surer: the watch keeps it, still no phone symbol
+  put("iphone", "r2", false, 0.7);
+  people = locatedPersons(hass, building, new Set(), now);
+  assert.deepEqual(people.map((p) => [p.id, p.roomId, p.thing ?? false]), [["person.tom", "r1", false]]);
+});
+
+test("located people: a watch lying still while the phone walks on was taken off – the phone places her, the watch stands as a thing", () => {
+  const { hass, building } = setup();
+  const now = Date.parse("2026-10-23T12:00:00Z");
+  const iso = (agoS: number) => new Date(now - agoS * 1000).toISOString();
+  const put = (name: string, room: string, worn: boolean, probability: number, sinceS: number) =>
+    (hass.states[`sensor.${name}_raum`] = st(`sensor.${name}_raum`, "x", { neonplan_locate: true, room_id: room, person: "person.mia", device_name: name, wearable: worn, last_seen: iso(5), since: iso(sinceS), probability }));
+  // the watch has lain in the living room for an hour, the phone came into the kitchen a minute ago
+  put("watch", "r1", true, 0.95, 3600);
+  put("iphone", "r2", false, 0.6, 60);
+  const people = locatedPersons(hass, building, new Set(), now);
+  assert.deepEqual(
+    people.map((p) => [p.id, p.roomId, p.thing ?? false]).sort(),
+    [["person.mia", "r2", false], ["sensor.watch_raum", "r1", true]],
+  );
 });

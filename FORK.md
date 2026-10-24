@@ -484,3 +484,9 @@ MIT-Lizenz, Copyright (c) 2026 Mastershort. Die Lizenz liegt unverändert in
 Wer NeonPlan 3D nutzt, sollte das Original unterstützen: die Möbel-Packs und der
 Supporter-Pass im [Shop](https://mastershort.de/neonplan3d/) finanzieren die
 Entwicklung. Dieser Fork ersetzt sie nicht, er macht nur eigene Möbel möglich.
+
+## Merge-Hinweise (2.0.2.1)
+
+- Die Bundle-Budgets des Forks stehen als Zuschlag `FORK_EXTRA` an der Pruefstelle in `frontend/build.mjs`, nicht in `BUDGET`. So kollidieren Budgetaenderungen des Originals nicht mehr.
+- `hacs.json` bleibt beim Sync immer die des Forks (zip_release mit `neonplan3d.zip`).
+

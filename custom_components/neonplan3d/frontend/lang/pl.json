@@ -2071,6 +2071,7 @@
   "persons_pin": "Pinezka",
   "persons_off": "wył.",
   "locate": "Lokalizacja",
+  "diag_menu": "Pomóż",
   "frame_pos": "Rama w ścianie",
   "frame_pos_hint": "Gdzie rama okna leży w grubości ściany: pośrodku, w licu zewnętrznym (np. okno w warstwie ocieplenia, głęboka ościeżnica wewnątrz) lub w licu wewnętrznym.",
   "frame_pos_middle": "środek",
