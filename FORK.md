@@ -356,6 +356,12 @@ Neben `shut` (ohne Sensor geschlossen) gibt es `open_wide`: eine Tür ohne Konta
 gezeichnet. Feld in `schema.py` (Öffnung), `model.ts` und `devices.ts` (`wide`). Im Editor gibt es noch keinen Schalter,
 das Feld wird im Plan gesetzt.
 
+## Möbel ohne eigenen Ton (2.0.2.2)
+
+`mute: true` an einem Möbel (Fernseher) zeigt dessen Media-Player weiter auf dem Bildschirm, aber Klang-Ringe und
+Now-Playing-Karte kommen von den anderen Möbeln mit derselben Entity (Lautsprecher). Feld in `schema.py`, `model.ts`,
+ausgewertet in `components/view3d.ts` (Klang & Kino). Kein Schalter im Editor.
+
 ## Updates des Originals einpflegen
 
 Der Fork hat zwei Remotes: `origin` (dieses Repo) und `upstream` (das Original).

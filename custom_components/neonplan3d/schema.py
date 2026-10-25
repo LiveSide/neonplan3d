@@ -245,6 +245,8 @@ FURNITURE_SCHEMA = vol.Schema(
         vol.Optional("aliases"): vol.All([vol.All(str, vol.Length(min=1, max=60))], vol.Length(max=12)),
         vol.Optional("show_name", default=False): bool,
         # lamps / lights: how strongly they glow in 3D (None = as reported)
+        # FORK d14tk: the furniture shows its media player but makes no sound (speakers elsewhere play it)
+        vol.Optional("mute", default=False): bool,
         vol.Optional("glow_scale", default=None): vol.Any(
             None, vol.All(vol.Coerce(float), vol.Range(min=0.1, max=1.5))
         ),

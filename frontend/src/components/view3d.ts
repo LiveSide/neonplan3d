@@ -1342,6 +1342,8 @@ export class Fp3dView3d extends LitElement {
       const furn = (floor: Building["floors"][number], byHand: boolean) => {
         for (const f of floor.furniture) {
           if ((f.entity != null && f.entity !== "none") !== byHand) continue;
+          // FORK d14tk: a TV whose sound plays on speakers elsewhere: the speakers ring, not the TV (see FORK.md)
+          if (f.mute) continue;
           const e = this.furnitureLinks?.get(f.id)?.entity;
           if (e) add(floor, e, f.x, f.z, mountBase(floor, f) + f.h, f.name || furnitureName(hass, f.type));
         }

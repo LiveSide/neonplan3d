@@ -201,6 +201,8 @@ export interface Furniture {
   show_name?: boolean;
   /** Lamps: how strongly the lamp glows in 3D, 0.1–1.5 (1 = as bright as the light reports) – #181. */
   glow_scale?: number | null;
+  /** FORK d14tk: shows its media player (a TV picture) but its sound comes from other furniture: no rings, no card here. */
+  mute?: boolean;
   /**
    * Lamps: glow only while the light shows this colour ("#rrggbb", similar shades count) – a colour light used as a
    * signal (yellow: water) does not show its other colours here. Null: every colour.
