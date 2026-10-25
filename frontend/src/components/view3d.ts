@@ -1286,14 +1286,15 @@ export class Fp3dView3d extends LitElement {
     if (hasFeature("sound")) {
       const seenMedia = new Set<string>();
       const holoSize = (b.settings.roof.hologram ?? DEFAULT_HOLOGRAM).size;
-      const add = (floor: Building["floors"][number], id: string, x: number, z: number, top: number, name: string) => {
+      // FORK d14tk: ry = height of the rings (the middle of a speaker), see FORK.md
+      const add = (floor: Building["floors"][number], id: string, x: number, z: number, top: number, name: string, ry?: number) => {
         const st = hass.states[id];
         if (!st || kindOf(id) !== "media") return;
         if (seenMedia.has(id)) {
           // a second speaker linked to the same player (a Sonos group or stereo pair known as one entity): it
           // plays along – its own rings, a line to the first, the one card stays with the first (#475)
           const first = sound.find((x) => x.id === id);
-          if (first) sound.push({ ...first, id: `${id}#${sound.filter((x) => x.id.startsWith(`${id}#`)).length + 2}`, floorId: floor.id, x, z, members: [id] });
+          if (first) sound.push({ ...first, id: `${id}#${sound.filter((x) => x.id.startsWith(`${id}#`)).length + 2}`, floorId: floor.id, x, z, y: ry, members: [id] });
           return;
         }
         seenMedia.add(id);
@@ -1313,7 +1314,7 @@ export class Fp3dView3d extends LitElement {
             this.mediaGraceTimer = setTimeout(() => this.syncDevices(true), Math.max(500, graced.until - Date.now() + 100));
           } else if (!isUnavailable(st)) {
             this.mediaGrace.delete(id);
-            sound.push({ id, floorId: floor.id, x, z, level: 0, playing: false, members: [] });
+            sound.push({ id, floorId: floor.id, x, z, y: ry, level: 0, playing: false, members: [] });
           }
           return;
         }
@@ -1321,7 +1322,7 @@ export class Fp3dView3d extends LitElement {
         const a = st.attributes;
         const vol = typeof a.volume_level === "number" ? Math.min(1, Math.max(0, a.volume_level)) : 0.5;
         const members = Array.isArray(a.group_members) ? (a.group_members as string[]).filter((m) => m !== id) : [];
-        sound.push({ id, floorId: floor.id, x, z, level: playing ? 0.3 + 0.7 * vol : 0, playing, members });
+        sound.push({ id, floorId: floor.id, x, z, y: ry, level: playing ? 0.3 + 0.7 * vol : 0, playing, members });
         const title = label || translate(hass, "holo_media_playing");
         const anchor = { p: [x, floor.elevation + top + 0.12, z] as [number, number, number], n: [0, 1, 0] as [number, number, number], floorId: floor.id, size: holoSize * 0.7, roof: false, views: "all" as const };
         const card: HoloCard = {
@@ -1345,7 +1346,7 @@ export class Fp3dView3d extends LitElement {
           // FORK d14tk: a TV whose sound plays on speakers elsewhere: the speakers ring, not the TV (see FORK.md)
           if (f.mute) continue;
           const e = this.furnitureLinks?.get(f.id)?.entity;
-          if (e) add(floor, e, f.x, f.z, mountBase(floor, f) + f.h, f.name || furnitureName(hass, f.type));
+          if (e) add(floor, e, f.x, f.z, mountBase(floor, f) + f.h, f.name || furnitureName(hass, f.type), Math.max(0.03, mountBase(floor, f) + f.h / 2));
         }
       };
       for (const floor of b.floors) furn(floor, true);

@@ -362,6 +362,9 @@ das Feld wird im Plan gesetzt.
 Now-Playing-Karte kommen von den anderen Möbeln mit derselben Entity (Lautsprecher). Feld in `schema.py`, `model.ts`,
 ausgewertet in `components/view3d.ts` (Klang & Kino). Kein Schalter im Editor.
 
+Ab 2.0.2.3 stehen die Klang-Ringe auf halber Höhe des Möbels (`SoundSource.y`), nicht mehr auf dem Boden: Lautsprecher unter
+der Decke tönen dort, wo sie hängen.
+
 ## Updates des Originals einpflegen
 
 Der Fork hat zwei Remotes: `origin` (dieses Repo) und `upstream` (das Original).

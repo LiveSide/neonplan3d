@@ -266,6 +266,8 @@ export interface SoundSource {
   playing: boolean;
   /** Entity ids of the players grouped with this one (Sonos, HA media groups). */
   members: string[];
+  /** FORK d14tk: height of the rings above the floor (a speaker under the ceiling); default on the floor. */
+  y?: number;
 }
 
 export interface ScreenState {
@@ -1109,7 +1111,7 @@ export class FloorplanViewer {
 
   /** Klang & Kino: rings around playing speakers, lines between grouped players; an empty list clears them. */
   setSound(list: SoundSource[]): void {
-    const sig = (l: SoundSource[]) => l.map((s) => `${s.id}:${s.floorId}:${s.x},${s.z}:${s.level.toFixed(2)}:${s.playing ? 1 : 0}:${s.members.join("+")}`).join(";");
+    const sig = (l: SoundSource[]) => l.map((s) => `${s.id}:${s.floorId}:${s.x},${s.z},${s.y ?? 0}:${s.level.toFixed(2)}:${s.playing ? 1 : 0}:${s.members.join("+")}`).join(";");
     if (sig(list) === sig(this.sound)) return;
     this.sound = list;
     this.soundActive = list.some((s) => s.playing);
@@ -1137,7 +1139,7 @@ export class FloorplanViewer {
             new MeshBasicMaterial({ color: 0x37e0ff, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, side: DoubleSide }),
           );
           ring.rotation.x = -Math.PI / 2;
-          ring.position.set(src.x, y + i * 0.002, src.z);
+          ring.position.set(src.x, (src.y ?? y) + i * 0.002, src.z);
           ring.userData = { sound: true, phase: i / 3, level: src.level };
           ring.frustumCulled = false;
           g.add(ring);
@@ -1153,7 +1155,7 @@ export class FloorplanViewer {
           const key = [src.id, o.id].sort().join("|");
           if (seen.has(key)) continue;
           seen.add(key);
-          pos.push(src.x, y + 0.02, src.z, o.x, y + 0.02, o.z);
+          pos.push(src.x, (src.y ?? y) + 0.02, src.z, o.x, (o.y ?? y) + 0.02, o.z);
         }
       if (pos.length) {
         const geo = new Geometry();
