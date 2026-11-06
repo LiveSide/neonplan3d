@@ -84,18 +84,20 @@ def union_lang(path: str, tag: str) -> None:
     git("add", path)
 
 
-def report(title: str, body: str) -> None:
-    """An issue in the fork (one per title), so a stop does not go unnoticed."""
+def report(title: str, body: str) -> bool:
+    """An issue in the fork (one per title), so a stop does not go unnoticed. True only for a new one."""
     print(f"::error::{title}\n{body}")
     if os.environ.get("GITHUB_ACTIONS") != "true":
-        return
+        return True
     found = subprocess.run(
         ["gh", "issue", "list", "--repo", REPO, "--state", "open", "--search", f'"{title}" in:title', "--json", "number"],
         capture_output=True, text=True,
     ).stdout
     if json.loads(found or "[]"):
-        return
+        print("already reported in an open issue, the run stays green")
+        return False
     subprocess.run(["gh", "issue", "create", "--repo", REPO, "--title", title, "--body", body], check=False)
+    return True
 
 
 def main() -> int:
@@ -131,19 +133,17 @@ def main() -> int:
             left.append(path)
     if merged.returncode and not conflicts:
         git("merge", "--abort", check=False)
-        report(f"Original {tag}: Merge fehlgeschlagen", f"```\n{merged.stdout}\n{merged.stderr}\n```")
-        return 1
+        return 1 if report(f"Original {tag}: Merge fehlgeschlagen", f"```\n{merged.stdout}\n{merged.stderr}\n```") else 0
     # the fork releases a zip (fork_release.py): its hacs.json stays, even when the original changes its own
     git("checkout", "HEAD", "--", "hacs.json")
     if left:
         git("merge", "--abort", check=False)
         files = "\n".join(f"- `{p}`" for p in left)
-        report(
+        return 1 if report(
             f"Original {tag}: Konflikt, von Hand zusammenführen",
             f"Diese Dateien haben Änderungen des Forks und des Originals an denselben Stellen:\n\n{files}\n\n"
             "Bis das gelöst ist, gibt es kein neues Release, HACS bleibt beim letzten Fork-Release.",
-        )
-        return 1
+        ) else 0
 
     data = manifest()
     data.update(FORK_FIELDS)
@@ -164,8 +164,7 @@ def main() -> int:
     except subprocess.CalledProcessError as err:
         git("merge", "--abort", check=False)
         git("reset", "--hard", "HEAD", check=False)
-        report(f"Original {tag}: Build oder Tests schlagen fehl", f"`{' '.join(err.cmd)}` endete mit {err.returncode}. Details im Workflow-Lauf.")
-        return 1
+        return 1 if report(f"Original {tag}: Build oder Tests schlagen fehl", f"`{' '.join(err.cmd)}` endete mit {err.returncode}. Details im Workflow-Lauf.") else 0
 
     git("add", "-A")
     git("commit", "-m", f"Merge original {tag}; {target}")
