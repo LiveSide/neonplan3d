@@ -23,10 +23,15 @@ export interface HouseholdItem {
 /** A pack item that is a plant: most of its parts are leaves or a pot. */
 export function isPackPlant(type: string): boolean {
   const item = packItem(type);
-  if (!item || item.light) return false;
+  if (!item) return false;
+  // named or tagged as a plant (the Deco pack's plants have leaf colours of their own, #712)
+  if (PLANT_WORDS.test([item.id, ...(item.tags ?? []), ...Object.values(item.name ?? {})].join(" "))) return !item.light || /plant|pflanz/i.test(item.id);
+  if (item.light) return false;
   const green = item.parts.filter((p) => p.color === "plant").length;
   return green > 0 && green + item.parts.filter((p) => p.color === "pot").length >= item.parts.length / 2;
 }
+
+const PLANT_WORDS = /plant|pflanz|palm|monstera|ficus|feige|\bfig\b|fig_|bonsai|kaktus|cactus|yucca|orchid|bambus|bamboo|bogenhanf|snake_|einblatt|lily|gummibaum|rubber|olive|kräuter|\bherb|\bfarn|\bfern\b|\befeu\b|\bivy\b|blumen|flower|tulp|tulip/i;
 
 export const BIN_SHAPES = ["bin120", "bin240", "bin1100", "multi", "bag", "caddy", "underground"] as const;
 export type BinShape = (typeof BIN_SHAPES)[number];

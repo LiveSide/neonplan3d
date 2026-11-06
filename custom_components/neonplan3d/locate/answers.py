@@ -188,11 +188,15 @@ def _match(
     return device["name"], [device]
 
 
+_NOT_AWAY = ("home", "on", "unknown", "unavailable", "")
+
+
 def _where(hass: HomeAssistant, service: LocateService, who: str, devices: list[dict[str, Any]], lang: str) -> Located:
     t = _TEXT[lang]
     person = devices[0].get("person")
     persons = any(d.get("person") for d in devices)
-    if person and (state := hass.states.get(person)) and state.state not in ("home", "on"):
+    # away, but not merely unknown: a person without a tracker of their own is home when located (#744)
+    if person and (state := hass.states.get(person)) and state.state not in _NOT_AWAY:
         return Located(t["away"].format(who=who), [], persons)
     best = person_state(service, devices)
     if best is None:

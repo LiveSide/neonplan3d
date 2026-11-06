@@ -38,6 +38,8 @@ const UNLOCKED = 0x37e0ff;
 
 const OPEN_ANGLE = 1.2;
 const DOOR_ANGLE = 1.5;
+/** How far a door without a sensor stands open (devices.ts DOOR_DEFAULT_OPEN): its own angle counts in full. */
+const SENSORLESS_OPEN = 0.5;
 const LEAF = 0x1c2c4d;
 const LEAF_TOP = 0x27406b;
 const LEAF_FRONT = 0x111a30;
@@ -48,6 +50,8 @@ const GLASS = shade(0x37e0ff, 0.08);
 /** Frosted glass: an opaque milky pane in the frames buffer (no see-through). */
 const FROSTED = 0xb9c8cf;
 const TILT_ANGLE = 0.2;
+/** How far a top-hung window opens outwards (about 26°). */
+const TOP_HUNG_ANGLE = 0.45;
 
 type Tf = (x: number, n: number, y: number) => number[];
 
@@ -140,11 +144,10 @@ export function sillBoards(info: OpeningInfo, infos: readonly OpeningInfo[]): { 
   // FORK d14tk: the window's own sill board (see FORK.md)
   const mode = info.opening.sill_board ?? "auto";
   if (mode === "none") return { inside: false, outside: false };
-  if (mode === "inside" || mode === "outside") {
-    const room = info.sill > 0.05;
-    return { inside: room && mode === "inside", outside: room && mode === "outside" };
-  }
-  const auto = info.sill > 0.3 && !stackedOnOpening(info, infos);
+  // chosen by hand it is drawn on any window, a floor-to-ceiling one too (at the floor, #702)
+  if (mode === "inside" || mode === "outside") return { inside: mode === "inside", outside: mode === "outside" };
+  // a glass wall has none unless chosen
+  const auto = info.sill > 0.3 && !stackedOnOpening(info, infos) && openingStyle(info.opening, info.exterior) !== "glass_wall";
   return { inside: auto, outside: auto && info.exterior };
 }
 
@@ -171,6 +174,18 @@ export interface OpeningParts {
   frameTris: { id: string; start: number; end: number }[];
   glassTris: { id: string; start: number; end: number }[];
   blindTris: { id: string; start: number; end: number }[];
+}
+
+/**
+ * The window board inside and the sill outside, by the window's setting. On a window down to the floor they lie
+ * on the floor's level (a board chosen there was not drawn at all, #702).
+ */
+function boardsOf(info: OpeningInfo, infos: readonly OpeningInfo[], frames: GeoBuffer, tf: Tf, mid: number, fd: number, top: Color, cut: number, bucket: number): void {
+  const boards = sillBoards(info, infos);
+  const W = info.width;
+  const S = Math.max(info.sill, 0.03);
+  if (boards.inside) splitBox(frames, tf, -0.04, W + 0.04, mid + fd, info.faceRoom + 0.07, S - 0.03, S, new Color(SILL), top, cut, bucket);
+  if (boards.outside) splitBox(frames, tf, -0.03, W + 0.03, -info.faceOut - 0.06, mid - fd, S - 0.04, S - 0.02, new Color(SILL), top, cut, bucket);
 }
 
 export function buildOpeningParts(infos: readonly OpeningInfo[], states: ReadonlyMap<string, OpeningState>, cut: number): OpeningParts {
@@ -248,9 +263,16 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
       }
       const leaves: [boolean, number][] = passage ? [] : [[info.hingeAtStart, st.open]];
       if (two && !passage) leaves.push([!info.hingeAtStart, st.open2 ?? 0]);
+      // a door's own opening angle: the leaf stands that far open (without a sensor) or opens that far (with one)
+      const ownAngle = info.opening.open_angle;
       for (const [atStart, openness] of leaves) {
         const open = Math.min(1, Math.max(0, openness));
-        const theta = style === "sliding" ? 0 : open * DOOR_ANGLE;
+        const theta =
+          style === "sliding"
+            ? 0
+            : ownAngle != null && ownAngle > 0
+              ? (st.sensed ? open : Math.min(1, open / SENSORLESS_OPEN)) * Math.min(170, ownAngle) * (Math.PI / 180)
+              : open * DOOR_ANGLE;
         // a sliding leaf runs along the wall face past the hinge side instead of turning
         const slide = style === "sliding" ? open * lw : 0;
         const leafTf: Tf = (u, n, y) => {
@@ -273,8 +295,11 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
         } else {
           splitBox(frames, leafTf, 0, lw, -thick, 0, 0.01, T - 0.01, leafC, leafTop, cut, leafBucket);
         }
-        if (style === "front_glass") panel(paneBuf, leafTf, 0.12, lw - 0.12, 0.001, T * 0.55, T - 0.18, paneC, cut, leafBucket);
-        else if (front) panel(paneBuf, leafTf, 0.1, 0.18, 0.001, 0.3, T - 0.3, paneC, cut, leafBucket);
+        // the pane on both faces of the solid leaf: from outside the leaf hid it (#712)
+        for (const n of [0.001, -thick - 0.001]) {
+          if (style === "front_glass") panel(paneBuf, leafTf, 0.12, lw - 0.12, n, T * 0.55, T - 0.18, paneC, cut, leafBucket);
+          else if (front) panel(paneBuf, leafTf, 0.1, 0.18, n, 0.3, T - 0.3, paneC, cut, leafBucket);
+        }
         // handle on both sides: a knob on a room door, a bar on a front door
         const hy = Math.min(1.05, T * 0.5);
         const hh = front ? 0.3 : 0.012;
@@ -294,6 +319,44 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
       if (closed > 0.01) panel(blinds, tf, 0.02, W - 0.02, plane, bottom, T, panelC, cut, bucket, 0.5);
       const up = (1 - closed) * T;
       if (up > 0.01) flatPanel(blinds, tf, 0.02, W - 0.02, plane, plane + up, T + 0.03, panelC, bucket, 0.5);
+    } else if (openingStyle(info.opening, info.exterior) === "slide") {
+      // lift-and-slide door or sliding window (#397, #361): the pane on the hinge side stands, the other runs on the
+      // inner track in front of it as far as it is open
+      const fw = 0.06;
+      const fd = 0.05;
+      splitBox(frames, tf, 0, fw, mid - fd, mid + fd, S, T, frameC, frameTop, cut, bucket);
+      splitBox(frames, tf, W - fw, W, mid - fd, mid + fd, S, T, frameC, frameTop, cut, bucket);
+      splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, S, S + (S > 0.05 ? fw : 0.03), frameC, frameTop, cut, bucket);
+      splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, T - fw, T, frameC, frameTop, cut, bucket);
+      boardsOf(info, infos, frames, tf, mid, fd, frameTop, cut, bucket);
+      const sy0 = S + (S > 0.05 ? fw : 0.03);
+      const sy1 = T - fw;
+      const halfW = (W - 2 * fw) / 2 + 0.03;
+      const open = Math.min(1, Math.max(st.open, st.tilt * 0.12));
+      const alert = markClosed ? !!st.sensed && open < 0.02 : open > 0.02;
+      const sashC = alert ? shade(OPEN_WARM, 0.75) : new Color(SASH);
+      const sashTop = alert ? shade(OPEN_WARM, 0.95) : frameTop;
+      const sw = 0.06;
+      const pane = (x0: number, n0: number, shift: number, c: Color, top: Color, glassC: Color) => {
+        const ptf: Tf = (x, n, y) => tf(x + shift, n, y);
+        const x1 = x0 + halfW;
+        const b = shift ? ALWAYS : bucket;
+        splitBox(frames, ptf, x0, x0 + sw, n0, n0 + 0.04, sy0, sy1, c, top, cut, b);
+        splitBox(frames, ptf, x1 - sw, x1, n0, n0 + 0.04, sy0, sy1, c, top, cut, b);
+        splitBox(frames, ptf, x0 + sw, x1 - sw, n0, n0 + 0.04, sy0, sy0 + sw, c, top, cut, b);
+        splitBox(frames, ptf, x0 + sw, x1 - sw, n0, n0 + 0.04, sy1 - sw, sy1, c, top, cut, b);
+        panel(glass, ptf, x0 + sw, x1 - sw, n0 + 0.02, sy0 + sw, sy1 - sw, glassC, cut, b);
+      };
+      const fixedAt = info.hingeAtStart ? fw : W - fw - halfW;
+      const movingAt = info.hingeAtStart ? W - fw - halfW : fw;
+      const run = open * (halfW - 0.08) * (info.hingeAtStart ? -1 : 1);
+      // the fixed pane on the outer track, the sliding one on the inner track (towards the room)
+      pane(fixedAt, mid - fd + 0.005, 0, new Color(SASH), frameTop, GLASS);
+      pane(movingAt, mid + 0.005, run, sashC, sashTop, alert ? shade(OPEN_WARM, 0.16) : GLASS);
+      // a pull handle on the sliding pane's free edge
+      const hx = info.hingeAtStart ? movingAt + 0.025 : movingAt + halfW - 0.035;
+      const hy = Math.min(1.05, (S + T) / 2);
+      splitBox(frames, (x, n, y) => tf(x + run, n, y), hx, hx + 0.012, mid + 0.045, mid + 0.07, hy - 0.15, hy + 0.15, new Color(HANDLE), new Color(HANDLE_TOP), cut, ALWAYS);
     } else if (openingStyle(info.opening, info.exterior) === "glass_wall") {
       // an indoor glass wall: a slim frame, mullions about every 0.9 m, glass from the floor up, no sashes
       const fw = 0.04;
@@ -302,6 +365,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
       splitBox(frames, tf, W - fw, W, mid - fd, mid + fd, S, T, frameC, frameTop, cut, bucket);
       splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, S, S + 0.03, frameC, frameTop, cut, bucket);
       splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, T - fw, T, frameC, frameTop, cut, bucket);
+      boardsOf(info, infos, frames, tf, mid, fd, frameTop, cut, bucket);
       const n = Math.max(1, Math.round((W - 2 * fw) / 0.9));
       const pane = (W - 2 * fw) / n;
       for (let k = 1; k < n; k++) {
@@ -322,9 +386,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
       splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, S, S + (S > 0.05 ? fw : 0.03), frameC, frameTop, cut, bucket);
       splitBox(frames, tf, fw, W - fw, mid - fd, mid + fd, T - fw, T, frameC, frameTop, cut, bucket);
       // window board inside and sill outside (by the window's setting; none on a transom light, #655)
-      const boards = sillBoards(info, infos);
-      if (boards.inside) splitBox(frames, tf, -0.04, W + 0.04, mid + fd, info.faceRoom + 0.07, S - 0.03, S, new Color(SILL), frameTop, cut, bucket);
-      if (boards.outside) splitBox(frames, tf, -0.03, W + 0.03, -info.faceOut - 0.06, mid - fd, S - 0.04, S - 0.02, new Color(SILL), frameTop, cut, bucket);
+      boardsOf(info, infos, frames, tf, mid, fd, frameTop, cut, bucket);
       // sashes: each rotates into the room around its hinge, or tilts around its bottom edge; a
       // double window (or French door) has two sashes meeting in the middle, each tilting on its own
       const sw = 0.055;
@@ -348,10 +410,19 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
         const sx1 = sash.x1;
         const sashW = sx1 - sx0;
         // a terrace door may open outwards (swing "out"); tilting stays inwards
-        const theta = sash.open * OPEN_ANGLE * (info.opening.swing === "out" ? -1 : 1);
-        const phi = sash.tilt * TILT_ANGLE;
+        const topHung = !!info.opening.top_hung;
+        const theta = topHung ? 0 : sash.open * OPEN_ANGLE * (info.opening.swing === "out" ? -1 : 1);
+        const phi = topHung ? 0 : sash.tilt * TILT_ANGLE;
+        // a top-hung window (#327) turns about its top edge, the bottom outwards – opened or tilted alike
+        const psi = topHung ? Math.max(sash.open, sash.tilt) * TOP_HUNG_ANGLE : 0;
         // sash coordinates: u from the hinge across the sash, n, y
         const sashTf: Tf = (u, n, y) => {
+          if (psi) {
+            const dn = n - n0;
+            const dt = y - sy1;
+            const x = sash.atStart ? sx0 + u : sx1 - u;
+            return tf(x, n0 + dn * Math.cos(psi) + dt * Math.sin(psi), sy1 - dn * Math.sin(psi) + dt * Math.cos(psi));
+          }
           const dy = y - sy0;
           let nn = n + dy * Math.sin(phi);
           const yy = sy0 + dy * Math.cos(phi);
@@ -361,7 +432,7 @@ export function buildOpeningParts(infos: readonly OpeningInfo[], states: Readonl
           return tf(x, nn, yy);
         };
         // a sash that has swung into the room belongs to no wall: keep it visible
-        const sashBucket = Math.abs(theta) > 0.05 ? ALWAYS : bucket;
+        const sashBucket = Math.abs(theta) > 0.05 || psi > 0.05 ? ALWAYS : bucket;
         splitBox(frames, sashTf, 0, sw, n0, n1, sy0, sy1, sashC, sashTop, cut, sashBucket);
         splitBox(frames, sashTf, sashW - sw, sashW, n0, n1, sy0, sy1, sashC, sashTop, cut, sashBucket);
         splitBox(frames, sashTf, sw, sashW - sw, n0, n1, sy0, sy0 + sw, sashC, sashTop, cut, sashBucket);

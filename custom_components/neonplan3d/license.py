@@ -141,7 +141,9 @@ async def _post(hass: HomeAssistant, path: str, body: dict[str, Any]) -> Any:
 
 async def async_fetch_catalog(hass: HomeAssistant, key: str, instance: str) -> dict[str, Any]:
     """The customer's packs (id, name, release, shop page) and name; binds this installation to the key."""
-    text = await _post(hass, "catalog", {"key": key, "instance": instance})
+    # the language, so the shop names its offers in it (an English installation saw German shop texts, #825)
+    lang = (hass.config.language or "en")[:10]
+    text = await _post(hass, "catalog", {"key": key, "instance": instance, "lang": lang})
     try:
         data = json.loads(text)
     except ValueError as err:
@@ -194,6 +196,8 @@ def _offers(raw: Any) -> list[dict[str, Any]]:
                 "kind": o.get("kind") if o.get("kind") in ("pack", "pro", "bundle", "fun") else "pack",
                 "price": str(o.get("price") or "")[:40],
                 "new": bool(o.get("new")),
+                # the Supporter Pass: its tile mentions what comes with it (NeonPlan Print)
+                "supporter_pass": bool(o.get("supporter_pass")),
             }
         )
     return out
@@ -238,10 +242,19 @@ async def async_fetch_pack(hass: HomeAssistant, key: str, instance: str, pack_id
     return await _post(hass, "pack", {"key": key, "instance": instance, "pack": pack_id})
 
 
+def _pending_release(pack: dict[str, Any]) -> int:
+    """The release of a module update that waits for the admin's approval, 0 without one."""
+    pending = pack.get("pending")
+    return int(pending.get("release") or 1) if isinstance(pending, dict) else 0
+
+
 def status(data: FloorplanData, instance: str) -> dict[str, Any]:
     """What the frontend shows: the fingerprint, the connection and the catalog with installed releases."""
     lic = data.license
-    installed = {p["id"]: int(p.get("release") or 1) for p in data.packs}
+    # a module update that waits for the admin's approval counts as installed (#805, #707): the shop list shows it
+    # as waiting, not as an update a click would only fetch again
+    installed = {p["id"]: max(int(p.get("release") or 1), _pending_release(p)) for p in data.packs}
+    waits = {p["id"] for p in data.packs if _pending_release(p)}
     key = lic.get("key")
     return {
         "instance": instance,
@@ -251,7 +264,9 @@ def status(data: FloorplanData, instance: str) -> dict[str, Any]:
         "checked_at": lic.get("checked_at"),
         "error": lic.get("error"),
         "shop_url": SHOP_URL,
-        "packs": [{**p, "installed": installed.get(p["id"])} for p in lic.get("catalog", [])],
+        "packs": [
+            {**p, "installed": installed.get(p["id"]), "waits": p["id"] in waits} for p in lic.get("catalog", [])
+        ],
         "offers": lic.get("offers", []) if key else [],
         "loyalty": lic.get("loyalty") if key else None,
         "supporter": lic.get("supporter") if key else None,
@@ -368,10 +383,7 @@ async def async_refresh(hass: HomeAssistant, data: FloorplanData, install_update
     )
     if install_updates:
         # a module update that waits for the admin's approval counts as fetched
-        installed = {
-            p["id"]: max(int(p.get("release") or 1), int((p.get("pending") or {}).get("release") or 1))
-            for p in data.packs
-        }
+        installed = {p["id"]: max(int(p.get("release") or 1), _pending_release(p)) for p in data.packs}
         fetched = 0
         for p in catalog["packs"]:
             if p["id"] in installed and p["release"] > installed[p["id"]]:

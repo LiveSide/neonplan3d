@@ -4,7 +4,7 @@
 
 NeonPlan 3D draws your home right inside Home Assistant and shows it as a 3D model in a neon look. Lights glow in their colours, blinds move, windows tilt, doors swing open, cameras look into the room and the TV shows what is playing. Everything runs locally in Home Assistant, without a cloud or external programs, and it is built for wall tablets.
 
-This manual describes every feature of the current version. What changed in which version is in the [changelog](../CHANGELOG.md) and on the [releases page](https://github.com/Mastershort/neonplan3d/releases). The pictures come from the demo with invented data. The app follows the language of your Home Assistant user (profile → language); the labels below are the English ones. German and English are built in; French, Spanish, Dutch, Italian, Hungarian, Danish, Swedish, Norwegian (Bokmål and Nynorsk), Finnish, Czech, Polish, Romanian, Slovenian, Portuguese and Chinese (Simplified) are fetched when needed, so the bundles stay small for wall tablets. A text missing in a language shows in English.
+This manual describes every feature of the current version. What changed in which version is in the [changelog](../CHANGELOG.md) and on the [releases page](https://github.com/Mastershort/neonplan3d/releases). The pictures come from the demo with invented data. The app follows the language of your Home Assistant user (profile → language); the labels below are the English ones. German and English are built in; French, Spanish, Dutch, Italian, Hungarian, Danish, Swedish, Norwegian (Bokmål and Nynorsk), Finnish, Czech, Polish, Romanian, Slovenian, Slovak, Portuguese and Chinese (Simplified) are fetched when needed, so the bundles stay small for wall tablets. A text missing in a language shows in English.
 
 ![The house in the 3D view](images/view-house.jpg)
 
@@ -136,6 +136,7 @@ On the far left of the toolbar is **Floor: Ground floor ▾** – the floor you 
 - **Background picture:** in the **Background** section you load a photo or scan of your floor plan as a template under the plan (opacity adjustable). **Move, scale and turn** gives the picture handles in the plan like a piece of furniture: drag moves it, the lower right corner scales it, the round handle on top turns it (Shift for 15° steps). **Done** fixes it again, so you can draw over it undisturbed. **Rotation (°)** turns it to a tenth of a degree. The easiest way to the scale is **📏 Scale with a ruler**: tap the start and end of a stretch of known length in the picture (a dimensioned wall), enter the real length – the picture is scaled to fit and the first point stays put. A skewed scan is put straight with **📐 Straighten**: tap two points on a wall in the picture that should run horizontally or vertically – the picture turns to fit. Order: straighten first, then the scale, then draw the rooms over it.
 - **Floor in Home Assistant** links the floor to an HA floor. Then **"Add … rooms from HA areas"** offers the areas of that floor as rooms.
 - **Move up** and **Move down** change the order, **Delete floor** removes it with its rooms.
+- **Duplicate floor** (since 3.0.1) puts the floor once more on top of the house: rooms, walls, windows, doors and furniture – for houses whose floors are laid out alike. The copy has no links to Home Assistant (the devices up there are other ones): choose areas, lights and sensors there anew.
 - **Close gaps** joins rooms that are up to 60 cm apart. This helps when you measured inside dimensions. The gap becomes the interior wall thickness.
 - **Straighten slanted edges** finds room edges that are only a few centimetres off straight (a corner 1 cm out makes slanted walls in 3D) and straightens them in every room that shares the corner. Walls drawn slanted on purpose stay.
 
@@ -167,7 +168,7 @@ A selected room shows on the right:
 
 Walls are created automatically: every shared edge of two rooms becomes an interior wall, every outer edge an exterior wall. Corners and T-junctions are mitred. You set the thicknesses under **Settings**.
 
-**Single walls:** The **Wall** tool draws a free-standing wall, e.g. a partition that runs through half a room. **Shift** keeps it straight, **Alt** draws without snapping. Where it meets a room wall, the corner is mitred. When selected, drag the handles to move its ends or the line to move the whole wall. On the right you set **X** and **Y** (the middle of the wall, as with furniture; so you place it to the centimetre, off the grid), **Length**, **Wall thickness** and **Height**. In 3D it behaves like any interior wall. You can put doors and windows into single walls too, with **Doors & windows** (see 4.7). Deleting the wall removes its doors and windows as well.
+**Single walls:** The **Wall** tool draws a free-standing wall, e.g. a partition that runs through half a room. **Shift** keeps it straight, **Alt** draws without snapping. Where it meets a room wall, the corner is mitred. When selected, drag the handles to move its ends or the line to move the whole wall. On the right you set **X** and **Y** (the middle of the wall, as with furniture; so you place it to the centimetre, off the grid), **Length**, **Wall thickness** and **Height**. In 3D it behaves like any interior wall. With rooms on one side only (a single wall drawn as an outer wall), the other side counts as outside: blinds and sills sit there whichever way the wall was drawn, and it turns to glass like the other outer walls when it faces the camera. You can put doors and windows into single walls too, with **Doors & windows** (see 4.7). Deleting the wall removes its doors and windows as well. Since 2.2 a single wall can slope too: **◢ Sloping** in its form gives it a **height at corner 1** and **at corner 2** (the plan numbers its ends while it is selected), like a room wall (see *Sloping wall* below).
 
 **Wall height:** Any wall can be lower than the room, e.g. a parapet or a counter. For a single wall you set its **Height** in the form. For rooms (rectangle and free shape) select the room; the form shows the **Wall heights** box with every wall of the room, named by its corners (e.g. "Wall 2–3", the numbers are shown at the corners in the plan) and with its length. Hovering a row or tapping its field lights the wall up in the plan. ↥ resets it to full room height. If two rooms share the wall, the lower setting applies. Windows and doors in a low wall end at the wall height. Low walls look lighter in the plan. If one wall in line should have two heights (2.5 m next to 1.7 m), split it with **✂**: the part gets a row and a height of its own, the split point can be moved in **Split point from corner** (marked by a tick in the plan), **⨉** joins the parts again.
 
@@ -194,6 +195,7 @@ Everything that belongs to the whole plan rather than to a floor, a room or an i
 | **⛰ Ground** | see [4.21](#421-cellar-and-ground) |
 | **💾 Backup** | export, import, restore, see chapter 9 |
 | **🧩 Modules** | the modules installed (code from the shop, e.g. "The house answers") and **Import a module …** for the .fp3dpack file |
+| **🖥 Card templates** | ready-made dashboard cards for the wall tablets, see [8.1](#81-card-templates) |
 
 The **roof shape** (none, flat, gable, ridge, pitch, overhang) sits with the roof tool, see [4.19](#419-roof). The **start view** is remembered in the 3D view: turn and zoom the house, then tap **📌** in the view settings (gear at the top right); **📌✕** resets it. The 3D view, the card and the kiosk then open the house like that, and an opened floor is shown from the same side.
 
@@ -216,7 +218,7 @@ Under **Template (floor plan image)** you load a photo or scan of your floor pla
 
 ![A selected door](images/editor-opening.jpg)
 
-With **Doors & windows** you tap a wall, a room wall or a single wall. Then you choose the **Type** on the right: door, window or garage door. A window with a sill of 0 is a terrace door; like a door, **⇅ Reverse opening direction** turns it outwards (in 3D its sashes then swing outside; tilting stays inwards). The preset **Glass wall** sets fixed floor-to-ceiling glazing with slim mullions and no sashes – for an indoor glass wall or partition; width and height are free, and any window can take it under **Style**.
+With **Doors & windows** you tap a wall, a room wall or a single wall. Then you choose the **Type** on the right: door, window or garage door. A window with a sill of 0 is a terrace door; like a door, **⇅ Reverse opening direction** turns it outwards (in 3D its sashes then swing outside; tilting stays inwards). The preset **Glass wall** sets fixed floor-to-ceiling glazing with slim mullions and no sashes – for an indoor glass wall or partition; width and height are free, and any window can take it under **Style**. The presets **Lift-and-slide door** and **Sliding window** (since 3.0.1, style **Sliding**) have a fixed pane on the hinge side and one that runs in front of it on the inner track – as far as the contact reports open; **⇆** swaps the side. **Top-hung** in the window's form hangs the window at the top: its bottom opens outwards, open and tilted look alike – common in Scandinavia.
 
 Where two rooms meet without a wall (an open transition) and the outer wall carries on in a straight line, a window or door may reach across the transition into the neighbouring room's wall. The middle of the opening stays on its own room's wall.
 
@@ -225,11 +227,12 @@ Where two rooms meet without a wall (an open transition) and the outer wall carr
 Every opening has:
 
 - **Width**, **sill** and **height**, plus the hinge side. With **Select** you slide it along the wall.
-- **Sill** (windows only): *automatic* (default) draws a window board inside and a sill outside from a sill height of 30 cm – except for a window that sits directly on another window or a door of the same wall (transom light, fixed upper part, a glass front split in two): that one gets none of its own. *None*, *inside only* or *outside only* fix it, e.g. for a glass front without a board or a window above a kitchen worktop.
+- **Sill** (windows only): *automatic* (default) draws a window board inside and a sill outside from a sill height of 30 cm – except for a window that sits directly on another window or a door of the same wall (transom light, fixed upper part, a glass front split in two): that one gets none of its own. *None*, *inside only* or *outside only* fix it, e.g. for a glass front without a board or a window above a kitchen worktop. Chosen by hand it also shows on a window down to the floor or a terrace door (lying at the floor) and on a glass wall, which has none by itself.
 - **Style:** room door, front door, front door with glass, with one or two sidelights, glass door, sliding door or **Opening (no door)**. With sidelights you set their **width** below (empty = automatic), with two the left and the right one separately; a single sidelight sits opposite the hinge, or next to the hinges with **Sidelight on the hinge side**. An opening is just a gap in the wall, without frame and leaf; light always passes through. Windows come as standard or with glazing bars. "Automatic" picks a front door for exterior doors.
 - **Leaves:** single or double, with an own contact for the second leaf.
 - **Highlight in 3D:** *When open* (default) makes open windows and doors glow warm. *When closed* turns this round, e.g. for the WC or a child's room door: it glows while it is shut. This needs a contact; without a sensor nothing is highlighted.
 - **Show closed without a sensor:** a door without a contact stands half open in 3D, so it is seen as a door. The checkbox draws it closed, e.g. for a front door or a carport without a sensor.
+- **Opening angle (since 2.0.6):** how far the leaf stands open: **Default**, 15°, 30°, 45°, 60° or 90°. Without a sensor the door always stands that far open, with one it opens that far as soon as the sensor reports "open". **Default** stays as before: half open without a sensor, fully open with one.
 - **Smart lock:** the door's lock (Nuki, Aqara, `lock.*`). A pin stands at the door in 3D: 🔒 locked, glowing red while it is unlocked; a tap locks or unlocks. A tap on the door itself (without a drive) also opens its menu with **Lock** or **Unlock**, always asking first; while the lock is unlocked, the leaf's free edge glows softly in the accent colour – whatever the door contact says. On a double door or terrace door the pin sits on the main leaf (on the hinge side). The voice asks it ("Is the front door locked?").
 - **Invert contact:** for sensors that report open and closed the other way round. NeonPlan then shows open when the sensor reports closed, and vice versa (default: off).
 
@@ -244,7 +247,7 @@ Doors and windows can also be tapped in a wide band around the opening in the pl
 | **Cover** | The blind moves in front of the window – or of a door (front door, French window, sliding door) – with the cover's position |
 | **Position sensor** | For blinds whose position comes from a separate sensor, e.g. Homematic. Can be inverted |
 | **Ask before switching** | Open, close and positions ask first in the quick menu and the room panel, and a swipe on the marker no longer moves the blind (it turns the view instead). Stop never asks. Good for tablets where blinds or the garage door would otherwise move by accident |
-| **Contact** | The door swings open, the window opens |
+| **Contact** | The door swings open, the window opens. Offered are binary sensors of the door, window or opening class and ones without a class (KNX, enOcean, template sensors often have none) |
 | **Tilt contact** | A second sensor that reports "tilted" |
 | **Tilt angle sensor** | Optional: a sensor reporting the tilt angle in degrees (e.g. the "Rotation" of a Shelly BLU Door/Window). The sash tilts exactly that far in 3D; **Angle that counts as fully tilted** (15° by default), an **Offset** for the value while closed and **counts the other way round** adapt it to the mounting. Above a small angle the window counts as tilted, also for the rain warning |
 | **Contact second leaf** | For double windows and doors |
@@ -283,6 +286,7 @@ The **Worktop** (Kitchen) is a free top without a base, for gaps in the kitchen 
 ![Wall view: 3D in the room and wall from the front](images/wall-view.jpg)
 
 - **State from:** any piece of furniture can show an entity that reports on, occupied or home – its top then glows: the bed with an occupancy mat, the armchair, the sauna. A second entity lights the other half (left/right, bottom/top for a bunk bed); set the first one to *none* and the second moves up into its place. Lamps, energy devices and screens have fields of their own for this.
+- **Only show while …** (new): the piece stands in 3D only while an entity is in a state – the Christmas tree while `input_boolean.christmas` is on, the garden decoration only while a season sensor says "summer". Separate several states with commas, `<20` or `>80` compares a number, a `!` in front turns it round; empty means "on". Hidden, its light and its marker go too. The editor always shows the piece; while it is missing in 3D it is faint in the plan. So you place decoration once and switch it on every year with a switch or an automation.
 - **Duplicate** and **Delete** are there too.
 
 ![A selected item](images/editor-furniture.jpg)
@@ -326,9 +330,9 @@ A selected device has:
 
 - **Marker height**, **rotation** and, for lights, the **mount**: ceiling, floor, table or wall.
 - **Ask before switching:** A tap in 3D, the quick menu and the room panel ask first. This protects, for example, a server switch from an accidental tap. A double tap on the room leaves this device out.
-- **Marker in 3D:** *Automatic* follows the None / Important / All switch of the 3D view. *Always show* shows the marker with "Important" too, e.g. for a temperature sensor. *Without watts* leaves out the power, e.g. on a smart plug. *Hide* never shows a marker. With "None" all markers stay off.
+- **Marker in 3D:** *Automatic* follows the None / Important / All switch of the 3D view. *Always show* shows the marker with "Important" too, e.g. for a temperature sensor. *Without watts* leaves out the power, e.g. on a smart plug. *Only while active* (since 3.0.1) shows the marker only while the device is on, open or triggered – a motion sensor only while it sees motion. *Hide* never shows a marker. With "None" all markers stay off.
 - **Own symbol:** the name of a Material Design icon as in Home Assistant, e.g. `mdi:thermometer` or `mdi:water-alert`, replaces the symbol of the device kind in the pin. Leave it empty for the default. Works for electric furniture just the same.
-- **Show as furniture:** replaces the pin by a fitting furniture item in the same place, already linked to the device – a speaker or smart display for a media player, a lamp for a light, a radiator for a thermostat, the robot vacuum for a vacuum. The list only shows furniture that fits the kind of device. In the furniture form **Back to a device pin** brings the plain pin back; Ctrl+Z undoes either.
+- **Show as furniture:** replaces the pin by a fitting furniture item in the same place, already linked to the device – a speaker or smart display for a media player, a lamp for a light, a radiator for a thermostat, the robot vacuum for a vacuum. The list only shows furniture that fits the kind of device. In the furniture form **Back to a device pin** brings the plain pin back; Ctrl+Z undoes either. **For a camera** (since 2.0.7) the pin stays with all its camera settings; the chosen model is only its look: it replaces the built-in camera model, moves and turns with the camera, and a new choice swaps it. **Built-in camera model** in the same list brings the built-in model back.
 - **Own name** and **Show the name under the marker in 3D:** ticked, the own name sits small under the pin – three thermometers in the garden ("Pool water", "Pool air", "Greenhouse") stay apart. The tick appears as soon as an own name is set; furniture with an own name has it too. The card option `marker_names: true` shows the names of every device with an own name.
 - **To room centre** and **Remove**.
 
@@ -409,7 +413,7 @@ Its lanes keep clear of furniture standing on the floor: cabinets, sofas, beds, 
 
 ### 4.17 Outdoor areas and outdoor lights
 
-With **Outside → Outdoor** you draw lawn, terrace, path, driveway, flower bed, hedge or fence. Choose in the menu first what you draw; the type can still be changed in the form afterwards. There you also choose **Rectangle** (drag it open) or **Free form**: then you place the corners one by one like a free-form room – for curved beds, slanted plot borders or an L-shaped path; a tap on the first corner or **Enter** closes the area. A selected outdoor area is resized at its corners; a rectangle stays a rectangle. Hedges and fences take a **height** in the form (a 2.5 m thuja screen, a 0.5 m bed border); **Show the outline** unticked leaves out the glowing line along the edge, say on a plot made of several lawns. **Height offset** lowers an area below the ground or raises it – the driveway down to a lower garage, a raised terrace; lamps on it follow. **Slope** tilts an area: the height difference in metres and the direction it falls towards (the high edge sits at the height offset) – a driveway falling to the street, a sloping garden; fence posts and lamps stand on the sloped surface. **Wild patch** is a type for unmown corners. **Balcony** is for upper floors: a thin slab at the floor's level with a see-through railing of bars (height in the form); edges along a house wall get no railing – balcony doors behind it stay in view. **Cut out of the areas beneath** turns an area into a hole in every area drawn before it that contains it whole – a pond or a wild patch in the middle of one single big lawn. **Pergola / frame** draws corner posts, beams and rafters at the set height, with **X-bracing** on the sides – for pergolas, carport frames or the support of a roll-off roof. Fences and pergolas can stay **open**: the edge from the last point back to the first is left out, so the fence leans against the house. Trees, shrubs and brush come as furniture from the **Garden & Terrace** pack (from release 3: oak, lime, birch, maple, fruit tree, spruce, pine, thuja, shrub, flowering shrub, brush, group of trees); width and height in the furniture form set crown and growth. Path lights, garden spots and outdoor wall lights light the outdoor areas and the facade. **Pool:** pools are drawn with **Outside → Pool**; in the menu you choose the shape – **Rectangular**, **Round**, **Oval** or **Free** – and then draw it (round: as wide as the short side of the box). A round or oval pool is resized at the four corners of its box (a circle stays round) or in the form by diameter or width and depth; the shape itself stays. A pool cuts itself out of the lawn around it. **Above-ground pool** stands it on the ground as a tub, with a **pool height**; otherwise it is let into the ground. **Basin depth** is the depth from the rim down to the floor (1.50 m by default), **Rim above the lawn** how far the rim stands out – a 1.50 m deep pool standing 20 cm out of the lawn: depth 1.50, rim 0.20. The water stands 15 cm below the rim; you look through the water onto the basin's walls and floor. The depth shows when the pool lies in a lawn, terrace or other area – without ground around it the basin would show from outside, so it stays flat.
+With **Outside → Outdoor** you draw lawn, terrace, path, driveway, flower bed, hedge or fence. Choose in the menu first what you draw; the type can still be changed in the form afterwards. There you also choose **Rectangle** (drag it open) or **Free form**: then you place the corners one by one like a free-form room – for curved beds, slanted plot borders or an L-shaped path; a tap on the first corner or **Enter** closes the area. A selected outdoor area is resized at its corners; a rectangle stays a rectangle. Hedges and fences take a **height** in the form (a 2.5 m thuja screen, a 0.5 m bed border); **Show the outline** unticked leaves out the glowing line along the edge, say on a plot made of several lawns. **Height offset** lowers an area below the ground or raises it – the driveway down to a lower garage, a raised terrace; lamps on it follow. **Slope** tilts an area: the height difference in metres and the direction it falls towards (the high edge sits at the height offset) – a driveway falling to the street, a sloping garden; fence posts and lamps stand on the sloped surface. **Wild patch** is a type for unmown corners. **Balcony** is for upper floors: a thin slab at the floor's level with a see-through railing of bars (height in the form); edges along a house wall get no railing – balcony doors behind it stay in view. **Cut out of the areas beneath** turns an area into a hole in every area drawn before it that contains it whole – a pond or a wild patch in the middle of one single big lawn. **Pergola / frame** draws corner posts, beams and rafters at the set height, with **X-bracing** on the sides – for pergolas, carport frames or the support of a roll-off roof. Fences and pergolas can stay **open**: the edge from the last point back to the first is left out, so the fence leans against the house. **Gates in fences (since 2.2):** in a fence's form, **+ Gate in the fence** puts a gap into one side, like a door in a wall – as a **garden gate** (one leaf), a **double gate** (two leaves) or a **sliding gate**. You choose the **side** (in the order you placed the corners), the **middle from the side's start** and the **width**; the gap shows in the plan as a yellow bar. **Hinge on the other side** or **Opens towards the other side** turns the direction, **Opens outwards** swings the leaves out of the plot. With a **motor or switch** (a cover such as a gate motor, a switch, an input_boolean or a lock) and/or a **contact** the gate opens in 3D too; a tap on it switches it. When the motor only reports "opening"/"closing", the gate runs open in its **run time**; a contact always wins. Trees, shrubs and brush come as furniture from the **Garden & Terrace** pack (from release 3: oak, lime, birch, maple, fruit tree, spruce, pine, thuja, shrub, flowering shrub, brush, group of trees); width and height in the furniture form set crown and growth. Path lights, garden spots and outdoor wall lights light the outdoor areas and the facade. **Pool:** pools are drawn with **Outside → Pool**; in the menu you choose the shape – **Rectangular**, **Round**, **Oval** or **Free** – and then draw it (round: as wide as the short side of the box). A round or oval pool is resized at the four corners of its box (a circle stays round) or in the form by diameter or width and depth; the shape itself stays. A pool cuts itself out of the lawn around it. **Above-ground pool** stands it on the ground as a tub, with a **pool height**; otherwise it is let into the ground. **Basin depth** is the depth from the rim down to the floor (1.50 m by default), **Rim above the lawn** how far the rim stands out – a 1.50 m deep pool standing 20 cm out of the lawn: depth 1.50, rim 0.20. The water stands 15 cm below the rim; you look through the water onto the basin's walls and floor. The depth shows when the pool lies in a lawn, terrace or other area – without ground around it the basin would show from outside, so it stays flat.
 
 **Outdoor areas like rooms:** give an area (lawn, terrace, balcony, pool …) a Home Assistant **area** in its form, say "Garden", and a **name** if you like. It then acts like a room: it is in the room bar, a tap in 3D opens it with the area's devices (garden lights, sockets, irrigation), the camera frames it, and with **Show → Values** the outdoor temperature stands at its name – sensors with "outdoor" in their name count here on purpose. The area's form lists its devices like a room's: **Place**, **☆** shows a device in the room panel without putting it on the plan, **👁** hides it there, **Aa** leaves out its state text. Hedges, fences and pergolas take no area.
 
@@ -436,13 +440,14 @@ A simple house gets a flat or gable roof over the whole top floor under **Build 
 - Each section has a **shape** – gable, hip, half-hip (a gable hipped at the top), pyramid (four slopes to a point), mansard (steep below, flatter above), pent, flat and parapet (a flat roof with a wall ring) – and a **ridge direction** (↔ or ↕).
 - For gable, hip and half-hip, **End left/right** (or **top/bottom**) sets each end of the ridge on its own to a gable, a hip or a half-hip – a hip roof with an upright gable at the other end, for example. **as the shape** leaves the end as the shape has it.
 - **Eave** and **pitch** are set for both sides separately. All heights count from the ground. A side with a lower eave reaches further down, e.g. a catslide over a low extension. A pent roof rises from the first side; **Swap sides** turns it round.
+- **Turn:** if an extension or wing stands at an angle to the house, turn its section with **Turn** (or ↺ 15° / ↻ 15°), clockwise. Dormers and cross gables on it turn along, roof windows and solar fields stay on it. A turned section is moved by dragging; the corners for resizing come back at 0° (turn back, resize, turn again). Where a turned wing runs into another roof, that roof's slopes cut it off. By default every section stays at 0°.
 - **Top of walls** is the height where the walls below the roof end. A new section takes it from the rooms below, whatever floor the plan shows. Gables and knee walls are built from there up under the roof, so the space under a pent roof is closed too.
 - **Sits on floor** shows which floor the section belongs to in the 3D view and puts it on another floor's wall tops – top of walls and eaves move along. This helps when a new section landed on the wrong floor, e.g. over an upper floor with a stairwell in the middle.
 - **Flat roof as a free shape:** a flat roof has the button **Take the floor's outline** – the surface takes the outline of the shown floor's rooms (L- or Z-shaped too), one surface without seams instead of several rectangles. The corners can be dragged in the plan afterwards; **Back to the rectangle** drops the shape.
 - **Dormers:** in a section's form, **+ Dormer** adds a dormer on the chosen side – 2 m wide, its front at the eave wall, eaves 1.4 m above the roof's eave, gable roof, as deep as its ridge needs to meet the slope. A dormer is a small section: move it and change its width, heights and shape (gable, pent) like any other. The main slope opens under it, the cheeks close its sides, and the attic wall rises under the dormer up to its eave – put the dormer window there with **Door & window**.
 - **Cross gables (a "three-gable house"):** a gable stepping out of the eave side is a wide dormer whose eaves lie on the top of the walls: **+ Dormer**, then drag its width (say 3.4 m) and set its **eave** to the top of walls. Its depth follows by itself – the dormer reaches exactly as far as its ridge meets the slope, and the main roof opens only where the dormer's roof lies above it (the valleys). The attic wall under the cross gable rises into the gable; put its window there with **Door & window**.
 - **Roof slopes (knee walls):** if the top of walls lies below the ceiling height of the floor underneath (also when the slope already starts in the floor below: its walls on the eave side then end at the slope as well) – say 0.9 m above the attic floor – that floor's walls end under the roof: knee walls at the eaves, gables up to the ridge, inner walls cut by the slope. Windows then only fit where the wall is tall enough (in the gable); on the eave side use roof windows. Dashed lines in the plan show where 1.5 m and 2 m of headroom remain under the slope.
-- Where a section meets a taller part of the house, e.g. a pent roof against the house wall, the overhang is left out there; the roof ends at the wall.
+- Where a section meets a taller part of the house, e.g. a pent roof against the house wall, the overhang is left out there; the roof ends at the wall. This also works when the section is drawn flush against the outer face of a thick wall (since 2.2). **Overhang per side** in the section's form sets each side's overhang by hand instead (it starts with the automatic values); off, it is automatic again.
 - The **ridge height** is shown at the bottom of the form. Sections may overlap: the lower roof runs under the higher one, as with a real extension.
 - **Create again from the rooms** replaces all sections with a new proposal, **Back to one roof** switches to the simple roof. The sections are kept for later but no longer cut any walls.
 
@@ -486,7 +491,7 @@ Drag fields in the plan and in the **3D view beside it**, also onto another roof
 
 Below the field you see its power, counted with 400 W per module. The plan lock does not hold solar fields; **🔓 Fix** in the form fixes a single field (and a roof window just the same). **Devices:** solar inverters, home batteries and wallboxes are added in the **Energy** tool as well, under **Devices**, on the floor chosen at the top. A wallbox goes into the garage by itself, inverters and batteries into a utility room (utility room, basement …), each against a wall without a door or gate, and the plan moves there. Tapping a device in the list shows it in the plan. There, in the Energy tool, every device carries a round marker with a symbol (⚡ inverter, 🔋 battery, 🔌 wallbox) to grab and move it by, also below a solar field on the roof. With a power sensor they show their watts. The **home battery** also shows its charge with the **State of charge** field, e.g. "64 % · ▲ 1.5 kW" (▲ charging, ▼ discharging), the **wallbox** "charging · 11 kW" or "plugged in" with a **Status** sensor.
 
-**Meter and grid connection:** The **electricity meter** is the fourth energy device; it takes the grid sensor (W, + = import) and shows "Grid import 420 W" or "Export 900 W". The **grid connection** marks where the cable to the utility leaves the plot, e.g. at the end of the driveway; it is added where the cable would end by itself and can be dragged in the plan. Every device has a **Name** field in its form ("Inverter north") that shows in the list, the form and on the pins in 3D, and inverters and batteries a **Model**: wall unit, slim and tall or hybrid; tower, wall battery or compact balcony battery. Several inverters and batteries work, e.g. a big plant and a balcony plant: each gets its own sensor.
+**Meter and grid connection:** The **electricity meter** is the fourth energy device; it takes the grid sensor (W, + = import) and shows "Grid import 420 W" or "Export 900 W". The **grid connection** marks where the cable to the utility leaves the plot, e.g. at the end of the driveway; it is added where the cable would end by itself and can be dragged in the plan. Every device has a **Name** field in its form ("Inverter north") that shows in the list, the form and on the pins in 3D, and inverters and batteries a **Model**: wall unit, slim and tall or hybrid; tower, wall battery or compact balcony battery. Several inverters and batteries work, e.g. a big plant and a balcony plant: each gets its own sensor. **Cable hub (Energie Pro, since 2.2.0):** normally every cable runs to the meter. If the meter stands at the grid connection, far from the house board, tick **Cables meet at a point of their own** in the energy tool's devices and **Set the point in the plan** with a tap – the cables then meet there, and the checklist counts it as done. In an inverter's form, **Cable ends at the grid point** lets its cable run to the grid connection instead of the meter.
 
 **Energy balance:** NeonPlan takes grid, solar and battery from the devices in the plan (meter, inverters, batteries; several add up, charges are averaged). In the **Energy balance** section you choose other sensors, flip signs and set the house consumption. **Take over from the energy dashboard** fetches the sensors you set up in Home Assistant's energy dashboard: for every energy statistic the power sensor of the same device, plus the gas and water meters. Check the signs afterwards. **Gas meter** and **water meter** are counters (a meter reading, e.g. in m³); with Energy Pro the house card shows how much was used today.
 
@@ -500,7 +505,7 @@ A **cellar** is a floor with a negative **elevation**, e.g. −2.6 m. Under **�
 - **Show cellars in the earth:** floors below the ground sit in the earth in 3D. Open the cellar and you see it as in a building pit, with the earth walls around it. Unticked, they stand free as before.
 - **Reset the ground** sets everything back.
 
-**Cellar window:** in a window's form, **Cellar window** sets the right size – 100 × 50 cm, 25 cm under the ceiling. A window below the ground gets a **light well** with a grate in 3D by itself. The tick **Light well** is in the window form exactly when 3D draws a well (a window in an outer wall below the ground) and takes it away again (e.g. where a path runs past outside); **Rim above the ground** raises the rim and grate so a gravel or paved path around the house does not cover them. Where a lawn, path or terrace of the garden tool reaches over the well up to the house, its rim stands just above that surface by itself.
+**Cellar window:** in a window's form, **Cellar window** sets the right size – 100 × 50 cm, 25 cm under the ceiling. A window below the ground gets a **light well** with a grate in 3D by itself. The tick **Light well** is in the window form exactly when 3D draws a well (a window in an outer wall below the ground) and takes it away again (e.g. where a path runs past outside); **Rim above the ground** raises the rim and grate so a gravel or paved path around the house does not cover them. Where a lawn, path or terrace of the garden tool reaches over the well up to the house, its rim stands just above that surface by itself. Since 2.2 a lawn or path raised up to the house counts as the ground too: a cellar window under it gets its well even when the plan's ground level lies lower. **Depth from the wall (m)** sets how far the well reaches out (0.8 m by default), so it stays within a narrow path.
 
 ### 4.22 Awnings
 
@@ -535,6 +540,23 @@ Under **Furniture → Home technology** (in the wall view under 🔌 **Switches*
 
 **Water heater:** a standing tank or a slim tank on the wall (at 1.1 m). Link the water_heater entity, a thermostat or the heating element's switch, plus optionally a sensor with the **water temperature** and a power sensor. It glows warm while it heats (thermostat heating, switch on or power above the threshold), faintly while it is ready, and shows the water temperature. The **heat pump (indoor unit)**, gas boiler, buffer tank and water heater from the packs take a water_heater entity as well; their pin shows the mode and the water temperature.
 
+### 4.25 Several floor plans and the property (new in 3.0)
+
+![Choosing a floor plan](images/plans-picker.jpg)
+
+One installation can hold several floor plans: the house, the garage, the garden house, a granny flat or the holiday flat by the sea. Each floor plan has its own floors, rooms, furniture, devices, card templates and restore points. Your plan so far stays as it is – it is the first floor plan.
+
+- **Create:** ⚙ Settings → 🏘 **Floor plans** → **New floor plan**: type a name, choose where it comes from (**Empty**, **Copy of …** or **From a file** – an export, also one from the import page) and **Create**. The new floor plan opens in the editor at once.
+- **Switch:** the picker with every floor plan sits at the top next to "NeonPlan 3D"; admins also create one there with **＋ New floor plan**. Other users see the picker once there are two. Each device remembers which one was open last. A link with `?plan=<id>` opens a particular one.
+- **Manage:** in the same list you rename a plan, choose an icon (🏠 🏡 🏢 🏖️ …), sort with ↑ ↓ and open it with **Open**. 🗑 moves a floor plan to the **bin**: it can be restored for 30 days, only then is it deleted. The first floor plan cannot be deleted. Each floor plan shows its id for the dashboard card.
+- **All floor plans:** in the picker, **▦ All floor plans** shows a tile per floor plan with the lights that are on, open windows and doors, the temperature and warnings. A tap opens it.
+- **Warnings from everywhere:** if the water sensor in the garden house goes off while the house is open, "Garden house: Workshop · Water …" shows at the top with **Show**, which jumps straight into the room. The picker's button shows the number of warnings.
+- **The property:** under ⚙ → 🏘 Floor plans → **Property** you place the other buildings beside the house: tick one, drag it to its place in the view from above (0.5 m grid), turn it in 15° steps with ↺ ↻ or by **90°**. Unticked, a floor plan is somewhere else, like the holiday flat. **🏘 Property** in the picker then shows every building together in 3D, with lights, devices and warnings. A tap on a room of another building opens its floor plan in that room. The property view is for looking and switching; each floor plan is edited on its own. Every building brings its own roof.
+- **Live Presence** works with one floor plan. Which one, you choose at the bottom of the list.
+- **Announcements** find rooms in every floor plan. Without a room they go to the floor plans on the property; with **Floor plan** (`plan:`) to one only.
+
+![The property in 3D](images/plans-site.jpg)
+
 ---
 
 ## 5. The 3D view
@@ -564,6 +586,7 @@ The switches for walls, floors, roof, heat map and the Pro displays are in the *
 | Switch | Effect |
 |---|---|
 | **Tall walls** / **Cut** | Walls at full height, the front ones as tinted glass, or all walls cut at hip height – tall furniture (wardrobe, stairs, tall units) is cut with them, so it hides nothing behind it. Each device remembers the choice |
+| **With furniture** / **Floor plan only** | Floor plan only (since 2.2): walls, doors, windows and stairs without furniture – devices and their markers stay. Each device remembers the choice |
 | **Apart** / **Stacked** | In the house view: floors pulled apart or on top of each other |
 | **Roof stays** | In the house view: the roof stays while zooming in instead of lifting and fading (in the editor's roof and energy tools it always stays) |
 | **Dimmed** / **Stacked** / **Alone** | With an open floor: what happens to the floors below |
@@ -582,8 +605,8 @@ At the top right:
 
 | Switch | Effect |
 |---|---|
-| **Auto** / **Tablet** / **High** | Quality level. Tablet leaves out patterns, shadows and halos and is chosen automatically on Fire tablets. High adds light cones under spots |
-| **Clock** | Date and time in a corner of the view (↖ ↗ ↙ ↘) or off – per device; in the card `clock: tr` |
+| **Auto** / **Tablet** / **High** | Quality level. Tablet leaves out patterns, shadows and halos and is chosen automatically on Fire tablets and slow devices. High adds light cones under spots |
+| **Clock** | Date and time in a corner of the view (↖ ↗ ↙ ↘) or off – per device; in the card `clock: tr`. 12 or 24 hours as set in your Home Assistant profile under **Time format** |
 | **Neon** / **Blueprint** / **Day** / **Auto** | The look; **Auto** shows Day while the sun is above the horizon (`sun.sun`) and Neon after sunset – for the wall tablet. In the card `theme: auto`. The colour well beside it sets an **accent colour of your own**: in the neon look lines and glowing edges take it, the buttons and pins in every look; ↺ brings the cyan back |
 | **None** / **In the room** / **Important** / **All** | Which device markers appear. Important shows only devices without their own 3D model and values such as watts or the running app. **In the room** shows no markers in the house and floor views and, in an open room, only that room's own – handy with many sockets and sensors |
 | **Small** / **Normal** / **Large** | How large the device markers are; the device remembers the choice (card: `marker_size`) |
@@ -606,7 +629,7 @@ Each device remembers these switches.
 
 - **Tap** switches lamps and switches. The lamp flashes briefly to confirm.
 - **Swipe up or down** on a lamp dims it; on a blind or window it moves the blind. The value appears at your finger. Devices and windows with "Ask before switching" do not react to a swipe.
-- **Long press** opens the quick menu: brightness, colour temperature and colours for lights; up, stop, down and fixed positions for blinds. Venetian blinds and Raffstores get a **Slats** slider there and in the room panel (or slats open/closed) as soon as the entity supports it.
+- **Long press** opens the quick menu: brightness, colour temperature and colours for lights; up, stop, down and fixed positions for blinds. Venetian blinds and Raffstores get a **Slats** slider there and in the room panel (or slats open/closed) as soon as the entity supports it. Roller shutters, garage doors and curtains only get them when they report a slat position (some integrations such as KNX announce slat buttons for roller shutters, too).
 - Tap a **window** – frame, glass or blind – to open the blind menu or show the contact.
 - **Double tap a room** switches all its lights on or off. Devices with "Ask before switching" stay out.
 - TVs, doors and garage doors can be tapped directly as well.
@@ -633,9 +656,17 @@ With a selected room and no open room panel, the area's **scenes and scripts** a
 
 The **star** above the magnifier opens the **central menu**: lights on or off and blinds up or down for the floor shown – in the house view for the whole house, then with a confirmation ("Sure?", a second tap runs it). Garage doors and gates do not count as blinds. Below it the **favourites** from the editor; a tap starts a scene or script, presses a button or toggles a switch. In the card, `central: false` hides the star.
 
+**⚙ Settings (since 2.0.7):** at the top of the central menu, **⚙ Settings** opens the most used settings right in the 3D view, without the editor: **Look** (sun path and house shadow, windows glowing out at night, sunlight through the windows, since 2.1.0 the **size of the glass cards** for energy, heat pump, car and devices), **Controls** and **Warnings** (window open while it rains, contact unavailable, device names in warnings). Below, every module with settings has a section of its own, such as the **Announcements** (7.5). The settings apply to the whole house; only administrators can change them. Everything else stays in the editor under ⚙ Settings.
+
+**Switch devices only in the opened room (since 2.0.11, off by default):** in the 3D view under **⭐ (the star above the magnifier) → ⚙ Settings → Controls**, in the editor under **⚙ Settings → Weather & warnings**. In the **All floors** view and on a floor, a tap on a device, a pin or a linked piece of furniture then opens its room instead of switching it, so no blind starts moving when you only meant to tap the ground floor. In the opened room a tap switches as usual, and a long press opens the device's menu everywhere. Good for wall tablets.
+
+**Right click goes one step back (since 2.2, off by default):** under **⭐ → ⚙ Settings → Controls**. A short right click in the 3D view then closes the opened room or goes from the floor back to the whole house – like a double tap on empty space. Dragging with the right mouse button still pans the view. Switched off, a right click works like a click.
+
+When a module offers something for the whole house (📢 **Announcement**), it is in the central menu too.
+
 The magnifier at the bottom left opens **"Where is …?"**. Type a device or room name. A hit flies the camera there and the device flashes.
 
-**Walk:** the **🚶 Walk** button at the top right starts a **walk through the house**: you stand at eye height in the chosen room (else the biggest of the floor shown) and walk through it. **Drag** to look around, **tap the floor** to walk there – through doors into other rooms too –, **W A S D** or the **arrow keys** walk, on a tablet the **stick** at the bottom right. Walls stop you, doors let you through. The house lives on around you: lights, TVs, sun patches, glass cards. At the top you see the room you are in; **✕ End** or **Esc** takes you back. In the card, `walk: false` hides the button. While walking, only the glass cards of the room you stand in show.
+**Walk:** the **🚶 Walk** button at the top right starts a **walk through the house**: you stand at eye height in the chosen room (else the biggest of the floor shown) and walk through it. **Drag** to look around, **tap the floor** to walk there – through doors into other rooms too –, **W A S D** or the **arrow keys** walk, on a tablet the **stick** at the bottom right. Walls stop you, doors let you through. The house lives on around you: lights, TVs, sun patches, glass cards. At the top you see the room you are in; **✕ End** or **Esc** takes you back. With a room open, the **🚶** button in its room panel (beside ✕) starts the walk right in that room; the panel steps aside meanwhile. In the card, `walk: false` hides the button. While walking, only the glass cards of the room you stand in show.
 
 ![Walk: the living room and the kitchen at eye height](images/walk.jpg)
 
@@ -652,6 +683,10 @@ The magnifier at the bottom left opens **"Where is …?"**. Type a device or roo
 
 With north set, sunlight from `sun.sun` falls through the windows facing the sun as soft patches on the floor. Lowered blinds make the patches smaller. If you do not like the patches, switch off **Sunlight through the windows** in **Settings**. By day the sky behind the house gets lighter.
 
+**Sun arc and house shadow (since 2.0.7):** a dotted arc around the house shows the sun's way today, with the times of sunrise and sunset at its ends. A glowing dot on it is the sun now, a brighter dot marks every full hour. The house's shadow lies on the ground and moves with the sun, so you can see when the terrace gets sun. The shadow shows in the **All floors** view and not on the **Tablet** level, the arc on every level. Both need the north direction and the home's location in Home Assistant; switch them off in the ⭐ central menu under **⚙ Settings** (or in the editor's settings) with **Sun arc and house shadow**. On a large plot, **Sun arc around: the whole plot** (in the same place, since 2.2.0) puts the arc and the compass ring around everything drawn – rooms, outdoor areas, fences and free walls – instead of only the house.
+
+**Windows glow outside at night (since 2.0.7):** when it is dark outside, the light of lit rooms on the ground floor falls out of the windows as a warm glow onto the lawn and terrace in front, in the room's light colour. Lowered blinds dim it. A window over a balcony lights the balcony; the glow ends at its edge. Switch it off in the ⭐ central menu under **⚙ Settings** (or in the editor's settings) with **Windows glow outside at night**.
+
 ### 5.8 Warnings
 
 ![A warning](images/view-alert-banner.jpg)
@@ -662,12 +697,14 @@ NeonPlan 3D warns for free and without setup:
 |---|---|
 | Smoke, gas, carbon monoxide, water | A `binary_sensor` of that device class in the area reports on |
 | Alarm | An `alarm_control_panel` is triggered or about to trigger |
-| Power outage | The entity from the plan settings (**Report a power outage with**) reports an outage: a grid sensor of class power is "off", a UPS runs on battery, the mains voltage is below 100 V, or a helper of your own is "on". The grid connection in 3D is crossed out meanwhile |
+| Power outage | The entity from the plan settings (**Report a power outage with**) reports an outage: a grid sensor of class power is "off", a UPS runs on battery, the mains voltage is below 100 V, a grid status says "Off Grid", or a helper of your own is "on". Since 2.0.8 the list only offers entities that fit, no switches. The grid connection in 3D is crossed out meanwhile |
 | Window open in the rain | A window is open or tilted while the weather entity reports rain, lightning rain, hail or sleet |
 
 The room pulses red and a banner appears at the top. A tap on the warning jumps into the room. The rain warning uses the weather entity from the plan settings and can be switched off there on its own under **Warning: window open while it rains**. A single window that may stay open in the rain (under a canopy, say) gets the tick **No rain warning** in its form. With a weather station of your own, choose its rain sensor (on = rain) or rain rate (mm/h) under **Rain from your own weather station**: then what counts is whether it really rains at the house – for the warning and, with Weather outside, for the rain in 3D.
 
 On a wall tablet the banner can get long: "Guest WC · Window open in the rain: Guest bathroom window". Switch off **Show device names in warnings** in the plan settings, and it reads "Guest WC · Window open in the rain". A warning without a room keeps the device name.
+
+**Contact unavailable (since 2.0.6, off by default):** when a window or door contact has been "unavailable" for 10 minutes (empty battery, out of radio reach), the window looks shut in 3D although nobody knows. Switch on **Warn when a window or door contact is unavailable** in the settings under **Weather & warnings**, and a warning names the contact. A short gap while Home Assistant restarts does not warn.
 
 ### 5.9 Cameras in 3D
 
@@ -679,7 +716,7 @@ A tap on the camera or on its wedge opens the snapshot, which refreshes every fe
 
 ### 5.10 Voice control (new)
 
-> **New in 1.20 and still in development.** Voice control is switched on for everyone, free, and already works well. It will grow over the next versions. If a sentence is not understood the way you mean it, send us the sentence on Discord or in a GitHub issue.
+> **New in 1.20 and still in development.** Voice control is switched on for everyone, free, and already works well. If a sentence is not understood the way you mean it, send us the sentence in a GitHub issue.
 
 Talk to your house. A **microphone button** 🎙️ appears at the bottom left of the 3D view. Tap it: it turns red and "Listening …" shows above it. Say your sentence and pause briefly, and NeonPlan responds.
 
@@ -755,6 +792,12 @@ data:
 
 **Screen names.** With several tablets, give each view a name: in the editor under **⚙ Settings → 🎙 Voice control → Screen name** (for this device) or on the card with the option `screen: Kitchen`. When the service names a screen, only the view with that name reacts; without one, all of them do. With no view open, Assist answers "No NeonPlan screen is open right now".
 
+**Room of this device – "here"** (new in 2.1). When a tablet hangs in one room, choose it under **⚙ Settings → 🎙 Voice control → Room of this device** (for this device, empty by default). Then sentences without a room name are enough: "Lights on", "Turn off the lights here" or "Close the blinds" switch only in that room. When you name a room ("Turn on the kitchen lights"), that room counts. You can choose the rooms (and outdoor areas) that have a Home Assistant area, because Assist switches by area: NeonPlan hands the sentence to Assist as if a device in that area had heard it. On a **dashboard** you set it on the card: edit the dashboard → NeonPlan card → **Features** → **Room for "here"**, or in YAML `voice_area: kitchen` (the area id from Home Assistant). The card applies on every device that shows this dashboard; without a choice, the room set on the device counts. A voice satellite like the Voice PE does not need this setting, it knows its area itself.
+
+**"there" – the room you tapped.** With a room open in the 3D view, "there" means that room: on the kitchen tablet tap into the living room, then "turn off the lights there" or "TV there off". "here" stays the tablet's room.
+
+**Vacuum and "everything off" per room.** In the editor every room has the field **Cleaning (robot vacuum)**: the script or button that sends your robot to this room (the room cleaning of your robot's integration, e.g. a script with the room segments). The room panel then shows **🧹 Vacuum**, and by voice "vacuum here", "vacuum the kitchen" or "vacuum there" work. **⏻ Everything off** in the room panel and by voice ("everything off", "turn everything off there", "everything off in the kitchen") switches off the room's lights and fans, turns off the TV and pauses playing speakers. Plain switched sockets only when a lamp hangs on them in the plan, so the fridge never goes off.
+
 **Testing:** in the **🎙️ Voice control** section, **🎙️ Test the microphone** starts a probe. It checks https, the microphone, the level and Assist one after the other. It also shows which room a spoken sentence would open, and switches nothing while doing so. Wherever there is a ✖, the fix stands next to it.
 
 **Good to know:**
@@ -785,14 +828,14 @@ NeonPlan shows which room you are in right now – and where your iPhone or your
 
 **Setting up** (editor → **⚙ Settings → 📡 Locating**, admins only):
 
-1. **Scanners:** NeonPlan lists all Bluetooth scanners of Home Assistant and suggests their room – from the device's Home Assistant area, a pin or a piece of furniture in the plan (the washing machine with the Shelly plug's power sensor) or the name ("PC office plug"). After learning NeonPlan knows from the signals where each scanner stands and offers **"Signals say: … – use it"** when they disagree.
+1. **Scanners:** NeonPlan lists all Bluetooth scanners of Home Assistant and suggests their room – from the device's Home Assistant area, a pin or a piece of furniture in the plan (the washing machine with the Shelly plug's power sensor) or the name ("PC office plug"). Outdoor areas with a Home Assistant area (a terrace, the garden) are in the list too and count as rooms, joined to the room whose door opens onto them. After learning NeonPlan knows from the signals where each scanner stands and offers **"Signals say: … – use it"** when they disagree.
 2. **Devices:** the watch and the iPhone through the **🔑 Key helper**, Android phones appear by themselves under **📱 Android with the Home Assistant app**, key tags through **📱 Add an Android phone or a key tag** (hold the device right next to a scanner). When no scanner hears a device right now, it says **⚠ not heard**; a key you already have goes in under **🔑 Paste a key you already have**. Give every device a name, a person and – for "ring my iPhone" – the phone's Home Assistant app.
 3. **Learning:** tick the devices you are **carrying**. Go into every room, tap it and walk around slowly for **90 seconds**, into the corners and along the walls. Keep a phone in your **pocket** (screen off), as in everyday life – best tap with another tablet or phone. **Learning once is enough:** devices without learning of their own use the others'. The countdown runs; at 0 the room is done (✓). **Check accuracy** then shows how surely each room is recognised. Simply learn a weak room again.
 4. **Live:** switch locating on and walk through the house – the list shows at once where NeonPlan sees you.
 
 **In the 3D view:**
 
-- **A person's watch and phone:** what is worn on the body (watch, band – tick **⌚ worn**, already set for "watch" in the name) tells where the person stands while it was heard in the last two minutes; otherwise the device heard last. When the watch and the phone are heard at the same time in different rooms (typically at a shared wall), the phone only wins when it is clearly surer (by more than 15 percentage points). A phone left lying in another room while you walked on with the watch shows there as a small symbol of its own. The other way round too: a watch that has lain in one room for ten minutes while the phone changed rooms after it counts as taken off – the phone then tells where the person is, and the watch stands as a symbol where it lies.
+- **A person's watch and phone:** what is worn on the body (watch, band – tick **⌚ worn**, already set for "watch" in the name) tells where the person stands while it was heard in the last two minutes; otherwise the device heard last. When the watch and the phone are heard at the same time in different rooms (typically at a shared wall), the phone only wins when it is clearly surer (by more than 15 percentage points). A phone left lying in another room while you walked on with the watch shows there as a small symbol of its own. **Presence sensors with zones** (such as an Aqara FP2): when a zone named like a piece of furniture in the room ("Sofa", "Armchair", "Dining table", "Bed", or the furniture's own name) reports someone there, the figure stands at that furniture instead of in the middle of the room. A zone at a door ("Entrance hall", "Terrace door") puts the figure in front of the door to the room of that name, or of a door to the outside; "rest of the room" keeps the middle. The sensor belongs to the room by its Home Assistant area. The other way round too: a watch that has lain in one room for ten minutes while the phone changed rooms after it counts as taken off – the phone then tells where the person is, and the watch stands as a symbol where it lies.
 - People stand as a **glowing figure** in their colour in the room, with the name above. Things (keys, an iPhone without a person) are small round symbols. A tap shows the room, the certainty and since when.
 - In the assistant under **4 · Live → People in 3D**: **figure, pin or off** – once for the whole house.
 - The **room panel** shows under its name who is here now, and the floors count the people.
@@ -859,7 +902,9 @@ Pro add-ons are paid extra features, sold singly in the shop. Without an add-on,
 
 ![Motion trail](images/view-trail.jpg)
 
-**Detection pins:** when one of a camera's sensors reports a detection right now (Frigate, UniFi Protect, Reolink and the like give one sensor per object: person, vehicle, animal, motion), a pin stands in front of the camera with a symbol, the kind and the time – "Person · 18:42". A tap opens the sensor. Several objects at once give several pins on top of each other. Too busy? Switch off **Show detection symbols** in the camera's form – a detection then only turns the field of view red.
+**Detection pins:** when one of a camera's sensors reports a detection right now (Frigate, UniFi Protect, Reolink and the like give one sensor per object: person, vehicle, animal, motion), a pin stands in front of the camera with a symbol, the kind and the time – "Person · 18:42". A tap opens the sensor. Several objects at once give several pins on top of each other. Too busy? Switch off **Show detection symbols** in the camera's form – a detection then only turns the field of view red. **Pop up the picture on a new detection** (since 3.0.1, off by default) shows the camera's picture for 20 seconds at the bottom right on every new detection – who was that? A tap on it looks through the camera, ✕ closes it.
+
+**Which sensors count (since 2.0.7):** by default NeonPlan takes every motion, occupancy and presence sensor of the camera's device. If they are too eager – or the detection comes from another device, e.g. Frigate for a Reolink camera – tick **Choose the detection sensors yourself** in the camera's form: then only the ticked sensors count, and **Add a sensor** adds sensors of other devices (such as Frigate's `…_person_occupancy`). This applies to the pins, the motion trail and the live director.
 
 **Camera wall:** the **Cameras** switch at the bottom (in the card the option `camera_wall: true`) lays every placed camera's live picture over the scene as a wall, refreshed every few seconds. A camera that sees motion right now gets a red frame; one that records, a red dot. The tiles share the wall: the grid picks as many columns as make every camera as large as possible without overlapping (one camera fills it, two sit side by side, 22 e.g. as 6 × 4); with very many cameras the wall scrolls. The tiles are stills, refreshed every 5 seconds (every 10 on the tablet level; a small note in the header says so) – ten live streams would overwhelm an old tablet. The look-through in 3D is a still as well; the bar at the bottom says so. A tap shows the picture big, as a **live stream** through Home Assistant’s player as soon as the camera can stream (otherwise the still stays); from there **Look through the camera** goes into the 3D view, and **Back to the view** brings the wall back. **‹ All cameras** returns to the grid, ✕ closes the wall.
 
@@ -897,7 +942,7 @@ If the entity provides `cloud_coverage` and `wind_speed`, NeonPlan 3D uses them.
 
 ![Snow](images/view-weather-snow.jpg)
 
-**Settings** in the editor: **Weather entity** picks the entity, **Weather effects in 3D** switches single effects off. Fog starts off because it greys the whole scene. At the Tablet quality level only the dimming by clouds remains.
+**Settings** in the editor: **Weather entity** picks the entity, **Weather effects in 3D** switches single effects off. Fog starts off; switched on, it lies around the house – the rooms and their lights stay clear. At the Tablet quality level only the dimming by clouds remains.
 
 ### 6.3 Live screens
 
@@ -963,7 +1008,7 @@ The **Holograms** button in the energy bar (next to ⚡) hides all cards and sho
 
 Sound & Cinema brings the music into the 3D house. It needs a speaker in the plan: a media player placed as a device (chapter 4.11), or an item from the Home Cinema pack (floor-standing speaker, soundbar, ceiling speaker …) with the media player as its **Device** in the furniture form.
 
-**Now-playing card:** as soon as a speaker plays (or pauses), a glass card floats over it with cover, title, artist and volume. On it: previous, play/pause, next and a volume slider – without opening the room. A tap on its header folds the card. The cards follow the **Holograms** switch (next to ⚡ in the energy bar; without Energy Pro the switch is not there and they are always on).
+**Now-playing card:** as soon as a speaker plays (or pauses), a glass card floats over it with cover, title, artist and volume. Since 2.0.7 a paused card stays for ten minutes at most – Echos often stay "paused" for hours after the music was stopped. On it: previous, play/pause, next and a volume slider – without opening the room. A tap on its header folds the card. The cards follow the **Holograms** switch (next to ⚡ in the energy bar; without Energy Pro the switch is not there and they are always on).
 
 **Sound rings:** glowing rings travel outwards over the floor around every playing speaker – the louder, the wider and stronger. So you see from the house view where music is on.
 
@@ -1150,9 +1195,9 @@ At the bottom of the page a **bar** sums up your installed packs (furniture pack
 **Fun packs** are free extras just for fun – for everyone with a customer account at mastershort.de. No purchase is needed:
 
 - **With a shop connection** they are already in your account. Under **Extensions** they are among your packs with **Install**; Home Assistant also announces new fun packs once under Notifications.
-- **Without an account** you create one for free: **🎁 Create a free customer account** under **🎈 Fun packs** (or in the notice in the 3D view), confirm your e-mail, paste the licence key from the mail under **Shop connection**. Then the fun packs show up to install – and from then on new packs too, right in the app.
+- **Without an account** you create one for free: **🎁 Create a free customer account** in the editor under **⚙ Settings → 🎈 Fun packs** (or in the notice in the 3D view), confirm your e-mail, paste the licence key from the mail under **Shop connection**. Then the fun packs show up under **Extensions** to install – and from then on new packs too, right in the app.
 
-Switch them on and off under **🎈 Fun packs** afterwards.
+The fun packs are set in the editor under **⚙ Settings → 🎈 Fun packs** (new; they used to be under Extensions). There you switch them on and off and set up the pets, for instance; under Extensions a button **Open the fun pack settings** leads straight there.
 
 **Pets:** a cat, a rabbit or a dog – as a dachshund, pug, terrier, labrador or shepherd – lives in your 3D house. **+ Add a pet** sets one up: kind, breed (for dogs), name, fur and the floor it starts on. **Show the pets** switches all of them on and off; in the dashboard card the option **Show the pets** (YAML `pets: false`) leaves them out of that card, e.g. on the wall tablet.
 
@@ -1164,6 +1209,14 @@ Switch them on and off under **🎈 Fun packs** afterwards.
 - They are only drawn while one moves – resting, they cost nothing, even on old wall tablets.
 
 **Halloween:** 13 decorations in the furniture library under **Fun pack: Halloween** – a jack-o'-lantern, a small pumpkin, a pumpkin trio, a cobweb (for the corner under the ceiling), a bat garland, two gravestones, a skeleton, a witch's cauldron, a candelabra, orange string lights, a ghost figure and a witch's broom. Pumpkin, cauldron and candles glow when you link a light. A little **ghost** floats through the house now and then – right through the walls, more often at night. **Let the ghost float** under **🎈 Fun packs** switches it off; in the dashboard card the option **Show the Halloween ghost** (YAML `ghost: false`) leaves it out of that card. The ghost, too, is only drawn while it is on its way.
+
+**Winter & Christmas** (new): 11 decorations in the furniture library under **Fun pack: Winter & Christmas** – a Christmas tree with fairy lights (for the plug), a small Christmas tree, an **Advent wreath** that lights its candles by date (one on the first Sunday of Advent, all four on the fourth), a glowing window star, a candle arch, a light-up reindeer for the garden, a snowman, a pile of presents, warm white and colourful string lights and a poinsettia. What glows glows with a linked light or plug. With **Only show while …** (see [4.8](#48-furniture)) the decorations come back every December by themselves, e.g. while a calendar or a "Christmas time" helper is on. Under **⚙ Settings → 🎈 Fun packs**:
+
+- **Fairy lights along the eaves:** bulbs along the roof's edge. **Shine with** links them to your real outdoor lights; without a choice they shine **automatically in the evening from the first Sunday of Advent to 6 January**. Pick **Colourful instead of warm white** and **Gables and ridge too** (the whole roof in light) as you like.
+- **Snow:** when the weather entity reports snow, snow lies on the roof and the lawn. It stays while it freezes and melts within a few hours above zero.
+- **Firework:** on New Year's Eve a neon firework rises over the house at midnight (23:59 to 0:10).
+
+All of it runs on old wall tablets too: the fairy lights and the snow cost next to nothing, the firework is only drawn during those eleven minutes.
 
 ---
 
@@ -1177,21 +1230,22 @@ A **module** is a pack that carries code: NeonPlan loads it and runs it in the h
 2. **Install it:** with NeonPlan connected to the shop (7.1) it stands under Extensions → **Install/update all** – one tap. Without the connection download the `.fp3dpack` file from the account and import it: **⚙ Settings → 🧩 Modules → Import a module …** or here in the **Modules** section.
 3. **Approve it (since 1.24):** a module runs only once an administrator has seen and approved its code. The **Modules** section then says "waits for your approval" – **View code & approve** shows the publisher, version, size, fingerprint and the whole code; **Approve** starts exactly this code, without a restart.
 4. **See it:** the module stands in both lists as "Module by Mastershort · v2". What it does is in its shop description; the sentences of a voice module show at once under **🎙 Voice control → What NeonPlan understands**, a module's warnings in the warning bar, its cards over the house.
-5. **Updates:** a new release is fetched by the daily shop check by itself; without the connection import the new file. **New code never runs by itself:** the update waits beside the running release ("Update to v4 waits for your approval") until you confirm it with **View update & approve**. Until then the old release keeps running. Furniture and feature packs without code update as before.
+5. **Updates:** a new release is fetched by the daily shop check by itself; without the connection import the new file. **New code never runs by itself:** the update waits beside the running release ("Update to v4 waits for your approval") until you confirm it with **View update & approve**. Until then the old release keeps running. Since 2.0.6 the shop list shows such a waiting update with the **View update & approve** button too, instead of offering it for updating again. Furniture and feature packs without code update as before.
 6. **Remove:** **Remove** in the list, like a pack. Your plan stays untouched.
 
 Security: a module runs only with a valid signature and on the installation it was bought for. You can read the code in the file (it is not obfuscated) but not pass it on – the Elastic License 2.0 applies.
 
 **Why modules?** The Pro add-ons move over to this form one by one (on the extensions page they already stand under Modules, "becomes a module"). Nothing changes in how you use them. A lot changes in how they are built: each extension gets its updates through the shop without waiting for the next NeonPlan release; several extensions can be built and tested at once, each with its own supporter beta; and the core stays small and fast – a wall tablet only loads what it uses.
 
-> **Beta: The house answers.** Supporters test the voice module first: with the [Supporter Pass](https://mastershort.de/en/neonplan3d/supporters/) it lies in your account – **Install all** or import the file (step 2). Then open **⚙ Settings → 🎙 Voice control**: under "What NeonPlan understands" every question is listed. Try "What is open?", "Good morning", "Good night", "What is the weather like?" – at the microphone or in the Assist dialog. Speaking needs text-to-speech in the Assist pipeline (Settings → Voice assistants → Text-to-speech). Whatever is not understood or answered wrongly: post the exact sentence on Discord in **#beta-feedback** – that is what the next release is made of. After the beta the module is free for everyone.
+> **The house answers** is free for everyone with a customer account: pick it up in the shop, then **Install all** or import the file (step 2). Then open **⚙ Settings → 🎙 Voice control**: under "What NeonPlan understands" every question is listed. Try "What is open?", "Good morning", "Good night", "What is the weather like?" – at the microphone or in the Assist dialog. Speaking needs text-to-speech in the Assist pipeline (Settings → Voice assistants → Text-to-speech).
 
 Modules today:
 
 | Module | What it does | Price |
 |---|---|---|
 | **The house answers** | answers spoken questions – "What is open?", "What is the weather like?", "Good morning" … (5.10) | free |
-| **Window watch** | warns when a window has been open in the cold (below 12 °C outside) for more than 20 minutes or the heating runs with a window open (10 minutes): the room pulses, the warning bar names the window and the time; "Which windows have been open too long?" visits them | free |
+| **Announcements** (from NeonPlan 2.0.7) | Tap a room, **📢 Announcement**, tap "Dinner is ready!" – and the speaker in that room says it. Ready sentences (in ⚙ Settings → Announcements: ✕ takes one out, your own are added below, "Bring back the ready sentences" restores them), your own words, or spoken into the 🎙 microphone (needs HTTPS and a voice pipeline with speech-to-text, like the voice control). From the central menu to **all rooms**, to **one floor** or only **where someone is** (locating, presence and motion sensors). In the room's form (editor) every room has a **🌙 quiet time** (a kids' room from 8 pm until 7 am, for example): announcements to several rooms then leave it out, an announcement to this room alone still goes out. There are also **the room's own sentences**, shown first in that room. Words you typed lately come back as **↻** to send again. Which speaker talks: the one chosen in the room's form under **📢 Announcements through**, else a speaker placed in the room on the plan – only when none is placed there, one of the room's area (never a TV or an unreachable device on its own), else the default speaker from ⚙ Settings. An **outdoor area with a Home Assistant area** (a terrace, say) counts as a room since 2.0.11: its speaker gets announcements and its 📢 button. One speaker talks per room – with two in a room, choose which one in the room's form. Echos (Alexa Media Player, or since 2.0.11 Home Assistant's own **Alexa Devices** integration) and voice satellites like the Home Assistant Voice PE make a real announcement with a chime; other speakers talk through Home Assistant's text-to-speech (TTS), with chime_tts with a chime too; speakers that can announce (Sonos, for example) lower their music for it and play on after. The volume stays as it is. The speaker lights up in the plan for a moment, and in the 3D view **🔊** over it shows where it is talking. With **Also show 📢 right in the room** (⚙ Settings → Announcements) a 📢 button floats over every room's speaker in the floor's 3D view – a tap opens the sentences at once. **From automations** (from NeonPlan 2.0.9): the action **NeonPlan 3D: Announcement** (`neonplan3d.announce`) says a message with the same settings – when the doorbell rings, say –, also with no NeonPlan page open; without a room to every room, with **Rooms** to those named, with **Floor** to one floor; several rooms leave out those in their quiet time. With **On NeonPlan screens** every open NeonPlan screen speaks the message itself – with a chime – and shows it big; with **Screens** only those with these screen names. So an old wall tablet becomes an announcement speaker too. This needs a voice pipeline with text-to-speech in Home Assistant; browsers play sound only after a first tap on the page – in Fully Kiosk switch on **Autoplay Audio** under Web Content Settings. A wall tablet with Fully Kiosk can be a speaker itself: choose the Fully Kiosk integration's media player in the room form under **📢 Announcements through** | 3.90 €, in the Supporter Pass |
+| **Window watch** | warns when a window has been open in the cold (below 12 °C outside) for more than 20 minutes or the heating runs with a window open (10 minutes): the room pulses, the warning bar names the window and the time; "Which windows have been open too long?" visits them. Quiet at night (from release 3): create a helper (toggle) `input_boolean.window_watch_quiet` in Home Assistant, and it does not warn while that is on – turned on by an automation at night or when the blinds are down | free |
 
 ## 8. The dashboard card
 
@@ -1203,19 +1257,45 @@ The card `custom:neonplan3d-card` brings the 3D view into any dashboard. It load
 
 | Section | Options |
 |---|---|
-| **View** | One floor or the whole house, fixed size or full screen, height, look, walls, quality, floors below |
-| **Show** | Markers, heatmap, switches in the card, floor pictures, room names, room panel, full-screen button, clock (corner of your choice, `clock: tl/tr/bl/br`), floors apart, performance display |
-| **Features** | Warnings, jump to a warning, scene buttons, motion trail, camera wall, time travel, weather with weather entity |
+| **View** | Floor plan (also the property), one floor or the whole house, start room, only these rooms, fixed size or full screen, height, look, walls, quality, floors below |
+| **Show** | Markers, heatmap (also "values"), floor plan only (no furniture), switches in the card, 3D lock, keep view, walk, controls left or right, floor pictures, room names, room panel, full-screen button, clock (corner of your choice, `clock: tl/tr/bl/br`), floors apart, performance display |
+| **Features** | Warnings, jump to a warning, voice control with screen name and room for "here", scene buttons, motion trail, camera wall, time travel with range and speed, weather with weather entity |
 | **Wall tablet (kiosk)** | Back to the start view, night dimming, camera turn as screensaver |
 
 ![A card with scenes](images/card-scenes.jpg)
+
+### 8.1 Card templates
+
+Instead of setting up every card on every tablet, you build it once in the editor: **⚙ Settings → 🖥 Card templates → + New template**. Give it a name (e.g. "Kitchen Fire tablet") and set everything below, with the same form as in Home Assistant's card dialog. **Duplicate** makes a copy to start the next tablet from.
+
+**On the tablet:** add a card, search for "NeonPlan" and pick the template under **Template** at the very top, done. The form below goes away. The YAML has two lines only:
+
+```yaml
+type: custom:neonplan3d-card
+template: kitchen_fire
+```
+
+- **Changing it:** when you change the template in the editor, every tablet with this template follows after a moment by itself, without a reload.
+- **The template counts, the size stays with the card:** a card with a template shows the template. Only its size (**Fill the screen**, **Height**, **Full-screen button**) comes from its own YAML, as it belongs to the dashboard. Whatever else is still in the card's YAML from before no longer applies; the card dialog lists it and **Tidy up** removes it. For a tablet that should look different, give it a template of its own (**Duplicate**).
+- **Straight away or with a button:** under **Changes** each template is either **Straight to the tablets** (the default) or **Send with a button**. Then only the preview shows your changes; the tablets keep the old state until you press **Send to the tablets**. **Discard** drops the changes.
+- **Where does the tablet hang?** The field at the top of the template sets the room for "here" ("Turn on the lights here"), whatever floor or start room the card shows.
+- **Renaming:** the id in the YAML follows the new name. Tablets still set up with the old id keep finding the template.
+- **Screen name:** the template's name is also the card's screen name (for announcements and "here" in voice control), as long as the template has none of its own.
+- **Reload:** **Reload screens with this template** and **Reload all screens** make the open tablets load their page again, e.g. after a NeonPlan update (new code only arrives that way). Automations have the action `neonplan3d.reload_screens` for it (without `templates`: every screen).
+- **Deleted:** when the template is missing from the plan, the card shows a note and carries on with its own settings.
+
+### 8.2 All options in YAML
 
 In YAML a card looks like this. Every line except the first is optional:
 
 ```yaml
 type: custom:neonplan3d-card
+template: kitchen_fire  # a card template from the editor (then only it counts, not the other lines)
+plan: pab12cd34ef      # another floor plan (id under ⚙ → Floor plans; left out = the first); site = the property
 floor: floor_ab12cd34   # show one floor (id from the editor)
 room: room_ab12cd34     # start in this room (the id is in the editor's room form), e.g. a display for the kids' room
+rooms: [room_ab12cd34] # show only these rooms (see 8.3)
+rooms_lock: true       # false: other rooms may be opened
 height: 420             # height in pixels
 fill: false             # fill the screen below the header
 walls: auto             # auto | cut
@@ -1236,7 +1316,7 @@ buttons:                # own buttons for this card only (replace the ones from 
     icon: window-shutter
     action: fire_dom_event   # navigate | more_info | service | fire_dom_event
     data: { browser_mod: { service: browser_mod.popup, data: { title: Blinds, content: { type: "custom:my-blind-card" } } } }
-heatmap: none           # none | temperature | humidity | co2
+heatmap: none           # none | temperature | humidity | co2 | values (numbers at the room names)
 room_panel: true        # tapping a room opens the room panel
 room_names: true
 controls: true          # switches in the card, or a list: walls, floors, temperature, humidity, co2
@@ -1260,11 +1340,25 @@ time_travel_speed: 360  # time travel speed: 60 | 360 | 900 | 3600 | 14400 (one 
 time_travel_range: 24h  # time travel starts with: 24h or 7d (the week; also at the Tablet level, which else holds two days)
 roof: true              # false: show the house without its roof
 roof_fade: true         # false: the roof stays on the house while zooming in
+plain: false            # true: floor plan only – walls, doors, windows and stairs without furniture
 start_view: { theta: 0.8, phi: 1.0, radius: 20 }   # a start view of this card's own; the line is shown in the editor under Start view (leave out = the plan's)
 idle_return: 0          # seconds without a touch until the start view
 night: "off"            # off | sun | "22:00-06:00"
 idle_orbit: false
 ```
+
+### 8.3 Cards for single rooms (new in 3.0)
+
+![A card for the kids' room only](images/card-room-one.jpg)
+
+In the card dialog under **Only these rooms**, tap rooms on the small view from above (or tick them below). The card then shows only them, with their furniture, devices, doors and windows; the other rooms, floors and the roof are left out. That is ideal for the tablet in the kids' room, a granny flat or the guest room. On old tablets it runs even more smoothly, because only these rooms are drawn.
+
+- **One room** opens with its devices beside it right away. "Here" in voice control then means that room.
+- **The tablet stays in these rooms:** taps, search and jumps do not lead out. **Other rooms may be opened** lifts that.
+- **Shortcut in the editor:** select a room → **🖥 Card for this room** makes a card template with only this room and opens it. On the tablet you then just pick the template.
+- **Several floor plans:** at the top of the card dialog you choose the card's **Floor plan**, also **🏘 Property** with every building together.
+
+![Only these rooms in the card dialog](images/card-editor-rooms.jpg)
 
 ---
 
@@ -1275,7 +1369,7 @@ idle_orbit: false
 NeonPlan 3D is built for wall tablets such as the Amazon Fire:
 
 - **No work while idle.** If nothing changes, the view draws not a single frame. The FPS display then reads "At rest (0 fps)".
-- **Tablet quality level:** "Auto" picks it by itself on Fire tablets. Patterns, shadows, halos and particles are left out. Moving decorations (energy flow, solar fields, sound rings, pool water, robot vacuums, colour effects, pets) run at about 5 frames a second and stand still 30 seconds after the last touch; a tap, or something new that starts to move, wakes them. Measured values alone (watts, temperature) show at most every 2 seconds, switches, doors and alarms at once.
+- **Tablet quality level:** "Auto" picks it by itself on Fire tablets, and on any device that turns the view at under 20 frames a second – the browser remembers that. Patterns, shadows, halos and particles are left out. Moving decorations (energy flow, solar fields, sound rings, pool water, robot vacuums, colour effects, pets) run at about 5 frames a second and stand still 30 seconds after the last touch; a tap, or something new that starts to move, wakes them. Measured values alone (watts, temperature) show at most every 2 seconds, switches, doors and alarms at once.
 - **Kiosk options of the card:** After a few minutes without a touch the card returns to the start view. At night it dims by the sun or by the clock. As a screensaver the house turns slowly.
 - **Warnings** can jump into the affected room by themselves.
 - In portrait the room panel appears at the bottom.
@@ -1296,10 +1390,11 @@ NeonPlan 3D is built for wall tablets such as the Amazon Fire:
 
 Under **Backup** in the editor:
 
-- **Restore points** are kept at most every 10 minutes while you edit, the last 20 stay. **Restore** brings back a state, the current one is kept as a restore point itself.
+- **Restore points** are kept at most every 10 minutes while you edit, the last 20 stay – with several floor plans, each its own. **Restore** brings back a state, the current one is kept as a restore point itself.
 - **Export** saves the plan as a file, **Import …** loads such a file.
 - **Share as template** exports without areas, devices, sensors and pictures. Good for passing a floor plan on.
-- **Full backup:** **Back up everything (plan, pictures, packs)** saves one file with the plan, every background and screen picture and the installed packs. **Restore a full backup …** brings it back into the same or another installation. Every pack is checked again. Packs signed for another installation are fetched there again through the shop connection. The licence key is not in the file.
+- **🖨 Print in 3D** (since 2.2, for Supporter-Pass holders): downloads the plan like **Export** and opens [NeonPlan Print](https://print.mastershort.de/) – upload the file there and get your house as 3D-print files: floors you lift off, the roof as a lid, a base plate with your name. Unlock it with your supporter code (under **Extensions**, where **Open NeonPlan Print** copies it for you). Free during the beta until 30 November 2026, for private, non-commercial use with your own homes. A small "New" dot on **Extensions** points supporters to it once.
+- **Full backup:** **Back up everything (plan, pictures, packs)** saves one file with every floor plan, every background and screen picture and the installed packs. **Restore a full backup …** brings it back into the same or another installation. Every pack is checked again. Packs signed for another installation are fetched there again through the shop connection. The licence key is not in the file.
 
 Home Assistant's own backup includes NeonPlan 3D completely as well.
 
@@ -1314,7 +1409,7 @@ Home Assistant's own backup includes NeonPlan 3D completely as well.
 - Camera pictures, history and states stay in Home Assistant and are only shown in the browser.
 - Time travel reads the history from Home Assistant's recorder, only for the devices of the plan. It never reads people or their trackers.
 - **Locating** evaluates the Bluetooth signals only in Home Assistant. Nothing about who is where leaves your house.
-- **Help make NeonPlan better (voluntary, off by default):** under **⚙ Settings → 🛟 Help improve** you can switch on anonymous usage and error reports. Then at most one report a day (and at most one batch of error messages an hour) goes to api.mastershort.de.
+- **Help make NeonPlan better (voluntary, off by default):** under **⚙ Settings → 🛟 Help improve** you can switch on anonymous usage and error reports. An admin who has not switched them on sees one invitation in the editor; **Have a look** opens the setting, **Not now** hides it for good on that device. Then at most one report a day (and at most one batch of error messages an hour) goes to api.mastershort.de.
   - **Sent:** a random id (not Home Assistant's, made when you switch it on), the versions of NeonPlan, Home Assistant and Python, the language, the installed packs and Pro add-ons, counts from the plan (floors, rooms, furniture, linked devices, cameras), device type, browser and system of the screens with frame rate and graphics class, how often each view was opened, and NeonPlan's error messages without names and addresses.
   - **Never sent:** names, entities, areas, the shape of your floor plan, IP addresses, your Home Assistant installation's id, user names, your licence key – and nothing from locating.
   - **"View report"** shows exactly the next report before it is sent. **"Delete data"** removes everything already sent. Switching off forgets the id.
@@ -1360,6 +1455,9 @@ Set quality to **Tablet** and check with **FPS** what is drawing. At rest it sho
 
 **Time travel shows nothing, "unknown" or gaps.**
 Time travel takes the history from Home Assistant's recorder. If the bar says "Without Home Assistant's recorder there is no history", the recorder is switched off (`recorder:` in `configuration.yaml`). A device reading "unknown" is excluded from the recorder (`exclude:` under `recorder:`) or new. Grey areas at the start of the bar: the recorder has not collected 24 hours yet (freshly set up, or `purge_keep_days` is below 1). Hatched areas: Home Assistant was off or restarting then. Temperatures and power come from the five-minute statistics; a sensor without a state class (`state_class: measurement`) is shown from its states instead. If the bar says "Please restart Home Assistant", an older version still runs in the background.
+
+**The 3D view breaks off right after it starts (graphics lost, "Error creating WebGL context").**
+Some older graphics chips fail on the sun's arc, the house shadow or the window glow at night (e.g. older AMD chips in Chrome on a Mac). If the 3D view loses its graphics within the first seconds, the browser remembers it: from the next load on, this browser starts without these effects, and ⚙ Settings says so. Every new NeonPlan version tries them again once. If Chrome has blocked the graphics after several crashes, quit Chrome completely and open it again.
 
 **Sunlight falls through the wrong windows.**
 Check **North** under Settings: degrees clockwise from "up" in the plan.

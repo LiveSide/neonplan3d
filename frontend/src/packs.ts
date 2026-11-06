@@ -2,7 +2,7 @@
 // furniture has the type "pack:<pack id>:<item id>". Every bundle (main, editor, 3D) keeps its own
 // registry, filled with setPacks() from the packs the backend returns.
 
-import { builtinBase, techBase, ELECTRIC_FURNITURE, FURNITURE_SIZE, LIFT_SPOTS, spotDepth, surfaceHeight, WALL_LAMP_Y, type Floor, type Furniture } from "./model.ts";
+import { builtinBase, techBase, ELECTRIC_FURNITURE, FURNITURE_SIZE, LIFT_SPOTS, outdoorGround, pointInPolygon, spotDepth, surfaceHeight, WALL_LAMP_Y, type Floor, type Furniture } from "./model.ts";
 import type { LampModel } from "./viewer/viewer3d.ts";
 
 /** A cooking zone of a pack cooktop: a thin disc lying on the item's top. */
@@ -48,6 +48,28 @@ export interface PackPart {
   axis?: "x" | "y" | "z";
   /** Turn of the part around its own centre (degrees around the vertical axis). */
   rot?: number;
+  /** An Advent candle's flame: drawn only from the n-th Sunday of Advent (1–4) until 6 January. */
+  advent?: number;
+}
+
+/**
+ * How many Advent candles burn on a day: one more each Sunday of Advent (the fourth is the Sunday before Christmas),
+ * all four until 6 January, none for the rest of the year.
+ */
+export function adventCandles(day: Date = new Date()): number {
+  const y = day.getFullYear();
+  const m = day.getMonth();
+  if (m === 0 && day.getDate() <= 6) return 4;
+  if (m < 10) return 0;
+  const today = new Date(y, m, day.getDate()).getTime();
+  // the fourth Sunday of Advent: the last Sunday before 25 December (24 December when that is a Sunday)
+  const dec24 = new Date(y, 11, 24);
+  const fourth = new Date(y, 11, 24 - dec24.getDay()).getTime();
+  const week = 7 * 24 * 3600 * 1000;
+  let n = 0;
+  // a week of daylight-saving drift cannot happen between late November and December, so plain weeks are exact
+  for (let k = 1; k <= 4; k++) if (today >= fourth - (4 - k) * week - 3600 * 1000) n = k;
+  return n;
 }
 
 export type PackSymbol =
@@ -151,6 +173,15 @@ export function packMovingPart(kind: PackMotion, p: PackPart): boolean {
   return kind === "curtain" ? p.color === "fabric" : p.shape !== "cyl";
 }
 
+/**
+ * A pack's sensor model (motion, mmWave presence, contact, leak, CO₂, temperature …): it follows a sensor of its own,
+ * whatever class the integration gave it (Local Tuya's motion sensors have none, #810).
+ */
+export function isPackSensor(type: string): boolean {
+  if (!isPackType(type)) return false;
+  return packItem(type)?.family === "sensor" || /:(\w+_sensor|door_contact|presence_mmwave)$/.test(type);
+}
+
 /** A robot vacuum: the built-in dock, or one from a pack (the smart home pack's robot with its dock, #470). */
 export function isRobotVacuum(type: string): boolean {
   return type === "robot_vacuum" || (isPackType(type) && type.endsWith(":robot_vacuum"));
@@ -238,7 +269,14 @@ export function packItemName(item: PackItem, language: string): string {
 // English names of our own packs: a pack file carries one (German) name, the furniture inside both (#224)
 const PACK_NAMES_EN: Record<string, string> = {
   architecture: "Architecture & Fit-out",
+  balcony: "Balcony & Small Spaces",
   bath: "Bathroom",
+  cabinet_kit: "Cabinets & Shelves – Kit",
+  deco: "Decor & Plants",
+  dining_hall: "Dining Room & Hallway",
+  fun_halloween: "Fun Pack: Halloween",
+  fun_winter: "Fun Pack: Winter & Christmas",
+  fun_pets: "Fun Pack: Pets",
   bedroom: "Bedroom",
   cinema: "Home Cinema & Hi-Fi",
   exclusive: "Exclusive: Smart Fridge",
@@ -263,6 +301,11 @@ const PACK_NAMES_EN: Record<string, string> = {
   pro_screens: "Pro: Live Screens",
   pro_sound: "Pro: Sound & Cinema",
   pro_weather: "Pro: Weather Outside",
+  pro_heat: "Pro: Heat Pro",
+  pro_household: "Pro: Household Pro",
+  announce: "Module: Announcements",
+  voice_answers: "Module: The house answers",
+  window_watch: "Module: Window watch",
 };
 
 /** A pack's name in the user's language: our own packs in English outside German, others as they come. */
@@ -271,7 +314,9 @@ export function packName(pack: { id: string; name: string }, language: string): 
   const key = pack.id.replace(/^mastershort\./, "");
   const sample = key.endsWith("_sample");
   const en = PACK_NAMES_EN[sample ? key.slice(0, -"_sample".length) : key];
-  return en ? (sample ? `${en} – Sampler` : en) : pack.name;
+  if (en) return sample ? `${en} – Sampler` : en;
+  // one of ours newer than this table: at least its kind in English (#825)
+  return pack.name.replace(/^Modul:/, "Module:").replace(/^Fun-Pack:/, "Fun Pack:");
 }
 
 /** Height of the bottom of a pack item, a wall light or an LED strip above the floor (0 for other built-in furniture). */
@@ -287,13 +332,25 @@ export function mountBase(floor: Floor, f: Pick<Furniture, "type" | "x" | "z" | 
   if (f.type === "led_strip") return Math.max(0, floor.height - 0.04 - Math.max(0.02, f.h));
   switch (item?.mount) {
     case "surface":
-      return surfaceHeight(floor, f.x, f.z, f.h);
+      return groundUnder(floor, f) + surfaceHeight(floor, f.x, f.z, f.h);
     case "wall":
       return item.wall_y ?? 1;
     case "ceiling":
       return Math.max(0, floor.height - f.h);
     default:
       // built-in models: where they are drawn by default (a wall cabinet at 1.45 m)
-      return item ? 0 : builtinBase(f);
+      if (item) return groundUnder(floor, f);
+      return builtinBase(f) || groundUnder(floor, f);
   }
+}
+
+/**
+ * Where an item standing on the ground stands: 0 in a room, outside on the lawn, terrace or lowered ground beneath
+ * it – a bin, a mower or outdoor steps no longer float above a garden lower than the floor (#708).
+ */
+export function groundUnder(floor: Floor, f: Pick<Furniture, "x" | "z">): number {
+  // a floor without rooms has no outside (a plan of free walls only)
+  const rooms = floor.rooms.filter((r) => r.points.length >= 3);
+  if (!rooms.length || rooms.some((r) => pointInPolygon([f.x, f.z], r.points))) return 0;
+  return outdoorGround(floor, f.x, f.z);
 }

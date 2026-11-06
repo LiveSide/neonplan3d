@@ -13,7 +13,7 @@ test("a lamp switched by a relay takes colour and brightness from its colour ent
   // the bulb unavailable: the relay's own (plain) glow
   assert.deepEqual(lightGlow(relay as never, { ...bulb, state: "unavailable" } as never)!.color, [1, 0.71, 0.28]);
 });
-import { isPulseDrive, isRelevant, apOnline, fanSpeed, climateModeGlow, cooktopLevel, onlyColor, appColor, carLocked, areaEntities, otherAreaEntities, roomClimateSensors, roomClimateValue, unassignedEntities, autoPlace, entityName, fridgeDoors, furnitureEntities, groupByDevice, isActive, kindOf, lightGlow, openingEntities, openingState, powerSensorsOf, primaryEntities, roomPanelEntities, windowPosition, confirmEntities, robotRoom, robotRoomSensor, roomKey, vacuumCleaning } from "./devices.ts";
+import { coverTiltButtons, isPulseDrive, isRelevant, apOnline, fanSpeed, climateModeGlow, cooktopLevel, onlyColor, appColor, carLocked, areaEntities, otherAreaEntities, roomClimateSensors, roomClimateValue, unassignedEntities, autoPlace, entityName, fridgeDoors, furnitureEntities, groupByDevice, isActive, kindOf, lightGlow, openingEntities, openingState, powerSensorsOf, primaryEntities, roomPanelEntities, windowPosition, confirmEntities, robotRoom, robotRoomSensor, roomKey, vacuumCleaning } from "./devices.ts";
 import type { Floor, Opening, Room } from "./model.ts";
 import { centroid, newFloor, pointInPolygon } from "./model.ts";
 import type { HomeAssistant } from "./types.ts";
@@ -817,6 +817,18 @@ test("water values of a pool count as sensors: pH by its class, redox and salt b
   assert.equal(isRelevant(hass, "sensor.pool_firmware"), false);
 });
 
+test("a redox probe that reports as a voltage in mV counts, a mains voltage does not (#814)", () => {
+  const hass = {
+    states: {
+      "sensor.pool_orp": { entity_id: "sensor.pool_orp", state: "690", attributes: { device_class: "voltage", unit_of_measurement: "mV" } },
+      "sensor.mains": { entity_id: "sensor.mains", state: "231", attributes: { device_class: "voltage", unit_of_measurement: "V" } },
+    },
+    entities: {},
+  } as unknown as Parameters<typeof isRelevant>[0];
+  assert.equal(isRelevant(hass, "sensor.pool_orp"), true);
+  assert.equal(isRelevant(hass, "sensor.mains"), false);
+});
+
 test("a door with a smart lock and no drive gets no roller shutter, and glows while unlocked (#682)", () => {
   const hass = hassWith();
   hass.states["lock.haustuer"] = { entity_id: "lock.haustuer", state: "unlocked", attributes: {} } as HomeAssistant["states"][string];
@@ -866,4 +878,82 @@ test("a garage door driven by a pulse switch or button shows its contact, not th
   assert.equal(isPulseDrive("switch.tor_impuls"), true);
   assert.equal(isPulseDrive("input_button.tor"), true);
   assert.equal(isPulseDrive("cover.tor"), false);
+});
+
+test("slat buttons only for covers with slats: a KNX roller shutter announcing tilt features gets none (#704)", () => {
+  const cover = (attributes: Record<string, unknown>) => ({ entity_id: "cover.x", state: "open", attributes, last_changed: "", last_updated: "" }) as Parameters<typeof coverTiltButtons>[0];
+  assert.equal(coverTiltButtons(cover({ device_class: "shutter", supported_features: 127, current_position: 100 })), false);
+  assert.equal(coverTiltButtons(cover({ device_class: "blind", supported_features: 255, current_tilt_position: 100 })), true);
+  // a shutter that really reports a tilt position keeps its buttons; a cover without a class keeps them too
+  assert.equal(coverTiltButtons(cover({ device_class: "shutter", supported_features: 127, current_tilt_position: 40 })), true);
+  assert.equal(coverTiltButtons(cover({ supported_features: 48 })), true);
+  assert.equal(coverTiltButtons(cover({ device_class: "blind", supported_features: 15 })), false);
+});
+
+test("a child device without an area takes its parent's (Home Assistant 2026.11), older versions as before", async () => {
+  const { areaEntities, deviceAreaId, entityAreaId } = await import("./devices.ts");
+  const hass = {
+    states: { "switch.gang_2": { entity_id: "switch.gang_2", state: "off", attributes: {} }, "switch.own": { entity_id: "switch.own", state: "off", attributes: {} } },
+    entities: {
+      "switch.gang_2": { entity_id: "switch.gang_2", device_id: "child", area_id: null },
+      "switch.own": { entity_id: "switch.own", device_id: "child_own", area_id: null },
+      "switch.loop": { entity_id: "switch.loop", device_id: "loop_a", area_id: null },
+    },
+    devices: {
+      parent: { id: "parent", area_id: "kitchen" },
+      child: { id: "child", area_id: null, parent_device_id: "parent" },
+      child_own: { id: "child_own", area_id: "hall", parent_device_id: "parent" },
+      // a parent chain in a circle ends instead of looping
+      loop_a: { id: "loop_a", area_id: null, parent_device_id: "loop_b" },
+      loop_b: { id: "loop_b", area_id: null, parent_device_id: "loop_a" },
+      // older Home Assistant: no parent field at all
+      old: { id: "old", area_id: "office" },
+    },
+  } as never;
+  assert.equal(entityAreaId(hass, "switch.gang_2"), "kitchen");
+  // a child's own area wins over its parent's
+  assert.equal(entityAreaId(hass, "switch.own"), "hall");
+  assert.equal(entityAreaId(hass, "switch.loop"), null);
+  assert.equal(deviceAreaId(hass, "old"), "office");
+  assert.equal(deviceAreaId(hass, "missing"), null);
+  assert.equal(deviceAreaId(hass, null), null);
+  // the room's device list finds the channel in the parent's room
+  assert.ok(areaEntities(hass, "kitchen").includes("switch.gang_2"));
+});
+
+test("a fence gate opens with its cover, switch or contact (#818)", async () => {
+  const { gateState } = await import("./devices.ts");
+  const st = (entity_id: string, state: string, attributes: Record<string, unknown> = {}) => ({ entity_id, state, attributes, last_changed: "", last_updated: "", context: { id: "", user_id: null, parent_id: null } });
+  const hass = (...list: ReturnType<typeof st>[]) => ({ states: Object.fromEntries(list.map((s) => [s.entity_id, s])) }) as never;
+  const gate = { id: "g", edge: 0, at: 1, width: 1, entity: "cover.gate" };
+  // a cover with its position follows it; running without one moves at the run time
+  assert.deepEqual(gateState(hass(st("cover.gate", "open", { current_position: 40 })), gate), { out: 0.4, moving: 0, time: 4 });
+  assert.equal(gateState(hass(st("cover.gate", "opening")), gate).moving, 1);
+  // open, or a switch that is on: it stands open, and stands there at once when first seen
+  assert.deepEqual(gateState(hass(st("cover.gate", "open")), gate), { out: null, moving: 1, time: 4, settled: true });
+  assert.equal(gateState(hass(st("switch.gate", "on")), { ...gate, entity: "switch.gate", kind: "slide" }).time, 15);
+  // the contact wins over the motor's state
+  const both = hass(st("cover.gate", "closed"), st("binary_sensor.gate", "on"));
+  assert.equal(gateState(both, { ...gate, contact: "binary_sensor.gate" }).moving, 1);
+  // nothing linked: shut
+  assert.equal(gateState(hass(), { id: "g", edge: 0, at: 1, width: 1 }).moving, -1);
+});
+
+test("covers open, close and stop the way they can: a slat-only blind by its tilt (#920)", async () => {
+  const { coverCall, coverCalls } = await import("./devices.ts");
+  const st = (f: number) => ({ entity_id: "cover.x", state: "open", attributes: { supported_features: f } }) as never;
+  // a roller shutter (open, close, stop, position): as always
+  assert.deepEqual(coverCall(st(15), "open"), { service: "open_cover", data: {} });
+  // slats only, with open/close tilt and stop tilt
+  assert.deepEqual(coverCall(st(16 | 32 | 64 | 128), "open"), { service: "open_cover_tilt", data: {} });
+  assert.deepEqual(coverCall(st(16 | 32 | 64 | 128), "stop"), { service: "stop_cover_tilt", data: {} });
+  // only a tilt position: open is 100, close is 0
+  assert.deepEqual(coverCall(st(128), "close"), { service: "set_cover_tilt_position", data: { tilt_position: 0 } });
+  // no features reported: as always
+  assert.deepEqual(coverCall(st(0), "close"), { service: "close_cover", data: {} });
+  const hass = { states: { "cover.a": st(15), "cover.b": st(128), "cover.c": st(3) } } as never;
+  assert.deepEqual(coverCalls(hass, ["cover.a", "cover.b", "cover.c"], "open"), [
+    { service: "open_cover", data: { entity_id: ["cover.a", "cover.c"] } },
+    { service: "set_cover_tilt_position", data: { tilt_position: 100, entity_id: ["cover.b"] } },
+  ]);
 });

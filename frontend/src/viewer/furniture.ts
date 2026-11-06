@@ -6,7 +6,7 @@
 import { Color } from "three";
 import type { Furniture, Vec2 } from "../model.ts";
 import { builtinBase, gangsOf, radiatorColor, stairsULayout, POOL_VALVE_Y } from "../model.ts";
-import { isRobotVacuum, mountBase, packItem, packMotion, packMovingPart, packRobotCentre, packRobotPart, packScreen, type PackItem, type PackMotion, type PackPart } from "../packs.ts";
+import { adventCandles, isRobotVacuum, mountBase, packItem, packMotion, packMovingPart, packRobotCentre, packRobotPart, packScreen, type PackItem, type PackMotion, type PackPart } from "../packs.ts";
 import { fitParts } from "../pack-scale.ts";
 import { binColors, binShape, householdCountry, mailboxShape, type BinShape, type MailboxShape } from "../household.ts";
 import type { Floor } from "../model.ts";
@@ -1424,6 +1424,17 @@ export const RADIATOR_Y = 0.12;
 export const AC_Y = 2.05;
 
 /**
+ * The size of a picture (cover, app icon) on a screen of sw × sh metres: the whole picture visible ("contain"),
+ * with a dark margin that grows with the screen – 4 cm on a TV, a few millimetres on a small smart display
+ * (a fixed 4 cm left only a sliver on a 5″ display, #799).
+ */
+export function screenPictureSize(sw: number, sh: number, aspect: number): { w: number; h: number } {
+  const m = Math.min(0.04, 0.08 * Math.min(sw, sh));
+  const w = Math.min(sw - m, (sh - m) * aspect);
+  return { w, h: w / aspect };
+}
+
+/**
  * Screen of a TV or monitor in local coordinates (x across, y up, z = its front face), for the glow
  * shown while the linked device is on. Null for furniture without a screen.
  */
@@ -1491,12 +1502,43 @@ function builtInScreen(f: Furniture, w: number, d: number, h: number, floor?: Fl
   return null;
 }
 
-/** Soft contact shadow under an item: a dark core that fades out beyond its footprint. */
-function contactShadow(shadow: GeoBuffer, tf: Tf, w: number, d: number, strength: number): void {
+/** Round things cast a round shadow: a round table, a plant, a pack item whose largest part is an upright cylinder (#719). */
+export function roundFootprint(f: Pick<Furniture, "type">): boolean {
+  if (f.type === "table_round" || f.type === "plant") return true;
+  const item = packItem(f.type);
+  if (!item?.parts.length) return false;
+  const big = item.parts.reduce((m, p) => (p.w * p.d > m.w * m.d ? p : m), item.parts[0]);
+  return big.shape === "cyl" && (big.axis ?? "y") === "y" && big.w >= 0.85 && big.d >= 0.85;
+}
+
+/**
+ * Soft contact shadow under an item: a dark core that fades out beyond its footprint – round under round things.
+ * `y`: the ground it lies on (an item in the garden stands lower than the floor, #708).
+ */
+function contactShadow(shadow: GeoBuffer, tf: Tf, w: number, d: number, strength: number, round = false, ground = 0): void {
   const grow = Math.min(0.14, Math.max(0.06, Math.min(w, d) * 0.15));
   const dark = new Color(1 - strength, 1 - strength, 1 - strength);
   const clear = new Color(1, 1, 1);
-  const y = 0.003;
+  const y = ground + 0.003;
+  if (round) {
+    const P = (p: Vec2) => [p[0], y, p[1]];
+    const n = 24;
+    const at = (i: number, rx: number, rz: number) => tf(Math.cos((i / n) * 2 * Math.PI) * rx, Math.sin((i / n) * 2 * Math.PI) * rz);
+    const s0 = shadow.p.length;
+    const c = P(tf(0, 0));
+    for (let i = 0; i < n; i++) {
+      const a0 = P(at(i, w / 2, d / 2));
+      const a1 = P(at(i + 1, w / 2, d / 2));
+      const o0 = P(at(i, w / 2 + grow, d / 2 + grow));
+      const o1 = P(at(i + 1, w / 2 + grow, d / 2 + grow));
+      // the same turn as the square shadow's triangles
+      shadow.tri(c, a0, a1, dark);
+      shadow.tri(a0, o0, o1, dark, clear, clear);
+      shadow.tri(a0, o1, a1, dark, clear, dark);
+    }
+    if (tfMirrors(tf)) flipWinding(shadow, s0);
+    return;
+  }
   const inner = [tf(-w / 2, -d / 2), tf(w / 2, -d / 2), tf(w / 2, d / 2), tf(-w / 2, d / 2)];
   const outer = [tf(-w / 2 - grow, -d / 2 - grow), tf(w / 2 + grow, -d / 2 - grow), tf(w / 2 + grow, d / 2 + grow), tf(-w / 2 - grow, d / 2 + grow)];
   const P = (p: Vec2) => [p[0], y, p[1]];
@@ -1548,9 +1590,12 @@ function pushUpright(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f: Fu
   if (packItem(f.type) || Math.abs(lift) < 0.001) return buildFurniture(buf, lines, shadow, f, base, still);
   const p0 = buf.p.length;
   const l0 = lines.p.length;
+  const s0 = shadow.p.length;
   buildFurniture(buf, lines, base < 0.05 ? shadow : new GeoBuffer(), f, 0);
   for (let i = p0 + 1; i < buf.p.length; i += 3) buf.p[i] += lift;
   for (let i = l0 + 1; i < lines.p.length; i += 3) lines.p[i] += lift;
+  // in the garden the item stands lower than the floor: its shadow goes down with it
+  if (base < 0) for (let i = s0 + 1; i < shadow.p.length; i += 3) shadow.p[i] += lift;
 }
 
 function buildFurniture(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f: Furniture, base: number, still = false): void {
@@ -1810,7 +1855,7 @@ function buildFurniture(buf: GeoBuffer, lines: LineBuffer, shadow: GeoBuffer, f:
       } else b.box(-w / 2, w / 2, 0, h, -d / 2, d / 2, C.body, C.bodyTop, EDGE_FURN);
     }
   }
-  contactShadow(shadow, tf, w, d, f.type === "plant" ? 0.35 : 0.5);
+  contactShadow(shadow, tf, w, d, f.type === "plant" ? 0.35 : 0.5, roundFootprint(f), Math.min(0, base));
 }
 
 /**
@@ -1842,8 +1887,11 @@ function packModel(
   skip: ((p: PackItem["parts"][number]) => boolean) | null = null,
 ): void {
   const onlyGlow = !!only;
+  const advent = item.parts.some((p) => p.advent) ? adventCandles() : 4;
   for (const q of fitParts(item, w, d, h)) {
     if (skip?.(q)) continue;
+    // an Advent candle's flame burns only from its Sunday on
+    if (q.advent && q.advent > advent) continue;
     // only some parts (the glowing ones of a speaker, a car's windows), a hair larger so they cover the item's own
     if (only && !only(q)) continue;
     const p = onlyGlow ? { ...q, glow: true, w: q.w + 0.006 / w, d: q.d + 0.006 / d, y: Math.max(0, q.y - 0.002 / h), h: q.h + 0.004 / h } : q;

@@ -284,3 +284,24 @@ test("no time left while the appliance is off or idle: a leftover on its display
   assert.ok(!applianceIdle(undefined, null, 10));
   assert.ok(!applianceIdle(st("switch.washer_plug", "on"), null, 10));
 });
+
+test("pack plants are plants by their name, not only by the palette's leaf colour (#712)", async () => {
+  const { setPacks, packType } = await import("./packs.ts");
+  const { isPackPlant } = await import("./household.ts");
+  const part = (color: string) => ({ shape: "box", x: 0, y: 0, z: 0, w: 0.1, h: 0.1, d: 0.1, color });
+  setPacks([
+    {
+      id: "deco",
+      name: "Deko",
+      items: [
+        { id: "plant_monstera_m", name: { de: "Monstera mittel" }, size: [0.6, 0.6, 1.2], parts: [part("pot"), part("#2f6b4a"), part("#1e4a3a")] },
+        { id: "humidifier", name: { de: "Luftbefeuchter", en: "Humidifier" }, size: [0.3, 0.3, 0.4], parts: [part("white")] },
+        { id: "tv_stand", name: { de: "Fernseher auf Standfuß" }, size: [1, 0.5, 1.5], parts: [part("dark")] },
+      ],
+    } as never,
+  ]);
+  assert.equal(isPackPlant(packType("deco", "plant_monstera_m")), true);
+  assert.equal(isPackPlant(packType("deco", "humidifier")), false);
+  assert.equal(isPackPlant(packType("deco", "tv_stand")), false);
+  setPacks([]);
+});

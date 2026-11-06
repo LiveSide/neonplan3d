@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Room, Vec2 } from "../model.ts";
 import { polygonArea, signedArea } from "../model.ts";
-import { edgeReach, generateWalls, locateOnWalls, locateOpening, openingHost, placeWallPlate } from "./walls.ts";
+import { edgeReach, freeWallRoomLeft, generateWalls, locateOnWalls, locateOpening, openingHost, placeWallPlate } from "./walls.ts";
 
 const EXT = 0.24;
 const INT = 0.12;
@@ -90,6 +90,21 @@ test("collinear pieces of the same room are merged into one wall", () => {
   assert.equal(walls.length, 4);
   const top = walls.find((w) => Math.abs(w.a[1]) < 1e-9 && Math.abs(w.b[1]) < 1e-9)!;
   assert.equal(top.sources.length, 2);
+});
+
+test("an outer wall stored in many pieces keeps the room on its inner side (found by T-Eberle)", () => {
+  // three or more pieces along one side, both ways round: merging must not leave the wall turned round, or a
+  // window's blind on it is drawn inside the room
+  const pts: Vec2[] = [[0, 0], [4, 0], [4, 0.8], [4, 1.5], [4, 2.2], [4, 3], [0, 3], [0, 2], [0, 1]];
+  for (const points of [pts, [...pts].reverse()]) {
+    const { walls } = generateWalls([{ ...rect("a", 0, 0, 4, 3), points }], opts);
+    assert.equal(walls.length, 4);
+    for (const w of walls) {
+      assert.equal(w.roomLeft, "a");
+      assert.equal(w.roomRight, null);
+      near(w.right, EXT);
+    }
+  }
 });
 
 test("L-shaped room gets a mitred reflex corner", () => {
@@ -300,4 +315,27 @@ test("an opening may reach across a transition without a wall where the outer wa
   // with a wall between the rooms the opening stays on its own edge
   const closed = generateWalls([a, { ...b, wall_heights: undefined }], { exterior: 0.3, interior: 0.115 }, []).walls;
   assert.deepEqual(edgeReach(closed, a, 0), [0, 0]);
+});
+
+test("a free wall drawn as an outer wall knows its room side, whichever way it was drawn (#542)", () => {
+  const rooms = [rect("bath", 0, 0, 4, 3)];
+  const wall = (a: Vec2, b: Vec2) => ({ a, b, left: 0.12, right: 0.12 });
+  // along the room's top edge: the room lies at larger z
+  assert.equal(freeWallRoomLeft(wall([0, 0], [4, 0]), rooms), true);
+  assert.equal(freeWallRoomLeft(wall([4, 0], [0, 0]), rooms), false);
+  // standing in the room, or out in the open: no outer side
+  assert.equal(freeWallRoomLeft(wall([2, 0.5], [2, 2.5]), rooms), null);
+  assert.equal(freeWallRoomLeft(wall([10, 0], [12, 0]), rooms), null);
+});
+
+test("a door on an inner wall piece left by an extra corner on a straight line reaches into the next piece", () => {
+  // the hall's edge along x = 4 has an extra corner at z = 1, a hair off the line, that the other room does not have:
+  // the wall breaks into two pieces there
+  const a = rect("a", 0, 0, 4, 3);
+  const hall: Room = { id: "hall", name: "hall", area_id: null, points: [[4, 0], [8, 0], [8, 3], [4, 3], [4.0005, 1]], floor_material: "wood" };
+  const { walls } = generateWalls([a, hall], opts);
+  // edge 4 runs from (4, 1) to (4, 0), 1 m long; before its start the same wall carries on for 2 m
+  const [before, after] = edgeReach(walls, hall, 4);
+  near(before, 2, 1e-3);
+  near(after, 0);
 });
